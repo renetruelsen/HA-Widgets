@@ -46,4 +46,8 @@
     <string name="connect_to_ha_title">Connect to Home Assistant</string>
     <string name="connect_to_ha_body">Enter your HA address and a long-lived access token (HA → Profile → Long-Lived Access Tokens).</string>
     <string name="load_dashboards_error">Could not fetch dashboards: %1$s</string>
+
+    <!-- LightWidget -->
+    <string name="light_widget_label">HA Light</string>
+    <string name="light_widget_description">Shows and controls a Home Assistant light.</string>
 </resources>

@@ -42,4 +42,8 @@
     <string name="connect_to_ha_title">Forbind til Home Assistant</string>
     <string name="connect_to_ha_body">Indtast din HA-adresse og et long-lived access token (HA → Profil → Long-Lived Access Tokens).</string>
     <string name="load_dashboards_error">Kunne ikke hente dashboards: %1$s</string>
+
+    <!-- LightWidget -->
+    <string name="light_widget_label">HA Lys</string>
+    <string name="light_widget_description">Viser og styrer en Home Assistant-lyskilde.</string>
 </resources>

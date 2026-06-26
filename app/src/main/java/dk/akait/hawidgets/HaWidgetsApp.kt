@@ -4,6 +4,8 @@ import android.app.Application
 import android.os.Handler
 import android.os.Looper
 import android.webkit.WebView
+import dk.akait.hawidgets.data.SecureStore
+import dk.akait.hawidgets.worker.SyncWorker
 
 /**
  * Pre-warms the WebView/Chromium provider so the first real dashboard open is
@@ -16,6 +18,9 @@ class HaWidgetsApp : Application() {
         super.onCreate()
         Handler(Looper.getMainLooper()).post {
             runCatching { WebView(this).destroy() }
+        }
+        if (SecureStore.get(this).isConfigured) {
+            SyncWorker.schedule(this)
         }
     }
 }

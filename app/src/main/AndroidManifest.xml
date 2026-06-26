@@ -51,6 +51,26 @@
                 android:resource="@xml/shortcut_widget_info" />
         </receiver>
 
+        <activity
+            android:name=".widget.light.LightWidgetConfigActivity"
+            android:exported="true"
+            android:theme="@style/Theme.HaWidgets">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".widget.light.LightWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/light_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>
