@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.HaWidgets" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar" />
+
+    <style name="Theme.HaWidgets.Translucent" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <!-- Skip the starting-window/splash when launched from a widget tap. -->
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

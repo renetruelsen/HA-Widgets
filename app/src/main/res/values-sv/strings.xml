@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widget metadata -->
+    <string name="shortcut_widget_label">HA Dashboard-genväg</string>
+    <string name="shortcut_widget_description">Öppnar ett Home Assistant-dashboard.</string>
+    <string name="open_dashboard">Öppna dashboard</string>
+
+    <!-- Common -->
+    <string name="cancel">Avbryt</string>
+    <string name="disconnect">Koppla från</string>
+    <string name="connect">Anslut</string>
+    <string name="connecting">Ansluter…</string>
+    <string name="checking_connection">Kontrollerar anslutning…</string>
+
+    <!-- MainActivity -->
+    <string name="disconnect_dialog_title">Koppla från HA?</string>
+    <string name="disconnect_dialog_body">Detta tar bort din anslutning. Befintliga widgets slutar fungera tills du ansluter igen.</string>
+    <string name="connected_to">Ansluten till</string>
+    <string name="add_widget_to_home">Lägg till dashboard-genväg på hemskärm</string>
+    <string name="pin_manual_instructions">Håll på ett tomt ställe på hemskärmen → Widgets → hitta \'HA Widgets\' → dra ut genvägen.</string>
+    <string name="pin_button_instructions">Tryck på knappen och bekräfta i dialogen. Fungerar det inte? Håll på hemskärmen → Widgets → \'HA Widgets\'.</string>
+    <string name="how_to_use_title">Hur du använder HA Widgets</string>
+    <string name="how_to_use_step1">1. Tryck \'Lägg till dashboard-genväg\' ovan</string>
+    <string name="how_to_use_step2">2. Välj dashboard och visningsläge i konfigurationen</string>
+    <string name="how_to_use_step3">3. Tryck på widget-ikonen på hemskärmen för att öppna ditt dashboard</string>
+    <string name="onboarding_intro">Anslut din Home Assistant-instans nedan. Du kan också hoppa över detta och ansluta första gången du lägger till en widget.</string>
+
+    <!-- ShortcutWidgetConfigActivity -->
+    <string name="configure_widget_title">Konfigurera widget</string>
+    <string name="save_widget">Spara widget</string>
+    <string name="select_dashboard">Välj dashboard</string>
+    <string name="section_dashboard">Dashboard</string>
+    <string name="section_display">Visning</string>
+    <string name="display_fullscreen">Helskärm</string>
+    <string name="display_overlay">Overlay (fönster)</string>
+    <string name="overlay_width">Bredd: %1$d %%</string>
+    <string name="overlay_height">Höjd: %1$d %%</string>
+    <string name="section_color_scheme">Färgtema</string>
+    <string name="color_scheme_system">Automatisk (följ enhet)</string>
+    <string name="color_scheme_dark">Mörkt</string>
+    <string name="color_scheme_light">Ljust</string>
+    <string name="connect_to_ha_title">Anslut till Home Assistant</string>
+    <string name="connect_to_ha_body">Ange din HA-adress och ett long-lived access token (HA → Profil → Long-Lived Access Tokens).</string>
+    <string name="load_dashboards_error">Kunde inte hämta dashboards: %1$s</string>
+</resources>
