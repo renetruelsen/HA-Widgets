@@ -3,7 +3,9 @@ package dk.akait.hawidgets.widget.light
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import dk.akait.hawidgets.worker.SyncWorker
+import android.util.Log
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -20,6 +22,7 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
@@ -36,7 +39,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.appwidget.SizeMode
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -45,6 +47,10 @@ import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.EntityWidgetEntity
+import dk.akait.hawidgets.worker.SyncWorker
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
 private const val STALE_THRESHOLD_MS = 15 * 60 * 1000L
@@ -61,10 +67,25 @@ class LightWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val db = AppDatabase.get(context)
-        val widgetCfg = db.entityWidgetDao().get(appWidgetId)
-        val entityState = widgetCfg?.let { db.entityStateDao().get(it.entityId) }
 
+        // Reaktiv: Glance-session holder sig i live og rekomponerer automatisk når Room ændres.
+        // saveAndFinish skriver til Room → Flow emitter → rekomposition → widget opdateres straks
+        // (ingen broadcasts eller direkte AppWidgetManager-kald nødvendigt).
         provideContent {
+            val viewState by db.entityWidgetDao()
+                .observe(appWidgetId)
+                .flatMapLatest { cfg ->
+                    if (cfg == null) {
+                        flowOf<Pair<EntityWidgetEntity?, EntityStateEntity?>>(null to null)
+                    } else {
+                        db.entityStateDao().observe(cfg.entityId)
+                            .map { state -> cfg to state }
+                    }
+                }
+                .collectAsState(initial = null to null)
+            val (widgetCfg, entityState) = viewState
+            Log.d("HA_WIDGET", "recompose: appWidgetId=$appWidgetId cfg=${widgetCfg?.entityId} state=${entityState?.state}")
+
             GlanceTheme {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (widgetCfg == null) {
@@ -223,7 +244,7 @@ private fun buildStatusText(
     isStale: Boolean,
 ): String {
     val base = when {
-        state == null -> "…"
+        state == null -> "Henter status..."
         state.state == "unavailable" -> "Utilgængelig"
         state.state == "on" && attrs?.brightnessPercent != null -> "${attrs.brightnessPercent}%"
         state.state == "on" -> "Tændt"

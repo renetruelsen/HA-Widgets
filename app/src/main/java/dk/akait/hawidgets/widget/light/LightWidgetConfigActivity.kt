@@ -3,6 +3,7 @@ package dk.akait.hawidgets.widget.light
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -75,22 +76,13 @@ class LightWidgetConfigActivity : ComponentActivity() {
         val app = applicationContext
         val id = appWidgetId
         lifecycleScope.launch {
-            // 1. Skriv config til Room (hurtigt, ingen net). Skal være committet FØR
-            //    setResult, så provideGlance ser config når launcheren trigrer onUpdate.
+            // Skriv config til Room — den reaktive provideGlance-session opdager ændringen
+            // via Flow og rekomponerer automatisk (ingen update()-kald eller broadcasts).
             AppDatabase.get(app).entityWidgetDao().upsert(
-                EntityWidgetEntity(
-                    appWidgetId = id,
-                    entityId = brief.entityId,
-                    domain = "light",
-                    label = "",
-                )
+                EntityWidgetEntity(appWidgetId = id, entityId = brief.entityId, domain = "light", label = "")
             )
-            // 2. Fortæl launcheren at widget er klar.
+            Log.d("HA_WIDGET", "saveAndFinish: id=$id entity=${brief.entityId}")
             setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
-            // 3. Kør sync nu (expedited WorkManager) — henter state + fan-out til widget.
-            //    WorkManager bypasser Glance's interne async scheduler, som Nova/Samsung
-            //    kan forsinke i 30-60 sek. (tidligere bug: Glance update() er fire-and-forget
-            //    internt; RemoteViews er ikke applied når setResult returnerer).
             SyncWorker.runNow(app)
             SyncWorker.schedule(app)
             finish()

@@ -114,3 +114,13 @@ JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assemble
   `windowAnimationStyle=@null`, så Android springer start-vinduet/splashet over. Bivirkning: ved kold
   proces-start vises launcher frosset ~1s før dashboardet tegnes (i stedet for et splash).
 - Glance-widget bruger unik `data`-Uri pr. widget for distinkte PendingIntents.
+- **Nova Launcher sender `ACTION_APPWIDGET_UPDATE` FØR config-activity åbner** (ikke efter RESULT_OK).
+  `provideGlance` kørte med `cfg=null` → "Opsæt" sat i AppWidgetManager-cachen. Alle forsøg på at
+  overskrive cachen bagefter (direkte `AppWidgetManager.updateAppWidget`, broadcasts, `update()`-kald)
+  ignoreres af Nova under placement. **Fix (v0.2.2):** `provideGlance` bruger reaktiv Room `Flow`
+  (`EntityWidgetDao.observe` + `flatMapLatest` til `EntityStateDao.observe`). Glance-sessionen holder
+  sig i live og rekomponerer automatisk når `saveAndFinish` upsert'er config. Ingen broadcasts
+  eller direkte AppWidgetManager-kald fra config-activity er nødvendige.
+- **`GlanceAppWidget.update()` er fire-and-forget i Glance 1.1.1** — kører `provideGlance` asynkront
+  i en session-coroutine. Returnerer ikke når RemoteViews er applied. Brug reaktiv Room `Flow` i stedet
+  for at kalde `update()` fra config-activity.
