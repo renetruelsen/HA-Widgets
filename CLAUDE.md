@@ -63,6 +63,19 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 - M2: native entity-widgets (sensor/binary_sensor/weather/climate + light/switch/scene/script/automation),
   StateCache + SyncWorker.
 
+## Workflow: rettelser og release
+
+**Aldrig meld "fikset" uden bevis.** Rettelsesworkflow er altid iterativt:
+
+1. **Fix i kode** — ret fejlen.
+2. **Byg** — `./gradlew assembleDebug`.
+3. **QA på emulator** (`pixel_test`) — driv det faktiske flow via `adb shell input`, screenshots, DB-inspektion.
+   Virker det ikke → tilbage til trin 1. Bliv i loopet til testen er grøn.
+4. **QA på telefon** (`adb install -r`, ALDRIG uninstall) — bekræft samme flow på rigtig enhed.
+5. **Commit + push** — kun når begge QA-trin er grønne.
+
+`code-review` køres inden merge til main.
+
 ## Build & install
 
 ```

@@ -32,12 +32,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
@@ -66,32 +66,34 @@ class LightWidgetConfigActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                val scope = rememberCoroutineScope()
-
-                LightPickerScreen(
-                    onEntitySelected = { brief ->
-                        scope.launch {
-                            val db = AppDatabase.get(this@LightWidgetConfigActivity)
-                            db.entityWidgetDao().upsert(
-                                EntityWidgetEntity(
-                                    appWidgetId = appWidgetId,
-                                    entityId = brief.entityId,
-                                    domain = "light",
-                                    label = "",
-                                )
-                            )
-                            SyncWorker.schedule(this@LightWidgetConfigActivity)
-                            SyncWorker.runNow(this@LightWidgetConfigActivity)
-
-                            val result = Intent().apply {
-                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                            }
-                            setResult(RESULT_OK, result)
-                            finish()
-                        }
-                    }
-                )
+                LightPickerScreen(onEntitySelected = ::saveAndFinish)
             }
+        }
+    }
+
+    private fun saveAndFinish(brief: HaApiClient.EntityBrief) {
+        val app = applicationContext
+        val id = appWidgetId
+        lifecycleScope.launch {
+            // 1. Skriv config til Room (hurtigt, ingen net). Skal være committet FØR
+            //    setResult, så provideGlance ser config når launcheren trigrer onUpdate.
+            AppDatabase.get(app).entityWidgetDao().upsert(
+                EntityWidgetEntity(
+                    appWidgetId = id,
+                    entityId = brief.entityId,
+                    domain = "light",
+                    label = "",
+                )
+            )
+            // 2. Fortæl launcheren at widget er klar.
+            setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+            // 3. Kør sync nu (expedited WorkManager) — henter state + fan-out til widget.
+            //    WorkManager bypasser Glance's interne async scheduler, som Nova/Samsung
+            //    kan forsinke i 30-60 sek. (tidligere bug: Glance update() er fire-and-forget
+            //    internt; RemoteViews er ikke applied når setResult returnerer).
+            SyncWorker.runNow(app)
+            SyncWorker.schedule(app)
+            finish()
         }
     }
 }

@@ -3,6 +3,7 @@ package dk.akait.hawidgets.widget.light
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import dk.akait.hawidgets.worker.SyncWorker
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,12 +41,10 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import dk.akait.hawidgets.R
-import dk.akait.hawidgets.data.HaApiClient
-import dk.akait.hawidgets.data.SecureStore
+import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.EntityWidgetEntity
-import dk.akait.hawidgets.worker.SyncWorker
 import org.json.JSONObject
 
 private const val STALE_THRESHOLD_MS = 15 * 60 * 1000L
@@ -140,7 +139,10 @@ private fun LightContent(
         .background(bgColor)
         .cornerRadius(16.dp)
 
-    val modifier = if (!isStale && !isUnavailable) {
+    // Tap tilladt så længe state er kendt (også stale): trykket sender en frisk kommando,
+    // som enten lykkes (frisk state) eller fejler (forbliver stale). Kun helt ukendt/
+    // unavailable blokerer — ellers kan en widget der engang fejlede aldrig selv-hele.
+    val modifier = if (state != null && !isUnavailable) {
         baseModifier.clickable(
             actionRunCallback<ToggleLightAction>(
                 actionParametersOf(ToggleLightAction.entityIdKey to config.entityId)
@@ -252,32 +254,22 @@ class ToggleLightAction : ActionCallback {
         parameters: ActionParameters,
     ) {
         val entityId = parameters[entityIdKey] ?: return
-        val db = AppDatabase.get(context)
-        val store = SecureStore.get(context)
+        val current = AppDatabase.get(context).entityStateDao().get(entityId) ?: return
+        val target = if (current.state == "on") "off" else "on"
+        // turn_on/turn_off (ikke toggle): resultatet er kendt → optimistisk state ER sandheden,
+        // ingen confirm-poll nødvendig. Ét hurtigt kald, godt under broadcast-ANR-grænsen.
+        val service = if (target == "on") "turn_on" else "turn_off"
 
-        val current = db.entityStateDao().get(entityId) ?: return
-        val optimistic = current.copy(
-            state = if (current.state == "on") "off" else "on",
-            lastUpdated = System.currentTimeMillis(),
+        // Tryk vækker appen straks (pålideligt, modsat baggrunds-WorkManager).
+        // Optimistisk lokalt + kort netværkskald direkte her i broadcast-vinduet.
+        EntityRepository.command(
+            context = context,
+            domain = "light",
+            service = service,
+            entityId = entityId,
+            targetState = target,
+            fromState = current.state,
         )
-        db.entityStateDao().upsert(optimistic)
-        GlanceAppWidgetManager(context)
-            .getGlanceIds(LightWidget::class.java)
-            .forEach { LightWidget().update(context, it) }
-
-        val baseUrl = store.baseUrl ?: return
-        val token = store.token ?: return
-        val result = HaApiClient(baseUrl, token).callService("light", "toggle", entityId)
-
-        when (result) {
-            is HaApiClient.Result.Error -> {
-                db.entityStateDao().upsert(current)
-                GlanceAppWidgetManager(context)
-            .getGlanceIds(LightWidget::class.java)
-            .forEach { LightWidget().update(context, it) }
-            }
-            HaApiClient.Result.Ok -> SyncWorker.runNow(context)
-        }
     }
 
     companion object {
@@ -287,4 +279,13 @@ class ToggleLightAction : ActionCallback {
 
 class LightWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = LightWidget()
+
+    // Kaldt af systemet efter config-RESULT_OK og ved eventuelle system-udløste opdateringer.
+    // super.onUpdate → Glance updateAll → provideGlance (læser Room, viser config/"…").
+    // SyncWorker.runNow henter state fra HA og fan-outer til widget — bypasser Glance's
+    // interne async scheduler der kan forsinkes 30-60 sek på Nova/Samsung.
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        SyncWorker.runNow(context)
+    }
 }

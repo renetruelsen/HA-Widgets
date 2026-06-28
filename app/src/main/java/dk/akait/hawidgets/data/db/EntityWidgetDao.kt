@@ -15,6 +15,10 @@ interface EntityWidgetDao {
     @Query("SELECT DISTINCT entityId FROM entity_widget")
     suspend fun allEntityIds(): List<String>
 
+    /** Alle widgets (på tværs af typer) der viser samme entity — bruges til fan-out. */
+    @Query("SELECT * FROM entity_widget WHERE entityId = :entityId")
+    suspend fun widgetsForEntity(entityId: String): List<EntityWidgetEntity>
+
     @Query("DELETE FROM entity_widget WHERE appWidgetId = :id")
     suspend fun delete(id: Int)
 }

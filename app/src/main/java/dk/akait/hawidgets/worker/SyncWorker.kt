@@ -4,48 +4,27 @@ import android.content.Context
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import dk.akait.hawidgets.data.HaApiClient
-import dk.akait.hawidgets.data.SecureStore
-import dk.akait.hawidgets.data.db.AppDatabase
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import dk.akait.hawidgets.widget.light.LightWidget
+import dk.akait.hawidgets.data.EntityRepository
 import java.util.concurrent.TimeUnit
 
 class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
 
     override suspend fun doWork(): Result {
-        val store = SecureStore.get(applicationContext)
-        val baseUrl = store.baseUrl ?: return Result.success()
-        val token = store.token ?: return Result.success()
-
-        val db = AppDatabase.get(applicationContext)
-        val entityIds = db.entityWidgetDao().allEntityIds()
-        if (entityIds.isEmpty()) return Result.success()
-
-        val client = HaApiClient(baseUrl, token)
-        var anyFailed = false
-
-        for (entityId in entityIds) {
-            val state = client.getState(entityId)
-            if (state != null) db.entityStateDao().upsert(state)
-            else anyFailed = true
-        }
-
-        GlanceAppWidgetManager(applicationContext)
-            .getGlanceIds(LightWidget::class.java)
-            .forEach { LightWidget().update(applicationContext, it) }
-
-        return if (anyFailed) Result.retry() else Result.success()
+        // Repository ejer pull + fan-out til widgets.
+        val allOk = EntityRepository.refreshAll(applicationContext)
+        return if (allOk) Result.success() else Result.retry()
     }
 
     companion object {
         private const val PERIODIC_WORK_NAME = "ha_entity_sync"
+        private const val NOW_WORK_NAME = "ha_entity_sync_now"
 
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
@@ -62,11 +41,17 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
             )
         }
 
+        /** Kør én gang nu — expedited, ingen net-constraint. Bruges efter config for at
+         *  hente state og fan-out til widgets uden at blokere config-activity. */
         fun runNow(context: Context) {
             val request = OneTimeWorkRequestBuilder<SyncWorker>()
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .build()
-            WorkManager.getInstance(context).enqueue(request)
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                NOW_WORK_NAME,
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
         }
     }
 }

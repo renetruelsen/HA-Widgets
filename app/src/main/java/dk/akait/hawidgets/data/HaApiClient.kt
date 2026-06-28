@@ -30,13 +30,13 @@ class HaApiClient(
     private val authHeader get() = "Bearer $token"
 
     suspend fun checkConnection(): Result = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url("$base/api/")
-            .header("Authorization", authHeader)
-            .header("Content-Type", "application/json")
-            .get()
-            .build()
         try {
+            val request = Request.Builder()
+                .url("$base/api/")
+                .header("Authorization", authHeader)
+                .header("Content-Type", "application/json")
+                .get()
+                .build()
             http.newCall(request).execute().use { response ->
                 when (response.code) {
                     200 -> Result.Ok
@@ -50,12 +50,12 @@ class HaApiClient(
     }
 
     suspend fun getState(entityId: String): EntityStateEntity? = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url("$base/api/states/$entityId")
-            .header("Authorization", authHeader)
-            .get()
-            .build()
         try {
+            val request = Request.Builder()
+                .url("$base/api/states/$entityId")
+                .header("Authorization", authHeader)
+                .get()
+                .build()
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
                 val body = response.body?.string() ?: return@withContext null
@@ -72,24 +72,29 @@ class HaApiClient(
         }
     }
 
+    /**
+     * Kald en service. [fast] = brug kort-timeout-klienten (kommando-path, så vi
+     * aldrig hænger i et ANR-følsomt vindue). Default bruger baggrunds-klienten.
+     */
     suspend fun callService(
         domain: String,
         service: String,
         entityId: String,
         extraData: Map<String, Any> = emptyMap(),
+        fast: Boolean = false,
     ): Result = withContext(Dispatchers.IO) {
-        val bodyJson = JSONObject().apply {
-            put("entity_id", entityId)
-            extraData.forEach { (k, v) -> put(k, v) }
-        }
-        val body = bodyJson.toString().toRequestBody("application/json".toMediaType())
-        val request = Request.Builder()
-            .url("$base/api/services/$domain/$service")
-            .header("Authorization", authHeader)
-            .post(body)
-            .build()
         try {
-            http.newCall(request).execute().use { response ->
+            val bodyJson = JSONObject().apply {
+                put("entity_id", entityId)
+                extraData.forEach { (k, v) -> put(k, v) }
+            }
+            val body = bodyJson.toString().toRequestBody("application/json".toMediaType())
+            val request = Request.Builder()
+                .url("$base/api/services/$domain/$service")
+                .header("Authorization", authHeader)
+                .post(body)
+                .build()
+            (if (fast) httpFast else http).newCall(request).execute().use { response ->
                 if (response.isSuccessful) Result.Ok
                 else Result.Error("HTTP ${response.code}")
             }
@@ -100,12 +105,12 @@ class HaApiClient(
 
     /** Henter alle states og filtrerer på domæne — bruges til config-skærm. */
     suspend fun listStatesByDomain(domain: String): List<EntityBrief> = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url("$base/api/states")
-            .header("Authorization", authHeader)
-            .get()
-            .build()
         try {
+            val request = Request.Builder()
+                .url("$base/api/states")
+                .header("Authorization", authHeader)
+                .get()
+                .build()
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext emptyList()
                 val body = response.body?.string() ?: return@withContext emptyList()
@@ -130,9 +135,16 @@ class HaApiClient(
     }
 
     companion object {
+        /** Baggrunds-klient: tålmodig (sync, config-load). */
         private val http = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
+            .build()
+
+        /** Kommando-klient: kort timeout så tryk aldrig hænger. */
+        private val httpFast = OkHttpClient.Builder()
+            .connectTimeout(6, TimeUnit.SECONDS)
+            .readTimeout(6, TimeUnit.SECONDS)
             .build()
     }
 }

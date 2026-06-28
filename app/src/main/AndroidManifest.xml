@@ -16,6 +16,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.HaWidgets">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -34,6 +35,8 @@
         <activity
             android:name=".widget.ShortcutWidgetConfigActivity"
             android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
             android:theme="@style/Theme.HaWidgets">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
@@ -54,6 +57,8 @@
         <activity
             android:name=".widget.light.LightWidgetConfigActivity"
             android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
             android:theme="@style/Theme.HaWidgets">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />

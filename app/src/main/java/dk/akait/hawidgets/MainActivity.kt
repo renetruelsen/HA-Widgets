@@ -129,6 +129,7 @@ private fun OnboardingScreen() {
                         val provider = ComponentName(context, ShortcutWidgetReceiver::class.java)
                         if (awm.isRequestPinAppWidgetSupported) {
                             awm.requestPinAppWidget(provider, null, null)
+                            (context as? android.app.Activity)?.moveTaskToBack(true)
                         }
                     },
                     enabled = pinSupported,
