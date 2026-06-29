@@ -9,4 +9,5 @@
     android:widgetFeatures="reconfigurable"
     android:configure="dk.akait.hawidgets.widget.ShortcutWidgetConfigActivity"
     android:description="@string/shortcut_widget_description"
+    android:previewImage="@drawable/ic_dashboard"
     android:initialLayout="@layout/glance_default_loading_layout" />

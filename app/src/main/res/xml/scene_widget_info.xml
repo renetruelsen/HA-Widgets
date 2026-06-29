@@ -11,5 +11,6 @@
     android:widgetFeatures="reconfigurable"
     android:configure="dk.akait.hawidgets.widget.scene.SceneWidgetConfigActivity"
     android:description="@string/scene_widget_description"
+    android:previewImage="@drawable/ic_scene"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/glance_default_loading_layout" />

@@ -11,5 +11,6 @@
     android:widgetFeatures="reconfigurable"
     android:configure="dk.akait.hawidgets.widget.binarysensor.BinarySensorWidgetConfigActivity"
     android:description="@string/binary_sensor_widget_description"
+    android:previewImage="@drawable/ic_binary_sensor"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/glance_default_loading_layout" />

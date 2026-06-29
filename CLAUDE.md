@@ -69,6 +69,32 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 - M2 QA på rigtig enhed (Galaxy S23): `adb install -r`, test widget placement + tap-interaktioner for alle 8 nye typer.
 - M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
 
+### Potentielle forbedringer (ikke kritiske)
+
+**Samsung battery optimization / MARs netværksblokering**
+Samsung's MARs-service blokerer DNS for baggrunds-apps (`isBlocked=true` i logcat). SyncWorker
+returnerer `Result.retry()` → widgets opdateres ikke ved tap på Samsung. Fix: tilføj
+`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission + vis system-dialog ved første connect i
+`MainActivity`. ~10 linjer Kotlin + 1 linje manifest. Ingen visuel ændring (Android-system-dialog).
+Midlertidig workaround til bruger: Indstillinger → Apps → HA Widgets → Batteri → Ingen restriktioner.
+
+### Åbne UX-problemer (skal løses før M3)
+
+**1. Compact 1×1: manglende entitets-identifikation**
+Nuværende compact layout viser kun ikon + status — intet label. Hvis brugeren har flere widgets af
+samme type (f.eks. to switch-widgets), er de visuelt identiske; kun skærm-position adskiller dem.
+UX-beslutning om at fjerne label ved 56dp skal genovervejes. Mulige løsninger:
+- Genindføre truncated label (10sp, maxLines=1) som 3. linje i compact
+- Brugerdefineret kort label i config-activity (sættes ved opsætning)
+Kræver: UX-oplæg → impl → UX-review → QA (følg workflow-visual-features).
+
+**2. Widget-picker: ikoner og beskrivelser**
+Alle HA Widgets viser samme hus-ikon i picker. Beskrivelserne er generiske og trunkeres:
+"Viser tilstanden for en Home Assistant..." — giver ingen reel information.
+- **Preview-ikon:** `previewImage` i `*_widget_info.xml` → domæne-specifikt ikon (f.eks. ic_switch).
+- **Kort beskrivelse:** maks ~30 tegn, domæne-fokuseret:
+  "Tænd/sluk kontakter", "Aktiver scener", "Vejrudsigt", osv.
+
 ## Workflow: rettelser og release
 
 **Aldrig meld "fikset" uden bevis.** Rettelsesworkflow er altid iterativt:

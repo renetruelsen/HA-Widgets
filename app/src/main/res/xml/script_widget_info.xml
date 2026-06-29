@@ -11,5 +11,6 @@
     android:widgetFeatures="reconfigurable"
     android:configure="dk.akait.hawidgets.widget.script.ScriptWidgetConfigActivity"
     android:description="@string/script_widget_description"
+    android:previewImage="@drawable/ic_script"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/glance_default_loading_layout" />

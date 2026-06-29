@@ -74,21 +74,22 @@ fun UnconfiguredWidgetContent(
     }
 }
 
-/** 1×1 compact: icon + status only. Label dropped — too cramped at 56dp. */
+/** 1×1 compact: icon (20dp) + label (10sp) + status (11sp). Icon shrunk to fit 3 lines in 44dp. */
 @Composable
 fun WidgetCompactLayout(iconResId: Int, label: String, statusText: String, contentColor: ColorProvider) {
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(6.dp),
+        modifier = GlanceModifier.fillMaxSize().padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
             provider = ImageProvider(iconResId),
             contentDescription = label,
-            modifier = GlanceModifier.size(26.dp),
+            modifier = GlanceModifier.size(20.dp),
             colorFilter = ColorFilter.tint(contentColor),
         )
-        Text(text = statusText, style = TextStyle(color = contentColor, fontSize = 12.sp), maxLines = 1)
+        Text(text = label, style = TextStyle(color = contentColor, fontSize = 10.sp), maxLines = 1)
+        Text(text = statusText, style = TextStyle(color = contentColor, fontSize = 11.sp), maxLines = 1)
     }
 }
 

@@ -49,37 +49,37 @@
 
     <!-- LightWidget -->
     <string name="light_widget_label">HA Light</string>
-    <string name="light_widget_description">Shows and controls a Home Assistant light.</string>
+    <string name="light_widget_description">Control lights</string>
 
     <!-- SwitchWidget -->
     <string name="switch_widget_label">HA Switch</string>
-    <string name="switch_widget_description">Shows and controls a Home Assistant switch.</string>
+    <string name="switch_widget_description">Control switches</string>
 
     <!-- SceneWidget -->
     <string name="scene_widget_label">HA Scene</string>
-    <string name="scene_widget_description">Activates a Home Assistant scene.</string>
+    <string name="scene_widget_description">Activate scenes</string>
 
     <!-- ScriptWidget -->
     <string name="script_widget_label">HA Script</string>
-    <string name="script_widget_description">Runs a Home Assistant script.</string>
+    <string name="script_widget_description">Run scripts</string>
 
     <!-- AutomationWidget -->
     <string name="automation_widget_label">HA Automation</string>
-    <string name="automation_widget_description">Shows and triggers a Home Assistant automation.</string>
+    <string name="automation_widget_description">Trigger automations</string>
 
     <!-- SensorWidget -->
     <string name="sensor_widget_label">HA Sensor</string>
-    <string name="sensor_widget_description">Shows a Home Assistant sensor value.</string>
+    <string name="sensor_widget_description">Show sensor values</string>
 
     <!-- BinarySensorWidget -->
     <string name="binary_sensor_widget_label">HA Binary Sensor</string>
-    <string name="binary_sensor_widget_description">Shows a Home Assistant binary sensor state.</string>
+    <string name="binary_sensor_widget_description">Show binary sensors</string>
 
     <!-- WeatherWidget -->
     <string name="weather_widget_label">HA Weather</string>
-    <string name="weather_widget_description">Shows Home Assistant weather conditions and temperature.</string>
+    <string name="weather_widget_description">Weather forecast (2×1)</string>
 
     <!-- ClimateWidget -->
     <string name="climate_widget_label">HA Climate</string>
-    <string name="climate_widget_description">Shows Home Assistant climate/thermostat status.</string>
+    <string name="climate_widget_description">Climate control (2×1)</string>
 </resources>

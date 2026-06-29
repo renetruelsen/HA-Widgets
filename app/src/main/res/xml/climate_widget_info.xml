@@ -11,5 +11,6 @@
     android:widgetFeatures="reconfigurable"
     android:configure="dk.akait.hawidgets.widget.climate.ClimateWidgetConfigActivity"
     android:description="@string/climate_widget_description"
+    android:previewImage="@drawable/ic_climate"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/glance_default_loading_layout" />
