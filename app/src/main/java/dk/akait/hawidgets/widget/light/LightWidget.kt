@@ -2,6 +2,7 @@ package dk.akait.hawidgets.widget.light
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,6 +21,7 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -31,6 +33,7 @@ import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.EntityWidgetEntity
+import dk.akait.hawidgets.widget.common.RangeControlActivity
 import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
@@ -114,7 +117,7 @@ private fun LightContent(
         .background(bgColor)
         .cornerRadius(16.dp)
 
-    val modifier = if (state != null && !isUnavailable) {
+    val toggleModifier = if (state != null && !isUnavailable) {
         baseModifier.clickable(
             actionRunCallback<ToggleLightAction>(
                 actionParametersOf(ToggleLightAction.entityIdKey to config.entityId)
@@ -122,7 +125,23 @@ private fun LightContent(
         )
     } else baseModifier
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    // Wide mode: tap opens brightness slider. Compact: tap toggles.
+    val controlIntent = Intent(context, RangeControlActivity::class.java).apply {
+        putExtra(RangeControlActivity.EXTRA_ENTITY_ID, config.entityId)
+        putExtra(RangeControlActivity.EXTRA_LABEL, label)
+        putExtra(RangeControlActivity.EXTRA_DOMAIN, "light")
+        putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE, attrs?.brightnessPercent ?: 100)
+        putExtra(RangeControlActivity.EXTRA_IS_ON, isOn)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val wideModifier = if (state != null && !isUnavailable) {
+        baseModifier.clickable(actionStartActivity(controlIntent))
+    } else baseModifier
+
+    Box(
+        modifier = if (isWide) wideModifier else toggleModifier,
+        contentAlignment = Alignment.Center,
+    ) {
         if (isWide) {
             WidgetWideLayout(R.drawable.ic_lightbulb, label, statusText, contentColor)
         } else {

@@ -65,20 +65,21 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 - ✅ **Widget-picker (v0.2.3):** domain-specifik `previewImage` + korte beskrivelser i `strings.xml`.
 - ✅ **QA på emulator (pixel_test, 2026-06-29):** alle 10 providers i AppWidgetManager, alle 8 config activities åbner med korrekte HA-entiteter, alle states synket, LightWidget tap-toggle "Slukket"→"Tændt" via Room Flow, ingen crashes.
 - ✅ **LightWidget spec-compliance (v0.2.4):** `LightWidgetConfigActivity` omskrevet til `BaseEntityPickerActivity`-subklasse (Screen 1 + Screen 2, korrekte chips, label-input). `LightWidget` bruger nu `WidgetCompactLayout`/`WidgetWideLayout` fra `GlanceWidgetCommon` → compact viser icon+label+status som spec. Widget-navne (`android:label`) på alle receivers i manifest. Rekonfiguration pre-fill: eksisterende entity + label vises direkte på Screen 2.
+- ✅ **v0.2.5 (2026-06-29):**
+  - **Strømspar-dialog:** `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + `LaunchedEffect` i `MainActivity` → forklarings-dialog → system-dialog vises automatisk ved connect hvis ikke fritaget.
+  - **SensorWidget dynamisk ikon:** `device_class` læses fra attributesJson → temperatur=termometer, fugt=vanddråbe, strøm/energi/spænding=lynnedslag, alt andet=søjlediagram (ic_sensor).
+  - **Vejrudsigt-widget fjernet** (WeatherWidget, WeatherWidgetReceiver, strings, manifest, ic_weather.xml).
+  - **LightWidget lysstyrke-slider:** wide (2×1) tap → åbner `RangeControlActivity` (dialog) med slider 1–100% + tænd/sluk-knap. Compact (1×1) beholder tap=toggle.
+  - **Nyt CoverWidget:** `cover`-domæne, compact/wide layouts, tap → `RangeControlActivity` med position 0–100% + Åbn/Luk-knap. `cover_widget_info.xml`, `ic_cover.xml` (persienne-striber).
 
 ## Næste skridt
 
-- M2 QA på rigtig enhed (Galaxy S23): `adb install -r`, test widget placement + tap-interaktioner for alle 8 nye typer.
+- v0.2.5 QA på rigtig enhed (Galaxy S23): `adb install -r`, test:
+  - Strømspar-dialog vises ved connect
+  - SensorWidget ikon matcher sensor-type (temperatur → termometer, fugt → vanddråbe)
+  - LightWidget wide → slider åbner, compact → toggle
+  - CoverWidget placement + slider-kontrol
 - M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
-
-### Potentielle forbedringer (ikke kritiske)
-
-**Samsung battery optimization / MARs netværksblokering**
-Samsung's MARs-service blokerer DNS for baggrunds-apps (`isBlocked=true` i logcat). SyncWorker
-returnerer `Result.retry()` → widgets opdateres ikke ved tap på Samsung. Fix: tilføj
-`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` permission + vis system-dialog ved første connect i
-`MainActivity`. ~10 linjer Kotlin + 1 linje manifest. Ingen visuel ændring (Android-system-dialog).
-Midlertidig workaround til bruger: Indstillinger → Apps → HA Widgets → Batteri → Ingen restriktioner.
 
 ### Åbne UX-problemer
 
@@ -86,6 +87,7 @@ _Alle kendte UX-problemer løst. Kanonisk spec i [`docs/widget-settings-spec.md`
 
 - v0.2.3: compact label + picker previewImage/beskrivelser
 - v0.2.4: widget-navne i picker (android:label på receivers) + rekonfiguration pre-fill + LightWidget spec-compliance
+- v0.2.5: strømspar-dialog, sensor dynamisk ikon, fjern vejr, lysstyrke-slider, cover-widget
 
 ## Workflow: rettelser og release
 

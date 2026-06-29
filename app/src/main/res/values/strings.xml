@@ -47,6 +47,12 @@
     <string name="connect_to_ha_body">Enter your HA address and a long-lived access token (HA → Profile → Long-Lived Access Tokens).</string>
     <string name="load_dashboards_error">Could not fetch dashboards: %1$s</string>
 
+    <!-- Battery optimization dialog -->
+    <string name="battery_dialog_title">Allow background access</string>
+    <string name="battery_dialog_body">Widgets sync with Home Assistant in the background. If the system restricts background activity, tapping a widget may show stale data or fail to update.\n\nTap \"Allow\" to exempt HA Widgets from battery optimization — this keeps widgets responsive.</string>
+    <string name="battery_dialog_allow">Allow</string>
+    <string name="battery_dialog_later">Not now</string>
+
     <!-- LightWidget -->
     <string name="light_widget_label">HA Light</string>
     <string name="light_widget_description">Control lights</string>
@@ -75,9 +81,9 @@
     <string name="binary_sensor_widget_label">HA Binary Sensor</string>
     <string name="binary_sensor_widget_description">Show binary sensors</string>
 
-    <!-- WeatherWidget -->
-    <string name="weather_widget_label">HA Weather</string>
-    <string name="weather_widget_description">Weather forecast (2×1)</string>
+    <!-- CoverWidget -->
+    <string name="cover_widget_label">HA Cover</string>
+    <string name="cover_widget_description">Control covers and blinds</string>
 
     <!-- ClimateWidget -->
     <string name="climate_widget_label">HA Climate</string>

@@ -1,7 +1,8 @@
-package dk.akait.hawidgets.widget.sensor
+package dk.akait.hawidgets.widget.cover
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.DpSize
@@ -15,7 +16,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
@@ -26,19 +27,18 @@ import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.EntityWidgetEntity
-import dk.akait.hawidgets.widget.common.RefreshEntityAction
+import dk.akait.hawidgets.widget.common.RangeControlActivity
 import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
-import dk.akait.hawidgets.widget.common.friendlyNameFromJson
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
-class SensorWidget : GlanceAppWidget() {
+class CoverWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
         setOf(DpSize(56.dp, 56.dp), DpSize(110.dp, 56.dp))
@@ -59,9 +59,9 @@ class SensorWidget : GlanceAppWidget() {
             GlanceTheme {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (cfg == null) {
-                    UnconfiguredWidgetContent(context, appWidgetId, SensorWidgetConfigActivity::class.java, R.drawable.ic_sensor)
+                    UnconfiguredWidgetContent(context, appWidgetId, CoverWidgetConfigActivity::class.java, R.drawable.ic_cover)
                 } else {
-                    SensorContent(cfg, state, isWide)
+                    CoverContent(context, cfg, state, isWide)
                 }
             }
         }
@@ -69,67 +69,76 @@ class SensorWidget : GlanceAppWidget() {
 }
 
 @androidx.compose.runtime.Composable
-private fun SensorContent(
+private fun CoverContent(
+    context: Context,
     config: EntityWidgetEntity,
     state: EntityStateEntity?,
     isWide: Boolean,
 ) {
-    val isUnavailable = state?.state == "unavailable"
+    val coverState = state?.state ?: ""
+    val isOpen = coverState in listOf("open", "opening")
+    val isUnavailable = coverState == "unavailable"
     val isStale = state == null || (System.currentTimeMillis() - state.lastUpdated) > STALE_THRESHOLD_MS
 
-    val contentColor = if (isUnavailable) GlanceTheme.colors.onErrorContainer
-                       else GlanceTheme.colors.onSurfaceVariant
-    val bgColor = if (isUnavailable) GlanceTheme.colors.errorContainer
-                  else GlanceTheme.colors.surfaceVariant
+    val bgColor = when {
+        isUnavailable -> GlanceTheme.colors.errorContainer
+        isOpen -> GlanceTheme.colors.primaryContainer
+        else -> GlanceTheme.colors.surfaceVariant
+    }
+    val contentColor = when {
+        isUnavailable -> GlanceTheme.colors.onErrorContainer
+        isOpen -> GlanceTheme.colors.onPrimaryContainer
+        else -> GlanceTheme.colors.onSurfaceVariant
+    }
 
-    val attrs = state?.let { parseSensorAttrs(it.attributesJson) }
+    val attrs = state?.let { parseCoverAttrs(it.attributesJson) }
     val label = config.label.ifEmpty { attrs?.friendlyName ?: config.entityId }
     val statusBase = when {
         state == null -> "Henter…"
         isUnavailable -> "Utilgængelig"
-        else -> buildSensorValue(state.state, attrs?.unit)
+        coverState == "opening" -> "Åbner…"
+        coverState == "closing" -> "Lukker…"
+        attrs?.position != null -> "${attrs.position}%"
+        coverState == "open" -> "Åben"
+        else -> "Lukket"
     }
     val statusText = if (isStale && state != null) "$statusBase ~" else statusBase
-    val iconRes = iconForDeviceClass(attrs?.deviceClass)
 
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(bgColor)
-            .cornerRadius(16.dp)
-            .clickable(actionRunCallback<RefreshEntityAction>()),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (isWide) WidgetWideLayout(iconRes, label, statusText, contentColor)
-        else WidgetCompactLayout(iconRes, label, statusText, contentColor)
+    val controlIntent = Intent(context, RangeControlActivity::class.java).apply {
+        putExtra(RangeControlActivity.EXTRA_ENTITY_ID, config.entityId)
+        putExtra(RangeControlActivity.EXTRA_LABEL, label)
+        putExtra(RangeControlActivity.EXTRA_DOMAIN, "cover")
+        putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE, attrs?.position ?: if (isOpen) 100 else 0)
+        putExtra(RangeControlActivity.EXTRA_IS_ON, isOpen)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    val modifier = if (state != null && !isUnavailable) {
+        GlanceModifier.fillMaxSize().background(bgColor).cornerRadius(16.dp)
+            .clickable(actionStartActivity(controlIntent))
+    } else {
+        GlanceModifier.fillMaxSize().background(bgColor).cornerRadius(16.dp)
+    }
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        if (isWide) WidgetWideLayout(R.drawable.ic_cover, label, statusText, contentColor)
+        else WidgetCompactLayout(R.drawable.ic_cover, label, statusText, contentColor)
     }
 }
 
-private data class SensorAttrs(val unit: String?, val friendlyName: String?, val deviceClass: String?)
+private data class CoverAttrs(val position: Int?, val friendlyName: String?)
 
-private fun parseSensorAttrs(attributesJson: String): SensorAttrs =
+private fun parseCoverAttrs(attributesJson: String): CoverAttrs =
     try {
         val obj = JSONObject(attributesJson)
-        SensorAttrs(
-            unit = obj.optString("unit_of_measurement").ifEmpty { null },
+        CoverAttrs(
+            position = obj.optInt("current_position", -1).takeIf { it >= 0 },
             friendlyName = obj.optString("friendly_name").ifEmpty { null },
-            deviceClass = obj.optString("device_class").ifEmpty { null },
         )
-    } catch (_: Exception) { SensorAttrs(null, null, null) }
+    } catch (_: Exception) { CoverAttrs(null, null) }
 
-private fun iconForDeviceClass(deviceClass: String?): Int = when (deviceClass) {
-    "temperature", "apparent_temperature" -> R.drawable.ic_thermometer
-    "humidity", "moisture" -> R.drawable.ic_humidity
-    "power", "energy", "current", "voltage", "apparent_power",
-    "reactive_power", "frequency", "battery" -> R.drawable.ic_power
-    else -> R.drawable.ic_sensor
-}
-
-private fun buildSensorValue(state: String, unit: String?): String =
-    if (unit != null) "$state $unit" else state
-
-class SensorWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = SensorWidget()
+class CoverWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = CoverWidget()
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         SyncWorker.runNow(context)

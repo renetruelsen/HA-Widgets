@@ -11,8 +11,8 @@ import dk.akait.hawidgets.widget.light.LightWidget
 import dk.akait.hawidgets.widget.scene.SceneWidget
 import dk.akait.hawidgets.widget.script.ScriptWidget
 import dk.akait.hawidgets.widget.sensor.SensorWidget
+import dk.akait.hawidgets.widget.cover.CoverWidget
 import dk.akait.hawidgets.widget.switchwidget.SwitchWidget
-import dk.akait.hawidgets.widget.weather.WeatherWidget
 
 /**
  * Fan-out til hjemskærms-widgets.
@@ -28,7 +28,7 @@ object WidgetUpdater {
         "automation" to AutomationWidget(),
         "sensor" to SensorWidget(),
         "binary_sensor" to BinarySensorWidget(),
-        "weather" to WeatherWidget(),
+        "cover" to CoverWidget(),
         "climate" to ClimateWidget(),
     )
 

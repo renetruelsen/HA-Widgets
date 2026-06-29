@@ -3,6 +3,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".HaWidgetsApp"
@@ -216,9 +217,9 @@
                 android:resource="@xml/binary_sensor_widget_info" />
         </receiver>
 
-        <!-- Weather -->
+        <!-- Cover -->
         <activity
-            android:name=".widget.weather.WeatherWidgetConfigActivity"
+            android:name=".widget.cover.CoverWidgetConfigActivity"
             android:exported="true"
             android:taskAffinity=""
             android:excludeFromRecents="true"
@@ -228,16 +229,23 @@
             </intent-filter>
         </activity>
         <receiver
-            android:name=".widget.weather.WeatherWidgetReceiver"
-            android:label="@string/weather_widget_label"
+            android:name=".widget.cover.CoverWidgetReceiver"
+            android:label="@string/cover_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/weather_widget_info" />
+                android:resource="@xml/cover_widget_info" />
         </receiver>
+
+        <activity
+            android:name=".widget.common.RangeControlActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HaWidgets.Dialog"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
 
         <!-- Climate -->
         <activity

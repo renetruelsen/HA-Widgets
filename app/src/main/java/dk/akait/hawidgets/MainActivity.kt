@@ -2,7 +2,11 @@ package dk.akait.hawidgets
 
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,6 +73,14 @@ private fun OnboardingScreen() {
     var status by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
+    var showBatteryDialog by remember { mutableStateOf(false) }
+
+    val pm = remember { context.getSystemService(PowerManager::class.java) }
+    LaunchedEffect(connected) {
+        if (connected && !pm.isIgnoringBatteryOptimizations(context.packageName)) {
+            showBatteryDialog = true
+        }
+    }
 
     if (showDisconnectDialog) {
         AlertDialog(
@@ -88,6 +101,29 @@ private fun OnboardingScreen() {
             },
             dismissButton = {
                 TextButton(onClick = { showDisconnectDialog = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
+    }
+
+    if (showBatteryDialog) {
+        AlertDialog(
+            onDismissRequest = { showBatteryDialog = false },
+            title = { Text(stringResource(R.string.battery_dialog_title)) },
+            text = { Text(stringResource(R.string.battery_dialog_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBatteryDialog = false
+                    val intent = Intent(
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                    context.startActivity(intent)
+                }) { Text(stringResource(R.string.battery_dialog_allow)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatteryDialog = false }) {
+                    Text(stringResource(R.string.battery_dialog_later))
+                }
             }
         )
     }
