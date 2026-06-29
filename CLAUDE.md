@@ -56,12 +56,18 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     "overlay over app" sås kun pga. de nu-fjernede in-app testknapper.
 - ⬜ Faktisk placeret tile + tryk-åbning testet på rigtig enhed (installeret på Galaxy S23 til brugertest).
 
+### M2 — Native entity-widgets (FÆRDIG 2026-06-29)
+- ✅ **8 nye widget-typer implementeret:** switch, scene, script, automation, sensor, binary_sensor, weather (2×1), climate (2×1).
+- ✅ **Fælles infrastruktur:** `GlanceWidgetCommon` (compact=icon+status, wide=icon+label+status), `BaseEntityPickerActivity`, `EntityActions` (Toggle/Trigger/Refresh callbacks).
+- ✅ **Room reaktiv Flow:** alle widgets bruger `flatMapLatest` + `collectAsState` — Nova/Samsung placement quirk håndteret.
+- ✅ **SyncWorker:** `runNow()` ved config-save + widget-tap; `schedule()` 15-min periodisk sync.
+- ✅ **UX:** compact uden label (56dp), scene "Aktiverer…" optimistisk feedback, script tap-disabled mens kører, automation "Udløs" CTA compact, weather compact=temp-only, climate wide=temp/mode split, read-widgets tap=refresh.
+- ✅ **QA på emulator (pixel_test, 2026-06-29):** alle 10 providers i AppWidgetManager, alle 8 config activities åbner med korrekte HA-entiteter, alle states synket, LightWidget tap-toggle "Slukket"→"Tændt" via Room Flow, ingen crashes.
+
 ## Næste skridt
 
-- Byg debug-APK, installer med `adb install -r` (ALDRIG uninstall — bevarer config/token).
-- Manuel test: onboarding mod rigtig HA, WebView live-opdatering uden gen-login, widget åbner dashboard.
-- M2: native entity-widgets (sensor/binary_sensor/weather/climate + light/switch/scene/script/automation),
-  StateCache + SyncWorker.
+- M2 QA på rigtig enhed (Galaxy S23): `adb install -r`, test widget placement + tap-interaktioner for alle 8 nye typer.
+- M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
 
 ## Workflow: rettelser og release
 

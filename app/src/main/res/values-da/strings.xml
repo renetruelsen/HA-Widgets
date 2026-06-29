@@ -46,4 +46,36 @@
     <!-- LightWidget -->
     <string name="light_widget_label">HA Lys</string>
     <string name="light_widget_description">Viser og styrer en Home Assistant-lyskilde.</string>
+
+    <!-- SwitchWidget -->
+    <string name="switch_widget_label">HA Kontakt</string>
+    <string name="switch_widget_description">Viser og styrer en Home Assistant-kontakt.</string>
+
+    <!-- SceneWidget -->
+    <string name="scene_widget_label">HA Scene</string>
+    <string name="scene_widget_description">Aktiverer en Home Assistant-scene.</string>
+
+    <!-- ScriptWidget -->
+    <string name="script_widget_label">HA Script</string>
+    <string name="script_widget_description">Kører et Home Assistant-script.</string>
+
+    <!-- AutomationWidget -->
+    <string name="automation_widget_label">HA Automatisering</string>
+    <string name="automation_widget_description">Viser og udløser en Home Assistant-automatisering.</string>
+
+    <!-- SensorWidget -->
+    <string name="sensor_widget_label">HA Sensor</string>
+    <string name="sensor_widget_description">Viser en Home Assistant-sensorværdi.</string>
+
+    <!-- BinarySensorWidget -->
+    <string name="binary_sensor_widget_label">HA Binær sensor</string>
+    <string name="binary_sensor_widget_description">Viser tilstanden for en Home Assistant-binær sensor.</string>
+
+    <!-- WeatherWidget -->
+    <string name="weather_widget_label">HA Vejr</string>
+    <string name="weather_widget_description">Viser Home Assistant vejrforhold og temperatur.</string>
+
+    <!-- ClimateWidget -->
+    <string name="climate_widget_label">HA Klima</string>
+    <string name="climate_widget_description">Viser Home Assistant klimastyring/termostat.</string>
 </resources>

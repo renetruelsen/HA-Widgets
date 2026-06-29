@@ -180,27 +180,23 @@ private fun LightContent(
     }
 }
 
+/** 1×1 compact: icon + status only — label dropped, too cramped at 56dp. */
 @androidx.compose.runtime.Composable
 private fun CompactLayout(label: String, statusText: String, contentColor: androidx.glance.unit.ColorProvider) {
     Column(
-        modifier = GlanceModifier.fillMaxSize().padding(8.dp),
+        modifier = GlanceModifier.fillMaxSize().padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
             provider = ImageProvider(R.drawable.ic_lightbulb),
             contentDescription = label,
-            modifier = GlanceModifier.size(24.dp),
+            modifier = GlanceModifier.size(26.dp),
             colorFilter = ColorFilter.tint(contentColor),
         )
         Text(
-            text = label,
-            style = TextStyle(color = contentColor, fontSize = 10.sp),
-            maxLines = 1,
-        )
-        Text(
             text = statusText,
-            style = TextStyle(color = contentColor, fontSize = 10.sp),
+            style = TextStyle(color = contentColor, fontSize = 12.sp),
             maxLines = 1,
         )
     }
