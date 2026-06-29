@@ -2,6 +2,7 @@ package dk.akait.hawidgets.web
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -78,7 +79,11 @@ class WebViewActivity : ComponentActivity() {
 
         val url = buildUrl(baseUrl, config.dashboardPath)
         val colorScheme = config.colorScheme
-        val isDark = colorScheme == ColorScheme.DARK
+        val isDark = when (colorScheme) {
+            ColorScheme.DARK -> true
+            ColorScheme.LIGHT -> false
+            ColorScheme.SYSTEM -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -90,7 +95,7 @@ class WebViewActivity : ComponentActivity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     view?.evaluateJavascript(KioskScript.JS, null)
-                    if (colorScheme != ColorScheme.SYSTEM && !themeInjected) {
+                    if (!themeInjected) {
                         themeInjected = true
                         view?.evaluateJavascript(ThemeScript.js(isDark), null)
                     }
@@ -117,7 +122,7 @@ class WebViewActivity : ComponentActivity() {
         }
 
         // Single bridge instance shared by both externalApp (legacy) and externalAppV2 (secure).
-        val bridge = ExternalAuthBridge(token) { js -> webView.post { webView.evaluateJavascript(js, null) } }
+        val bridge = ExternalAuthBridge(token, isDark) { js -> webView.post { webView.evaluateJavascript(js, null) } }
         webView.addJavascriptInterface(bridge, "externalApp")
 
         // Register externalAppV2 — origin-validated, main-frame only.

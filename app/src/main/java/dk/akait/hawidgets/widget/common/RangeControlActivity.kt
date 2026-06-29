@@ -6,11 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -38,6 +35,8 @@ class RangeControlActivity : ComponentActivity() {
         const val EXTRA_DOMAIN = "domain"
         const val EXTRA_CURRENT_VALUE = "current_value"
         const val EXTRA_IS_ON = "is_on"
+        const val EXTRA_MIN_VALUE = "min_value"
+        const val EXTRA_MAX_VALUE = "max_value"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +47,8 @@ class RangeControlActivity : ComponentActivity() {
         val domain = intent.getStringExtra(EXTRA_DOMAIN) ?: return finish()
         val initialValue = intent.getIntExtra(EXTRA_CURRENT_VALUE, 100)
         val isOnInitial = intent.getBooleanExtra(EXTRA_IS_ON, true)
+        val minValue = intent.getIntExtra(EXTRA_MIN_VALUE, 1)
+        val maxValue = intent.getIntExtra(EXTRA_MAX_VALUE, 100)
 
         setContent {
             MaterialTheme {
@@ -56,7 +57,7 @@ class RangeControlActivity : ComponentActivity() {
                     tonalElevation = 6.dp,
                 ) {
                     val scope = rememberCoroutineScope()
-                    var sliderValue by remember { mutableFloatStateOf(initialValue.toFloat()) }
+                    var sliderValue by remember { mutableFloatStateOf(initialValue.toFloat().coerceIn(minValue.toFloat(), maxValue.toFloat())) }
                     var isOn by remember { mutableStateOf(isOnInitial) }
                     var busy by remember { mutableStateOf(false) }
 
@@ -75,6 +76,10 @@ class RangeControlActivity : ComponentActivity() {
                                     "cover", "set_cover_position", entityId,
                                     extraData = mapOf("position" to value)
                                 )
+                                "climate" -> api.callService(
+                                    "climate", "set_temperature", entityId,
+                                    extraData = mapOf("temperature" to value)
+                                )
                             }
                             EntityRepository.refresh(applicationContext, entityId)
                         }
@@ -87,17 +92,21 @@ class RangeControlActivity : ComponentActivity() {
                             val base = store.baseUrl ?: run { busy = false; return@launch }
                             val token = store.token ?: run { busy = false; return@launch }
                             val api = HaApiClient(base, token)
-                            if (domain == "light") {
-                                if (isOn) {
+                            when (domain) {
+                                "light" -> if (isOn) {
                                     api.callService("light", "turn_off", entityId)
                                 } else {
                                     api.callService("light", "turn_on", entityId)
                                 }
-                            } else if (domain == "cover") {
-                                if (isOn) {
+                                "cover" -> if (isOn) {
                                     api.callService("cover", "close_cover", entityId)
                                 } else {
                                     api.callService("cover", "open_cover", entityId)
+                                }
+                                "climate" -> if (isOn) {
+                                    api.callService("climate", "turn_off", entityId)
+                                } else {
+                                    api.callService("climate", "turn_on", entityId)
                                 }
                             }
                             isOn = !isOn
@@ -113,16 +122,20 @@ class RangeControlActivity : ComponentActivity() {
                         Text(label, style = MaterialTheme.typography.titleMedium)
 
                         val toggleLabel = when {
-                            domain == "cover" && isOn -> "Luk"
-                            domain == "cover" -> "Åbn"
+                            domain == "cover" && isOn -> "Luk helt"
+                            domain == "cover" -> "Åbn helt"
                             isOn -> "Sluk"
                             else -> "Tænd"
                         }
                         val valueLabel = when (domain) {
                             "cover" -> "Position"
+                            "climate" -> "Temperatur"
                             else -> "Lysstyrke"
                         }
-                        val unitSuffix = "%"
+                        val unitSuffix = when (domain) {
+                            "climate" -> "°C"
+                            else -> "%"
+                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -142,17 +155,10 @@ class RangeControlActivity : ComponentActivity() {
                             value = sliderValue,
                             onValueChange = { sliderValue = it },
                             onValueChangeFinished = { sendRangeCommand(sliderValue.toInt()) },
-                            valueRange = 1f..100f,
+                            valueRange = minValue.toFloat()..maxValue.toFloat(),
                             enabled = isOn,
                             modifier = Modifier.fillMaxWidth(),
                         )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        Button(
-                            onClick = { finish() },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("Luk") }
                     }
                 }
             }

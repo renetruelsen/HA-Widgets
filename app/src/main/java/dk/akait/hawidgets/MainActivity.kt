@@ -197,6 +197,25 @@ private fun OnboardingScreen() {
 
                 Spacer(Modifier.height(8.dp))
 
+                val batteryExempted = remember(connected) {
+                    pm.isIgnoringBatteryOptimizations(context.packageName)
+                }
+                OutlinedButton(
+                    onClick = {
+                        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text(stringResource(R.string.battery_manage)) }
+                Text(
+                    if (batteryExempted) stringResource(R.string.battery_status_exempt)
+                    else stringResource(R.string.battery_status_restricted),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (batteryExempted) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
                 OutlinedButton(
                     onClick = { showDisconnectDialog = true },
                     colors = ButtonDefaults.outlinedButtonColors(

@@ -46,6 +46,8 @@ class SceneWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val db = AppDatabase.get(context)
+        val initialCfg = db.entityWidgetDao().get(appWidgetId)
+        val initialState = initialCfg?.let { db.entityStateDao().get(it.entityId) }
         provideContent {
             val viewState by db.entityWidgetDao()
                 .observe(appWidgetId)
@@ -53,7 +55,7 @@ class SceneWidget : GlanceAppWidget() {
                     if (cfg == null) flowOf(null to null)
                     else db.entityStateDao().observe(cfg.entityId).map { state -> cfg to state }
                 }
-                .collectAsState(initial = null to null)
+                .collectAsState(initial = initialCfg to initialState)
             val (cfg, state) = viewState
             GlanceTheme {
                 val isWide = LocalSize.current.width >= 110.dp

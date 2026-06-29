@@ -71,14 +71,27 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - **Vejrudsigt-widget fjernet** (WeatherWidget, WeatherWidgetReceiver, strings, manifest, ic_weather.xml).
   - **LightWidget lysstyrke-slider:** wide (2×1) tap → åbner `RangeControlActivity` (dialog) med slider 1–100% + tænd/sluk-knap. Compact (1×1) beholder tap=toggle.
   - **Nyt CoverWidget:** `cover`-domæne, compact/wide layouts, tap → `RangeControlActivity` med position 0–100% + Åbn/Luk-knap. `cover_widget_info.xml`, `ic_cover.xml` (persienne-striber).
+- ✅ **v0.2.6 (2026-06-29):**
+  - **Tema-fix:** `ExternalAuthBridge.replyExternalConfig` sender `themes: {darkMode}` til HA-frontend. `WebViewActivity` beregner `isDark` for alle `ColorScheme`-værdier inkl. SYSTEM (via `Configuration.UI_MODE_NIGHT_MASK`). ThemeScript kører nu for SYSTEM-mode også.
+  - **"Opsæt"-flash fix:** Alle 9 entity-widgets pre-loader `initialCfg`/`initialState` fra Room FØR `provideContent {}` → ingen flash til "Opsæt" under refresh.
+  - **RefreshEntityAction specifik:** ActionParameters med entityId → kun tappet entity refreshes. SensorWidget + BinarySensorWidget + ClimateWidget compact opdateret.
+  - **ClimateWidget styrbar:** Wide tap åbner `RangeControlActivity` med temperatur-slider (min/max fra HA attrs, default 16–30°C) + Tænd/Sluk. Bruger `climate.set_temperature` + `climate.turn_on/off`.
+  - **Cover UX:** "Luk" → "Luk helt", "Åbn" → "Åbn helt". Bred Luk-knap fjernet (hjemknap/back lukker).
+  - **LightWidget brightness-guard:** Wide slider kun for lys med brightness-support (`supported_features & 1` eller `brightness`-attr). Ikke-dimmable: wide = toggle.
+  - **Batteri-administrér:** Connected-state viser "Batterioptimering"-knap + fritaget/begrænset status → åbner `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`.
+  - **RangeControlActivity:** `EXTRA_MIN_VALUE`/`EXTRA_MAX_VALUE` for dynamisk range. Climate-domain tilføjet.
 
 ## Næste skridt
 
-- v0.2.5 QA på rigtig enhed (Galaxy S23): `adb install -r`, test:
-  - Strømspar-dialog vises ved connect
-  - SensorWidget ikon matcher sensor-type (temperatur → termometer, fugt → vanddråbe)
-  - LightWidget wide → slider åbner, compact → toggle
-  - CoverWidget placement + slider-kontrol
+- v0.2.6 QA på rigtig enhed (Galaxy S23): `adb install -r`, test:
+  - Tema (mørk/lys/auto) virker korrekt på dashboards
+  - Ingen "Opsæt"-flash på widgets under refresh
+  - Tap på sensor/klima-widget refresher KUN den ene widget (ikke alle)
+  - ClimateWidget wide → temperatur-slider åbner med korrekt range
+  - CoverWidget: "Luk helt"/"Åbn helt", ingen Luk-knap
+  - LightWidget: dimmable lys → slider, ikke-dimmable → toggle
+  - Batteri-knap viser status + åbner indstillinger korrekt
+- **Deferred:** Værdisensor med flere entiteter (op til 3-5) — kræver ny Room-kolonne + config-UI + widget-layout; separat opgave.
 - M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
 
 ### Åbne UX-problemer

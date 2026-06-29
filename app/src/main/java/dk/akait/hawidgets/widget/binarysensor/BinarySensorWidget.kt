@@ -26,6 +26,7 @@ import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.EntityWidgetEntity
+import androidx.glance.action.actionParametersOf
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
@@ -47,6 +48,8 @@ class BinarySensorWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val db = AppDatabase.get(context)
+        val initialCfg = db.entityWidgetDao().get(appWidgetId)
+        val initialState = initialCfg?.let { db.entityStateDao().get(it.entityId) }
         provideContent {
             val viewState by db.entityWidgetDao()
                 .observe(appWidgetId)
@@ -54,7 +57,7 @@ class BinarySensorWidget : GlanceAppWidget() {
                     if (cfg == null) flowOf(null to null)
                     else db.entityStateDao().observe(cfg.entityId).map { state -> cfg to state }
                 }
-                .collectAsState(initial = null to null)
+                .collectAsState(initial = initialCfg to initialState)
             val (cfg, state) = viewState
             GlanceTheme {
                 val isWide = LocalSize.current.width >= 110.dp
@@ -108,7 +111,9 @@ private fun BinarySensorContent(
             .fillMaxSize()
             .background(bgColor)
             .cornerRadius(16.dp)
-            .clickable(actionRunCallback<RefreshEntityAction>()),
+            .clickable(actionRunCallback<RefreshEntityAction>(
+                actionParametersOf(RefreshEntityAction.entityIdKey to config.entityId)
+            )),
         contentAlignment = Alignment.Center,
     ) {
         if (isWide) WidgetWideLayout(R.drawable.ic_binary_sensor, label, statusText, contentColor)

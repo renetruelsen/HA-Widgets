@@ -56,6 +56,8 @@ class LightWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val db = AppDatabase.get(context)
+        val initialCfg = db.entityWidgetDao().get(appWidgetId)
+        val initialState = initialCfg?.let { db.entityStateDao().get(it.entityId) }
 
         provideContent {
             val viewState by db.entityWidgetDao()
@@ -68,7 +70,7 @@ class LightWidget : GlanceAppWidget() {
                             .map { state -> cfg to state }
                     }
                 }
-                .collectAsState(initial = null to null)
+                .collectAsState(initial = initialCfg to initialState)
             val (widgetCfg, entityState) = viewState
             Log.d("HA_WIDGET", "recompose: appWidgetId=$appWidgetId cfg=${widgetCfg?.entityId} state=${entityState?.state}")
 
@@ -125,7 +127,8 @@ private fun LightContent(
         )
     } else baseModifier
 
-    // Wide mode: tap opens brightness slider. Compact: tap toggles.
+    // Wide: open brightness slider only for lights that support dimming.
+    // Lights without brightness support fall back to toggle.
     val controlIntent = Intent(context, RangeControlActivity::class.java).apply {
         putExtra(RangeControlActivity.EXTRA_ENTITY_ID, config.entityId)
         putExtra(RangeControlActivity.EXTRA_LABEL, label)
@@ -135,7 +138,11 @@ private fun LightContent(
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     val wideModifier = if (state != null && !isUnavailable) {
-        baseModifier.clickable(actionStartActivity(controlIntent))
+        if (attrs?.supportsBrightness == true) {
+            baseModifier.clickable(actionStartActivity(controlIntent))
+        } else {
+            toggleModifier
+        }
     } else baseModifier
 
     Box(
@@ -165,18 +172,24 @@ private fun buildStatusText(
     return if (isStale && state != null) "$base ~" else base
 }
 
-private data class LightAttrs(val brightnessPercent: Int?, val friendlyName: String?)
+private data class LightAttrs(
+    val brightnessPercent: Int?,
+    val friendlyName: String?,
+    val supportsBrightness: Boolean,
+)
 
 private fun parseLightAttrs(attributesJson: String): LightAttrs {
     return try {
         val attrs = JSONObject(attributesJson)
         val b = attrs.optInt("brightness", -1).takeIf { it >= 0 }
+        val supportedFeatures = attrs.optInt("supported_features", 0)
         LightAttrs(
             brightnessPercent = b?.let { (it * 100 / 255).coerceIn(0, 100) },
             friendlyName = attrs.optString("friendly_name").ifEmpty { null },
+            supportsBrightness = (supportedFeatures and 1) != 0 || b != null,
         )
     } catch (_: Exception) {
-        LightAttrs(null, null)
+        LightAttrs(null, null, false)
     }
 }
 

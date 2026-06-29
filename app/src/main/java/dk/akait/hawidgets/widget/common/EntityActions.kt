@@ -25,10 +25,19 @@ class ToggleEntityAction : ActionCallback {
     }
 }
 
-/** Tap = immediate sync. For read-only widgets (sensor, binary_sensor, weather, climate). */
+/** Tap = refresh one entity. Pass entityId to avoid refreshing all entities. */
 class RefreshEntityAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        SyncWorker.runNow(context)
+        val entityId = parameters[entityIdKey]
+        if (entityId != null) {
+            EntityRepository.refresh(context, entityId)
+        } else {
+            SyncWorker.runNow(context)
+        }
+    }
+
+    companion object {
+        val entityIdKey = ActionParameters.Key<String>("entityId")
     }
 }
 

@@ -25,6 +25,7 @@ import org.json.JSONObject
  */
 class ExternalAuthBridge(
     private val token: String,
+    private val isDarkMode: Boolean,
     private val runJs: (String) -> Unit,
 ) {
 
@@ -108,6 +109,7 @@ class ExternalAuthBridge(
             .put("hasBarCodeScanner", 0)
             .put("canSetupImprov", false)
             .put("downloadFileSupported", false)
+            .put("themes", JSONObject().put("darkMode", isDarkMode))
         val response = JSONObject()
             .put("id", id)
             .put("type", "result")
