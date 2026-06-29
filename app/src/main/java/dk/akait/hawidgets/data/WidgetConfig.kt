@@ -4,7 +4,6 @@ import android.content.Context
 import org.json.JSONObject
 
 enum class DisplayMode { FULLSCREEN, OVERLAY }
-enum class ColorScheme { SYSTEM, DARK, LIGHT }
 
 /** Per-widget display configuration (non-secret). */
 data class WidgetConfig(
@@ -13,7 +12,6 @@ data class WidgetConfig(
     val displayMode: DisplayMode = DisplayMode.FULLSCREEN,
     val widthPct: Int = 90,
     val heightPct: Int = 80,
-    val colorScheme: ColorScheme = ColorScheme.SYSTEM,
 ) {
     fun toJson(): String = JSONObject()
         .put("dashboardPath", dashboardPath)
@@ -21,7 +19,6 @@ data class WidgetConfig(
         .put("displayMode", displayMode.name)
         .put("widthPct", widthPct)
         .put("heightPct", heightPct)
-        .put("colorScheme", colorScheme.name)
         .toString()
 
     companion object {
@@ -34,8 +31,6 @@ data class WidgetConfig(
                     .getOrDefault(DisplayMode.FULLSCREEN),
                 widthPct = o.optInt("widthPct", 90),
                 heightPct = o.optInt("heightPct", 80),
-                colorScheme = runCatching { ColorScheme.valueOf(o.optString("colorScheme")) }
-                    .getOrDefault(ColorScheme.SYSTEM),
             )
         }
     }

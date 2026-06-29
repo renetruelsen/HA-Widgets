@@ -2,7 +2,6 @@ package dk.akait.hawidgets.web
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -28,10 +27,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
-import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
-import dk.akait.hawidgets.data.ColorScheme
 import dk.akait.hawidgets.data.DisplayMode
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.WidgetConfig
@@ -47,7 +44,6 @@ class WebViewActivity : ComponentActivity() {
 
     private lateinit var webView: WebView
     private lateinit var loadingOverlay: View
-    private var themeInjected = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,12 +75,6 @@ class WebViewActivity : ComponentActivity() {
         }
 
         val url = buildUrl(baseUrl, config.dashboardPath)
-        val colorScheme = config.colorScheme
-        val isDark = when (colorScheme) {
-            ColorScheme.DARK -> true
-            ColorScheme.LIGHT -> false
-            ColorScheme.SYSTEM -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        }
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -92,25 +82,10 @@ class WebViewActivity : ComponentActivity() {
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
-            // API 33+: algorithmisk mørkning via prefers-color-scheme media query.
-            // API 29-32: setForceDark (deprecated men fungerer).
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-                WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, isDark)
-            } else if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-                @Suppress("DEPRECATION")
-                WebSettingsCompat.setForceDark(
-                    settings,
-                    if (isDark) WebSettingsCompat.FORCE_DARK_ON else WebSettingsCompat.FORCE_DARK_OFF,
-                )
-            }
-            setBackgroundColor(if (isDark) Color.BLACK else Color.WHITE)
+            setBackgroundColor(Color.WHITE)
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     view?.evaluateJavascript(KioskScript.JS, null)
-                    if (!themeInjected) {
-                        themeInjected = true
-                        view?.evaluateJavascript(ThemeScript.js(isDark), null)
-                    }
                 }
 
                 override fun onReceivedError(
@@ -134,7 +109,7 @@ class WebViewActivity : ComponentActivity() {
         }
 
         // Single bridge instance shared by both externalApp (legacy) and externalAppV2 (secure).
-        val bridge = ExternalAuthBridge(token, isDark) { js -> webView.post { webView.evaluateJavascript(js, null) } }
+        val bridge = ExternalAuthBridge(token) { js -> webView.post { webView.evaluateJavascript(js, null) } }
         webView.addJavascriptInterface(bridge, "externalApp")
 
         // Register externalAppV2 — origin-validated, main-frame only.
@@ -180,7 +155,6 @@ class WebViewActivity : ComponentActivity() {
 
     private fun buildRoot(config: WidgetConfig): View {
         val root = FrameLayout(this)
-        val isDark = config.colorScheme == ColorScheme.DARK
 
         val container: FrameLayout = if (config.displayMode == DisplayMode.OVERLAY) {
             root.setBackgroundColor(0x99000000.toInt())
@@ -190,7 +164,7 @@ class WebViewActivity : ComponentActivity() {
             val h = metrics.heightPixels * config.heightPct / 100
             FrameLayout(this).apply {
                 background = GradientDrawable().apply {
-                    setColor(if (isDark) Color.BLACK else Color.WHITE)
+                    setColor(Color.WHITE)
                     cornerRadius = dp(16f)
                 }
                 clipToOutline = true
@@ -198,7 +172,7 @@ class WebViewActivity : ComponentActivity() {
                 layoutParams = FrameLayout.LayoutParams(w, h, Gravity.CENTER)
             }
         } else {
-            root.setBackgroundColor(if (isDark) Color.BLACK else Color.WHITE)
+            root.setBackgroundColor(Color.WHITE)
             FrameLayout(this).apply {
                 layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -217,7 +191,7 @@ class WebViewActivity : ComponentActivity() {
         container.addView(buildCloseButton())
 
         // Native loading overlay — shown until KioskScript signals dashboard ready.
-        loadingOverlay = buildLoadingOverlay(isDark)
+        loadingOverlay = buildLoadingOverlay()
         container.addView(
             loadingOverlay,
             FrameLayout.LayoutParams(
@@ -230,8 +204,7 @@ class WebViewActivity : ComponentActivity() {
         return root
     }
 
-    private fun buildLoadingOverlay(dark: Boolean): View {
-        val bg = if (dark) Color.BLACK else Color.WHITE
+    private fun buildLoadingOverlay(): View {
         val spinner = ProgressBar(this, null, android.R.attr.progressBarStyle).apply {
             isIndeterminate = true
             layoutParams = FrameLayout.LayoutParams(
@@ -241,7 +214,7 @@ class WebViewActivity : ComponentActivity() {
             )
         }
         return FrameLayout(this).apply {
-            setBackgroundColor(bg)
+            setBackgroundColor(Color.WHITE)
             addView(spinner)
         }
     }

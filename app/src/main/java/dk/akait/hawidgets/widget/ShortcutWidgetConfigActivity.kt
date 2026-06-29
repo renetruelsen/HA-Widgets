@@ -51,7 +51,6 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
 import dk.akait.hawidgets.BuildConfig
 import dk.akait.hawidgets.R
-import dk.akait.hawidgets.data.ColorScheme
 import dk.akait.hawidgets.data.DashboardInfo
 import dk.akait.hawidgets.data.DisplayMode
 import dk.akait.hawidgets.data.HaApiClient
@@ -142,7 +141,6 @@ private fun ConfigScreen(
     var mode by remember { mutableStateOf(existingConfig?.displayMode ?: DisplayMode.FULLSCREEN) }
     var widthPct by remember { mutableStateOf((existingConfig?.widthPct ?: 90).toFloat()) }
     var heightPct by remember { mutableStateOf((existingConfig?.heightPct ?: 80).toFloat()) }
-    var colorScheme by remember { mutableStateOf(existingConfig?.colorScheme ?: ColorScheme.SYSTEM) }
 
     // Load dashboards once HA is configured; restore previously selected dashboard if reconfiguring
     androidx.compose.runtime.LaunchedEffect(haConfigured) {
@@ -190,7 +188,6 @@ private fun ConfigScreen(
                                     displayMode = mode,
                                     widthPct = widthPct.toInt(),
                                     heightPct = heightPct.toInt(),
-                                    colorScheme = colorScheme,
                                 )
                             )
                         },
@@ -304,13 +301,7 @@ private fun ConfigScreen(
                             Slider(value = heightPct, onValueChange = { heightPct = it }, valueRange = 40f..100f)
                         }
 
-                        // Color scheme
-                        SectionLabel(stringResource(R.string.section_color_scheme))
-                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                            OptionRow(stringResource(R.string.color_scheme_system), colorScheme == ColorScheme.SYSTEM) { colorScheme = ColorScheme.SYSTEM }
-                            OptionRow(stringResource(R.string.color_scheme_dark), colorScheme == ColorScheme.DARK) { colorScheme = ColorScheme.DARK }
-                            OptionRow(stringResource(R.string.color_scheme_light), colorScheme == ColorScheme.LIGHT) { colorScheme = ColorScheme.LIGHT }
-                        }
+
                     }
                 }
             }

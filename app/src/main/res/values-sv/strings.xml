@@ -35,10 +35,6 @@
     <string name="display_overlay">Overlay (fönster)</string>
     <string name="overlay_width">Bredd: %1$d %%</string>
     <string name="overlay_height">Höjd: %1$d %%</string>
-    <string name="section_color_scheme">Färgtema</string>
-    <string name="color_scheme_system">Automatisk (följ enhet)</string>
-    <string name="color_scheme_dark">Mörkt</string>
-    <string name="color_scheme_light">Ljust</string>
     <string name="connect_to_ha_title">Anslut till Home Assistant</string>
     <string name="connect_to_ha_body">Ange din HA-adress och ett long-lived access token (HA → Profil → Long-Lived Access Tokens).</string>
     <string name="load_dashboards_error">Kunde inte hämta dashboards: %1$s</string>
