@@ -73,6 +73,7 @@ abstract class BaseEntityPickerActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 EntityPickerScreen(
+                    appWidgetId = appWidgetId,
                     domain = domain,
                     title = pickerTitle,
                     iconResId = domainIconResId,
@@ -101,6 +102,7 @@ abstract class BaseEntityPickerActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EntityPickerScreen(
+    appWidgetId: Int,
     domain: String,
     title: String,
     iconResId: Int,
@@ -123,9 +125,14 @@ private fun EntityPickerScreen(
             isLoading = false
             return@LaunchedEffect
         }
+        val existingCfg = AppDatabase.get(context).entityWidgetDao().get(appWidgetId)
         val client = HaApiClient(store.baseUrl!!, store.token!!)
         entities = client.listStatesByDomain(domain).sortedBy { it.friendlyName }
         isLoading = false
+        if (existingCfg != null) {
+            labelInput = existingCfg.label
+            selectedEntity = entities.find { it.entityId == existingCfg.entityId }
+        }
     }
 
     if (selectedEntity != null) {

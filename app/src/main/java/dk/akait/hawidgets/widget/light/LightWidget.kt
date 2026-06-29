@@ -2,19 +2,14 @@ package dk.akait.hawidgets.widget.light
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -25,35 +20,26 @@ import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.EntityWidgetEntity
+import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
+import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetCompactLayout
+import dk.akait.hawidgets.widget.common.WidgetWideLayout
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
-
-private const val STALE_THRESHOLD_MS = 15 * 60 * 1000L
 
 class LightWidget : GlanceAppWidget() {
 
@@ -68,9 +54,6 @@ class LightWidget : GlanceAppWidget() {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val db = AppDatabase.get(context)
 
-        // Reaktiv: Glance-session holder sig i live og rekomponerer automatisk når Room ændres.
-        // saveAndFinish skriver til Room → Flow emitter → rekomposition → widget opdateres straks
-        // (ingen broadcasts eller direkte AppWidgetManager-kald nødvendigt).
         provideContent {
             val viewState by db.entityWidgetDao()
                 .observe(appWidgetId)
@@ -89,40 +72,11 @@ class LightWidget : GlanceAppWidget() {
             GlanceTheme {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (widgetCfg == null) {
-                    UnconfiguredContent(context, appWidgetId, isWide)
+                    UnconfiguredWidgetContent(context, appWidgetId, LightWidgetConfigActivity::class.java, R.drawable.ic_lightbulb)
                 } else {
                     LightContent(context, appWidgetId, widgetCfg, entityState, isWide)
                 }
             }
-        }
-    }
-}
-
-@androidx.compose.runtime.Composable
-private fun UnconfiguredContent(context: Context, appWidgetId: Int, isWide: Boolean) {
-    val intent = Intent(context, LightWidgetConfigActivity::class.java).apply {
-        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(GlanceTheme.colors.surfaceVariant)
-            .cornerRadius(16.dp)
-            .clickable(actionStartActivity(intent)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                provider = ImageProvider(R.drawable.ic_lightbulb),
-                contentDescription = null,
-                modifier = GlanceModifier.size(24.dp),
-                colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
-            )
-            Text(
-                text = "Opsæt",
-                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 10.sp),
-            )
         }
     }
 }
@@ -160,9 +114,6 @@ private fun LightContent(
         .background(bgColor)
         .cornerRadius(16.dp)
 
-    // Tap tilladt så længe state er kendt (også stale): trykket sender en frisk kommando,
-    // som enten lykkes (frisk state) eller fejler (forbliver stale). Kun helt ukendt/
-    // unavailable blokerer — ellers kan en widget der engang fejlede aldrig selv-hele.
     val modifier = if (state != null && !isUnavailable) {
         baseModifier.clickable(
             actionRunCallback<ToggleLightAction>(
@@ -173,63 +124,9 @@ private fun LightContent(
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         if (isWide) {
-            WideLayout(label, statusText, contentColor)
+            WidgetWideLayout(R.drawable.ic_lightbulb, label, statusText, contentColor)
         } else {
-            CompactLayout(label, statusText, contentColor)
-        }
-    }
-}
-
-/** 1×1 compact: icon + status only — label dropped, too cramped at 56dp. */
-@androidx.compose.runtime.Composable
-private fun CompactLayout(label: String, statusText: String, contentColor: androidx.glance.unit.ColorProvider) {
-    Column(
-        modifier = GlanceModifier.fillMaxSize().padding(6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Image(
-            provider = ImageProvider(R.drawable.ic_lightbulb),
-            contentDescription = label,
-            modifier = GlanceModifier.size(26.dp),
-            colorFilter = ColorFilter.tint(contentColor),
-        )
-        Text(
-            text = statusText,
-            style = TextStyle(color = contentColor, fontSize = 12.sp),
-            maxLines = 1,
-        )
-    }
-}
-
-@androidx.compose.runtime.Composable
-private fun WideLayout(label: String, statusText: String, contentColor: androidx.glance.unit.ColorProvider) {
-    Row(
-        modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Image(
-            provider = ImageProvider(R.drawable.ic_lightbulb),
-            contentDescription = label,
-            modifier = GlanceModifier.size(28.dp),
-            colorFilter = ColorFilter.tint(contentColor),
-        )
-        Spacer(modifier = GlanceModifier.width(10.dp))
-        Column(modifier = GlanceModifier.fillMaxWidth()) {
-            Text(
-                text = label,
-                style = TextStyle(
-                    color = contentColor,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                maxLines = 1,
-            )
-            Text(
-                text = statusText,
-                style = TextStyle(color = contentColor, fontSize = 11.sp),
-                maxLines = 1,
-            )
+            WidgetCompactLayout(R.drawable.ic_lightbulb, label, statusText, contentColor)
         }
     }
 }
@@ -240,7 +137,7 @@ private fun buildStatusText(
     isStale: Boolean,
 ): String {
     val base = when {
-        state == null -> "Henter status..."
+        state == null -> "Henter status…"
         state.state == "unavailable" -> "Utilgængelig"
         state.state == "on" && attrs?.brightnessPercent != null -> "${attrs.brightnessPercent}%"
         state.state == "on" -> "Tændt"
@@ -273,12 +170,7 @@ class ToggleLightAction : ActionCallback {
         val entityId = parameters[entityIdKey] ?: return
         val current = AppDatabase.get(context).entityStateDao().get(entityId) ?: return
         val target = if (current.state == "on") "off" else "on"
-        // turn_on/turn_off (ikke toggle): resultatet er kendt → optimistisk state ER sandheden,
-        // ingen confirm-poll nødvendig. Ét hurtigt kald, godt under broadcast-ANR-grænsen.
         val service = if (target == "on") "turn_on" else "turn_off"
-
-        // Tryk vækker appen straks (pålideligt, modsat baggrunds-WorkManager).
-        // Optimistisk lokalt + kort netværkskald direkte her i broadcast-vinduet.
         EntityRepository.command(
             context = context,
             domain = "light",
@@ -297,10 +189,6 @@ class ToggleLightAction : ActionCallback {
 class LightWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = LightWidget()
 
-    // Kaldt af systemet efter config-RESULT_OK og ved eventuelle system-udløste opdateringer.
-    // super.onUpdate → Glance updateAll → provideGlance (læser Room, viser config/"…").
-    // SyncWorker.runNow henter state fra HA og fan-outer til widget — bypasser Glance's
-    // interne async scheduler der kan forsinkes 30-60 sek på Nova/Samsung.
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         SyncWorker.runNow(context)

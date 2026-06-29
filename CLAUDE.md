@@ -58,11 +58,13 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 
 ### M2 — Native entity-widgets (FÆRDIG 2026-06-29)
 - ✅ **8 nye widget-typer implementeret:** switch, scene, script, automation, sensor, binary_sensor, weather (2×1), climate (2×1).
-- ✅ **Fælles infrastruktur:** `GlanceWidgetCommon` (compact=icon+status, wide=icon+label+status), `BaseEntityPickerActivity`, `EntityActions` (Toggle/Trigger/Refresh callbacks).
+- ✅ **Fælles infrastruktur:** `GlanceWidgetCommon` (compact=icon+label+status, wide=icon+label+status), `BaseEntityPickerActivity`, `EntityActions` (Toggle/Trigger/Refresh callbacks).
 - ✅ **Room reaktiv Flow:** alle widgets bruger `flatMapLatest` + `collectAsState` — Nova/Samsung placement quirk håndteret.
 - ✅ **SyncWorker:** `runNow()` ved config-save + widget-tap; `schedule()` 15-min periodisk sync.
-- ✅ **UX:** compact uden label (56dp), scene "Aktiverer…" optimistisk feedback, script tap-disabled mens kører, automation "Udløs" CTA compact, weather compact=temp-only, climate wide=temp/mode split, read-widgets tap=refresh.
+- ✅ **UX:** compact label+status (56dp, 10sp/11sp), valgfrit kort label i config (maks 12 tegn), scene "Aktiverer…" optimistisk feedback, script tap-disabled mens kører, automation "Udløs" CTA compact, weather compact=temp-only, climate wide=temp/mode split, read-widgets tap=refresh.
+- ✅ **Widget-picker (v0.2.3):** domain-specifik `previewImage` + korte beskrivelser i `strings.xml`.
 - ✅ **QA på emulator (pixel_test, 2026-06-29):** alle 10 providers i AppWidgetManager, alle 8 config activities åbner med korrekte HA-entiteter, alle states synket, LightWidget tap-toggle "Slukket"→"Tændt" via Room Flow, ingen crashes.
+- ✅ **LightWidget spec-compliance (v0.2.4):** `LightWidgetConfigActivity` omskrevet til `BaseEntityPickerActivity`-subklasse (Screen 1 + Screen 2, korrekte chips, label-input). `LightWidget` bruger nu `WidgetCompactLayout`/`WidgetWideLayout` fra `GlanceWidgetCommon` → compact viser icon+label+status som spec. Widget-navne (`android:label`) på alle receivers i manifest. Rekonfiguration pre-fill: eksisterende entity + label vises direkte på Screen 2.
 
 ## Næste skridt
 
@@ -78,24 +80,16 @@ returnerer `Result.retry()` → widgets opdateres ikke ved tap på Samsung. Fix:
 `MainActivity`. ~10 linjer Kotlin + 1 linje manifest. Ingen visuel ændring (Android-system-dialog).
 Midlertidig workaround til bruger: Indstillinger → Apps → HA Widgets → Batteri → Ingen restriktioner.
 
-### Åbne UX-problemer (skal løses før M3)
+### Åbne UX-problemer
 
-**1. Compact 1×1: manglende entitets-identifikation**
-Nuværende compact layout viser kun ikon + status — intet label. Hvis brugeren har flere widgets af
-samme type (f.eks. to switch-widgets), er de visuelt identiske; kun skærm-position adskiller dem.
-UX-beslutning om at fjerne label ved 56dp skal genovervejes. Mulige løsninger:
-- Genindføre truncated label (10sp, maxLines=1) som 3. linje i compact
-- Brugerdefineret kort label i config-activity (sættes ved opsætning)
-Kræver: UX-oplæg → impl → UX-review → QA (følg workflow-visual-features).
+_Alle kendte UX-problemer løst. Kanonisk spec i [`docs/widget-settings-spec.md`](docs/widget-settings-spec.md)._
 
-**2. Widget-picker: ikoner og beskrivelser**
-Alle HA Widgets viser samme hus-ikon i picker. Beskrivelserne er generiske og trunkeres:
-"Viser tilstanden for en Home Assistant..." — giver ingen reel information.
-- **Preview-ikon:** `previewImage` i `*_widget_info.xml` → domæne-specifikt ikon (f.eks. ic_switch).
-- **Kort beskrivelse:** maks ~30 tegn, domæne-fokuseret:
-  "Tænd/sluk kontakter", "Aktiver scener", "Vejrudsigt", osv.
+- v0.2.3: compact label + picker previewImage/beskrivelser
+- v0.2.4: widget-navne i picker (android:label på receivers) + rekonfiguration pre-fill + LightWidget spec-compliance
 
 ## Workflow: rettelser og release
+
+**UX-ændringer:** følg [`docs/ux-process.md`](docs/ux-process.md). Spec for widget config-flow og display: [`docs/widget-settings-spec.md`](docs/widget-settings-spec.md).
 
 **Aldrig meld "fikset" uden bevis.** Rettelsesworkflow er altid iterativt:
 

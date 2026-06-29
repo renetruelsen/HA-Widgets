@@ -45,6 +45,7 @@
 
         <receiver
             android:name=".widget.ShortcutWidgetReceiver"
+            android:label="@string/shortcut_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -67,6 +68,7 @@
 
         <receiver
             android:name=".widget.light.LightWidgetReceiver"
+            android:label="@string/light_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -89,6 +91,7 @@
         </activity>
         <receiver
             android:name=".widget.switchwidget.SwitchWidgetReceiver"
+            android:label="@string/switch_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -111,6 +114,7 @@
         </activity>
         <receiver
             android:name=".widget.scene.SceneWidgetReceiver"
+            android:label="@string/scene_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -133,6 +137,7 @@
         </activity>
         <receiver
             android:name=".widget.script.ScriptWidgetReceiver"
+            android:label="@string/script_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -155,6 +160,7 @@
         </activity>
         <receiver
             android:name=".widget.automation.AutomationWidgetReceiver"
+            android:label="@string/automation_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -177,6 +183,7 @@
         </activity>
         <receiver
             android:name=".widget.sensor.SensorWidgetReceiver"
+            android:label="@string/sensor_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -199,6 +206,7 @@
         </activity>
         <receiver
             android:name=".widget.binarysensor.BinarySensorWidgetReceiver"
+            android:label="@string/binary_sensor_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -221,6 +229,7 @@
         </activity>
         <receiver
             android:name=".widget.weather.WeatherWidgetReceiver"
+            android:label="@string/weather_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -243,6 +252,7 @@
         </activity>
         <receiver
             android:name=".widget.climate.ClimateWidgetReceiver"
+            android:label="@string/climate_widget_label"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
