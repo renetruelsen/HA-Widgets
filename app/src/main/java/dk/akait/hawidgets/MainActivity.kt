@@ -322,7 +322,8 @@ private fun LanguageDropdown(currentTag: String?, onSelect: (String?) -> Unit) {
         "en" to stringResource(R.string.language_english),
         "sv" to stringResource(R.string.language_swedish)
     )
-    val selectedLabel = options.first { it.first == currentTag }.second
+    val selectedLabel = options.firstOrNull { it.first == currentTag }?.second
+        ?: stringResource(R.string.language_follow_system)
 
     ExposedDropdownMenuBox(
         expanded = expanded,
