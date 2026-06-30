@@ -37,6 +37,8 @@ class RangeControlActivity : ComponentActivity() {
         const val EXTRA_IS_ON = "is_on"
         const val EXTRA_MIN_VALUE = "min_value"
         const val EXTRA_MAX_VALUE = "max_value"
+        /** Actual measured temperature for climate domain. Int.MIN_VALUE = not provided. */
+        const val EXTRA_ACTUAL_TEMP = "actual_temp"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +51,7 @@ class RangeControlActivity : ComponentActivity() {
         val isOnInitial = intent.getBooleanExtra(EXTRA_IS_ON, true)
         val minValue = intent.getIntExtra(EXTRA_MIN_VALUE, 1)
         val maxValue = intent.getIntExtra(EXTRA_MAX_VALUE, 100)
+        val actualTemp = intent.getIntExtra(EXTRA_ACTUAL_TEMP, Int.MIN_VALUE)
 
         setContent {
             MaterialTheme {
@@ -120,6 +123,13 @@ class RangeControlActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Text(label, style = MaterialTheme.typography.titleMedium)
+                        if (domain == "climate" && actualTemp != Int.MIN_VALUE) {
+                            Text(
+                                "Aktuel temperatur: ${actualTemp}°C",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
 
                         val toggleLabel = when {
                             domain == "cover" && isOn -> "Luk helt"

@@ -80,6 +80,24 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - **LightWidget brightness-guard:** Wide slider kun for lys med brightness-support (`supported_features & 1` eller `brightness`-attr). Ikke-dimmable: wide = toggle.
   - **Batteri-administrér:** Connected-state viser "Batterioptimering"-knap + fritaget/begrænset status → åbner `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`.
   - **RangeControlActivity:** `EXTRA_MIN_VALUE`/`EXTRA_MAX_VALUE` for dynamisk range. Climate-domain tilføjet.
+- ✅ **v0.2.8:**
+  - **LightWidget dimmable-detektion:** `supported_color_modes` (moderne HA) tilføjet ud over
+    `supported_features`-bit — lys der kun rapporterer color_modes blev fejlagtigt vist som ikke-dimmable.
+    Compact og wide tap åbner nu konsekvent lysstyrke-slider for alle dimmable lys.
+- ✅ **v0.2.9–v0.2.12 — UX-review af widgets + app (2026-06-30):**
+  - **Baggrund:** bruger oplevede widgets som "rodet" (forkert størrelse/placering) og appen som blandet
+    sprog. UX-review kørt med screenshots på `pixel_test` før/efter, 3 beslutninger afklaret med bruger.
+  - **Entity-widget state-farve:** tændt/aktiv tilstand (light/switch/scene/script/automation/
+    binary_sensor/cover/climate) skiftet fra pastel `primaryContainer`/`onPrimaryContainer` til solid
+    `primary`/`onPrimary` — tændt/slukket var næsten umuligt at skelne visuelt. Sensor (ingen on/off)
+    uændret.
+  - **Compact layout tættere på cellen:** ikon 20→26dp, status 11→13sp + Medium-vægt — undgår "tom/
+    svævende" udseende i den faktiske (større) launcher-celle.
+  - **ShortcutWidget (dashboard-genvej):** label vises nu som separat tekstlinje under ikonet (ikke bagt
+    ind i ikongrafikken), og tilen fylder igen hele cellen kvadratisk — samme bredde som nabo-widgets.
+  - **App 100% dansk:** `values-da`/`values-sv` fjernet, default `strings.xml` er nu dansk (var blandet
+    engelsk/dansk — ingen reel i18n-ambition, kun én bruger).
+  - Spec opdateret: `docs/widget-settings-spec.md`.
 
 ## Næste skridt
 

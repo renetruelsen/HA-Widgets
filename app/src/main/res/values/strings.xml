@@ -3,88 +3,88 @@
     <string name="app_name">HA Widgets</string>
 
     <!-- Widget metadata -->
-    <string name="shortcut_widget_label">HA Dashboard Shortcut</string>
-    <string name="shortcut_widget_description">Opens a Home Assistant dashboard.</string>
-    <string name="open_dashboard">Open dashboard</string>
+    <string name="shortcut_widget_label">HA Dashboard-genvej</string>
+    <string name="shortcut_widget_description">Åbner et Home Assistant-dashboard.</string>
+    <string name="open_dashboard">Åbn dashboard</string>
 
     <!-- Common -->
-    <string name="cancel">Cancel</string>
-    <string name="disconnect">Disconnect</string>
-    <string name="connect">Connect</string>
-    <string name="connecting">Connecting…</string>
-    <string name="checking_connection">Checking connection…</string>
-    <string name="ha_url_label">HA URL</string>
+    <string name="cancel">Annuller</string>
+    <string name="disconnect">Frakobl</string>
+    <string name="connect">Forbind</string>
+    <string name="connecting">Forbinder…</string>
+    <string name="checking_connection">Tjekker forbindelse…</string>
+    <string name="ha_url_label">HA-URL</string>
     <string name="token_label">Long-lived access token</string>
 
     <!-- MainActivity -->
-    <string name="disconnect_dialog_title">Disconnect HA?</string>
-    <string name="disconnect_dialog_body">This removes your connection. Existing widgets will stop working until you reconnect.</string>
-    <string name="connected_to">Connected to</string>
-    <string name="add_widget_to_home">Add dashboard shortcut to home screen</string>
-    <string name="pin_manual_instructions">Long-press an empty spot on the home screen → Widgets → find \'HA Widgets\' → drag the shortcut out.</string>
-    <string name="pin_button_instructions">Press the button and confirm in the dialog. Not working? Long-press the home screen → Widgets → \'HA Widgets\'.</string>
-    <string name="how_to_use_title">How to use HA Widgets</string>
-    <string name="how_to_use_step1">1. Press \'Add dashboard shortcut\' above</string>
-    <string name="how_to_use_step2">2. Select dashboard and display mode in the configuration</string>
-    <string name="how_to_use_step3">3. Press the widget icon on the home screen to open your dashboard</string>
-    <string name="onboarding_intro">Connect your Home Assistant instance below. You can also skip this and connect the first time you add a widget.</string>
+    <string name="disconnect_dialog_title">Frakobl HA?</string>
+    <string name="disconnect_dialog_body">Dette fjerner din forbindelse. Eksisterende widgets holder op med at virke, indtil du forbinder igen.</string>
+    <string name="connected_to">Forbundet til</string>
+    <string name="add_widget_to_home">Tilføj dashboard-genvej til hjemskærm</string>
+    <string name="pin_manual_instructions">Hold på et tomt sted på hjemskærmen → Widgets → find \'HA Widgets\' → træk genvejen ud.</string>
+    <string name="pin_button_instructions">Tryk på knappen og bekræft i dialogen. Virker det ikke? Hold på hjemskærmen → Widgets → \'HA Widgets\'.</string>
+    <string name="how_to_use_title">Sådan bruger du HA Widgets</string>
+    <string name="how_to_use_step1">1. Tryk \'Tilføj dashboard-genvej\' ovenfor</string>
+    <string name="how_to_use_step2">2. Vælg dashboard og visning i konfigurationen</string>
+    <string name="how_to_use_step3">3. Tryk på widget-ikonet på hjemskærmen for at åbne dit dashboard</string>
+    <string name="onboarding_intro">Forbind din Home Assistant-instans nedenfor. Du kan også springe dette over og forbinde første gang du tilføjer en widget.</string>
 
     <!-- ShortcutWidgetConfigActivity -->
-    <string name="configure_widget_title">Configure widget</string>
-    <string name="save_widget">Save widget</string>
-    <string name="select_dashboard">Select dashboard</string>
+    <string name="configure_widget_title">Konfigurér widget</string>
+    <string name="save_widget">Gem widget</string>
+    <string name="select_dashboard">Vælg dashboard</string>
     <string name="section_dashboard">Dashboard</string>
-    <string name="section_display">Display</string>
-    <string name="display_fullscreen">Fullscreen</string>
-    <string name="display_overlay">Overlay (window)</string>
-    <string name="overlay_width">Width: %1$d%%</string>
-    <string name="overlay_height">Height: %1$d%%</string>
-    <string name="connect_to_ha_title">Connect to Home Assistant</string>
-    <string name="connect_to_ha_body">Enter your HA address and a long-lived access token (HA → Profile → Long-Lived Access Tokens).</string>
-    <string name="load_dashboards_error">Could not fetch dashboards: %1$s</string>
+    <string name="section_display">Visning</string>
+    <string name="display_fullscreen">Fuldskærm</string>
+    <string name="display_overlay">Overlay (vindue)</string>
+    <string name="overlay_width">Bredde: %1$d %%</string>
+    <string name="overlay_height">Højde: %1$d %%</string>
+    <string name="connect_to_ha_title">Forbind til Home Assistant</string>
+    <string name="connect_to_ha_body">Indtast din HA-adresse og et long-lived access token (HA → Profil → Long-Lived Access Tokens).</string>
+    <string name="load_dashboards_error">Kunne ikke hente dashboards: %1$s</string>
 
     <!-- Battery optimization dialog -->
-    <string name="battery_dialog_title">Allow background access</string>
-    <string name="battery_dialog_body">Widgets sync with Home Assistant in the background. If the system restricts background activity, tapping a widget may show stale data or fail to update.\n\nTap \"Allow\" to exempt HA Widgets from battery optimization — this keeps widgets responsive.</string>
-    <string name="battery_dialog_allow">Allow</string>
-    <string name="battery_dialog_later">Not now</string>
+    <string name="battery_dialog_title">Tillad baggrundsadgang</string>
+    <string name="battery_dialog_body">Widgets synkroniserer med Home Assistant i baggrunden. Hvis systemet begrænser baggrundsaktivitet, kan tryk på en widget vise forældet data eller fejle med at opdatere.\n\nTryk \"Tillad\" for at undtage HA Widgets fra batterioptimering — det holder widgets responsive.</string>
+    <string name="battery_dialog_allow">Tillad</string>
+    <string name="battery_dialog_later">Ikke nu</string>
     <string name="battery_manage">Batterioptimering</string>
     <string name="battery_status_exempt">Fritaget fra batterioptimering</string>
     <string name="battery_status_restricted">Begrænset af batterioptimering</string>
 
     <!-- LightWidget -->
-    <string name="light_widget_label">HA Light</string>
-    <string name="light_widget_description">Control lights</string>
+    <string name="light_widget_label">HA Lys</string>
+    <string name="light_widget_description">Styr lyskilder</string>
 
     <!-- SwitchWidget -->
-    <string name="switch_widget_label">HA Switch</string>
-    <string name="switch_widget_description">Control switches</string>
+    <string name="switch_widget_label">HA Kontakt</string>
+    <string name="switch_widget_description">Tænd/sluk kontakter</string>
 
     <!-- SceneWidget -->
     <string name="scene_widget_label">HA Scene</string>
-    <string name="scene_widget_description">Activate scenes</string>
+    <string name="scene_widget_description">Aktivér scener</string>
 
     <!-- ScriptWidget -->
     <string name="script_widget_label">HA Script</string>
-    <string name="script_widget_description">Run scripts</string>
+    <string name="script_widget_description">Kør scripts</string>
 
     <!-- AutomationWidget -->
-    <string name="automation_widget_label">HA Automation</string>
-    <string name="automation_widget_description">Trigger automations</string>
+    <string name="automation_widget_label">HA Automatisering</string>
+    <string name="automation_widget_description">Udløs automatiseringer</string>
 
     <!-- SensorWidget -->
     <string name="sensor_widget_label">HA Sensor</string>
-    <string name="sensor_widget_description">Show sensor values</string>
+    <string name="sensor_widget_description">Vis sensorværdier</string>
 
     <!-- BinarySensorWidget -->
-    <string name="binary_sensor_widget_label">HA Binary Sensor</string>
-    <string name="binary_sensor_widget_description">Show binary sensors</string>
+    <string name="binary_sensor_widget_label">HA Binær sensor</string>
+    <string name="binary_sensor_widget_description">Vis binære sensorer</string>
 
     <!-- CoverWidget -->
     <string name="cover_widget_label">HA Cover</string>
-    <string name="cover_widget_description">Control covers and blinds</string>
+    <string name="cover_widget_description">Styr persienner og rullegardiner</string>
 
     <!-- ClimateWidget -->
-    <string name="climate_widget_label">HA Climate</string>
+    <string name="climate_widget_label">HA Klima</string>
     <string name="climate_widget_description">Vis og styr temperatur (2×1)</string>
 </resources>

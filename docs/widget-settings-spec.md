@@ -113,11 +113,16 @@ Bruges i begge compact og wide layouts.
 
 | Tilstand | Baggrund | Indholdsfarve |
 |---|---|---|
-| Tændt / aktiv | `primaryContainer` | `onPrimaryContainer` |
+| Tændt / aktiv | `primary` (solid, mættet) | `onPrimary` |
 | Utilgængelig | `errorContainer` | `onErrorContainer` |
 | Slukket / inaktiv / standby | `surfaceVariant` | `onSurfaceVariant` |
 
 Brug `GlanceTheme.colors.*` (ikke hardkodede farver).
+
+**v0.2.8 UX-review:** `primaryContainer`/`onPrimaryContainer` (pastel tonal) erstattet af solid `primary`/`onPrimary`
+for tændt/aktiv tilstand — pastel-mod-pastel gav for lav kontrast mellem tændt/slukket på home screen
+(svært at aflæse status på afstand). Sensor-widget har ingen aktiv/inaktiv-tilstand og forbliver
+`surfaceVariant` (neutral, ikke styrbar).
 
 ### Status-tekst
 
@@ -135,11 +140,34 @@ Grænse for forældethed: `STALE_THRESHOLD_MS = 15 * 60 * 1000L` (15 minutter).
 **Komponent:** `WidgetCompactLayout` i `GlanceWidgetCommon.kt`
 
 ```
-Column (fillMaxSize, padding=4dp, centerH+V)
-  ├── Image: domainIcon, 20dp, tint=contentColor
-  ├── Text: label, 10sp, maxLines=1, color=contentColor
-  └── Text: statusText, 11sp, maxLines=1, color=contentColor
+Column (fillMaxSize, padding=6dp, centerH+V)
+  ├── Image: domainIcon, 26dp, tint=contentColor
+  ├── Text: label, 11sp, maxLines=1, color=contentColor
+  └── Text: statusText, 13sp, FontWeight.Medium, maxLines=1, color=contentColor
 ```
+
+**v0.2.8 UX-review:** ikon/tekst-størrelser øget (20→26dp ikon, status 11→13sp + Medium-vægt) for at
+udfylde den faktiske launcher-cellestørrelse bedre — compact widgets virkede "tomme"/svævende i en
+stor bleg boks ved tidligere mindre størrelser. Status er nu det visuelt tungeste element (primær info
+ved et kig).
+
+### ShortcutWidget (dashboard-genvej) — afviger fra entity-widget-mønsteret
+
+Ikke en data-widget — ren genvej, jf. arkitektur-status i `CLAUDE.md`. Layout (`ShortcutWidget.kt`):
+
+```
+Box (fillMaxSize, centerH+V)
+  └── Box: ikon-tile, kvadratisk = min(cellWidth, cellHeight) (samme bredde som nabo-widgets),
+        baggrund #03A9F4, cornerRadius 16dp, klikbar → åbn dashboard
+        └── Column (centerH)
+              ├── Image: ic_dashboard, 28dp
+              ├── Spacer 4dp
+              └── Text: config.title, 11sp, hvid, centreret, maxLines=1 — KUN hvis konfigureret
+```
+
+v0.2.10: label flyttet fra inde-i-ikongrafikken til en separat tekstlinje under ikonet.
+v0.2.12: tile fylder igen hele cellen (kvadratisk, samme bredde som entity-widgets) i stedet for en
+lille fast 64dp boks — ikon+label sidder begge inde i den fulde farvede tile, blot på separate linjer.
 
 Corner radius: 16dp. Klikbar (domain-specifik action) medmindre `state==null` eller `unavailable`.
 

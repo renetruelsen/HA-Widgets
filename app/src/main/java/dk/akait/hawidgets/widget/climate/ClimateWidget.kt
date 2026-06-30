@@ -89,12 +89,12 @@ private fun ClimateContent(
     val bgColor = when {
         isUnavailable -> GlanceTheme.colors.errorContainer
         isOff -> GlanceTheme.colors.surfaceVariant
-        else -> GlanceTheme.colors.primaryContainer
+        else -> GlanceTheme.colors.primary
     }
     val contentColor = when {
         isUnavailable -> GlanceTheme.colors.onErrorContainer
         isOff -> GlanceTheme.colors.onSurfaceVariant
-        else -> GlanceTheme.colors.onPrimaryContainer
+        else -> GlanceTheme.colors.onPrimary
     }
 
     val attrs = state?.let { parseClimateAttrs(it.attributesJson) }
@@ -111,6 +111,17 @@ private fun ClimateContent(
     }
     val modeStatusStale = if (isStale && state != null) "$modeStatus ~" else modeStatus
 
+    // Compact status includes current temperature when available
+    val compactStatus = when {
+        state == null -> "Henter…"
+        isUnavailable -> "Utilgængelig"
+        else -> {
+            val curTemp = attrs?.currentTemp?.roundToInt()
+            if (curTemp != null) "$curTemp° $modeStatus" else modeStatus
+        }
+    }
+    val compactStatusStale = if (isStale && state != null) "$compactStatus ~" else compactStatus
+
     val baseModifier = GlanceModifier
         .fillMaxSize()
         .background(bgColor)
@@ -125,6 +136,7 @@ private fun ClimateContent(
         putExtra(RangeControlActivity.EXTRA_IS_ON, !isOff && !isUnavailable)
         putExtra(RangeControlActivity.EXTRA_MIN_VALUE, attrs?.minTemp?.roundToInt() ?: 16)
         putExtra(RangeControlActivity.EXTRA_MAX_VALUE, attrs?.maxTemp?.roundToInt() ?: 30)
+        attrs?.currentTemp?.roundToInt()?.let { putExtra(RangeControlActivity.EXTRA_ACTUAL_TEMP, it) }
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     val wideModifier = if (state != null && !isUnavailable) {
@@ -145,7 +157,7 @@ private fun ClimateContent(
         contentAlignment = Alignment.Center,
     ) {
         if (isWide) WidgetWideLayout(R.drawable.ic_climate, tempLabel, modeStatusStale, contentColor)
-        else WidgetCompactLayout(R.drawable.ic_climate, entityName, modeStatusStale, contentColor)
+        else WidgetCompactLayout(R.drawable.ic_climate, entityName, compactStatusStale, contentColor)
     }
 }
 

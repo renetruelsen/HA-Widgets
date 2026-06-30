@@ -84,12 +84,12 @@ private fun CoverContent(
 
     val bgColor = when {
         isUnavailable -> GlanceTheme.colors.errorContainer
-        isOpen -> GlanceTheme.colors.primaryContainer
+        isOpen -> GlanceTheme.colors.primary
         else -> GlanceTheme.colors.surfaceVariant
     }
     val contentColor = when {
         isUnavailable -> GlanceTheme.colors.onErrorContainer
-        isOpen -> GlanceTheme.colors.onPrimaryContainer
+        isOpen -> GlanceTheme.colors.onPrimary
         else -> GlanceTheme.colors.onSurfaceVariant
     }
 

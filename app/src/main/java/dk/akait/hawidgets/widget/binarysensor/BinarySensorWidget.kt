@@ -88,13 +88,13 @@ private fun BinarySensorContent(
     val bgColor = when {
         isUnavailable -> GlanceTheme.colors.errorContainer
         isActive && isAlertClass -> GlanceTheme.colors.errorContainer
-        isActive -> GlanceTheme.colors.primaryContainer
+        isActive -> GlanceTheme.colors.primary
         else -> GlanceTheme.colors.surfaceVariant
     }
     val contentColor = when {
         isUnavailable -> GlanceTheme.colors.onErrorContainer
         isActive && isAlertClass -> GlanceTheme.colors.onErrorContainer
-        isActive -> GlanceTheme.colors.onPrimaryContainer
+        isActive -> GlanceTheme.colors.onPrimary
         else -> GlanceTheme.colors.onSurfaceVariant
     }
 

@@ -83,12 +83,12 @@ private fun SwitchContent(
 
     val bgColor = when {
         isUnavailable -> GlanceTheme.colors.errorContainer
-        isOn -> GlanceTheme.colors.primaryContainer
+        isOn -> GlanceTheme.colors.primary
         else -> GlanceTheme.colors.surfaceVariant
     }
     val contentColor = when {
         isUnavailable -> GlanceTheme.colors.onErrorContainer
-        isOn -> GlanceTheme.colors.onPrimaryContainer
+        isOn -> GlanceTheme.colors.onPrimary
         else -> GlanceTheme.colors.onSurfaceVariant
     }
 

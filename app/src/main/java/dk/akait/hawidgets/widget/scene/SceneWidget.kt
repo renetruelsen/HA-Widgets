@@ -81,8 +81,8 @@ private fun SceneContent(
     // Optimistically set "scening" on tap → "Aktiverer…" feedback for ~15s until next sync.
     val isActivating = state?.state == "scening"
     val statusText = if (isActivating) "Aktiverer…" else "Aktiver"
-    val bgColor = if (isActivating) GlanceTheme.colors.primaryContainer else GlanceTheme.colors.surfaceVariant
-    val contentColor = if (isActivating) GlanceTheme.colors.onPrimaryContainer else GlanceTheme.colors.onSurfaceVariant
+    val bgColor = if (isActivating) GlanceTheme.colors.primary else GlanceTheme.colors.surfaceVariant
+    val contentColor = if (isActivating) GlanceTheme.colors.onPrimary else GlanceTheme.colors.onSurfaceVariant
 
     val modifier = GlanceModifier
         .fillMaxSize()

@@ -101,12 +101,12 @@ private fun LightContent(
 
     val bgColor = when {
         isUnavailable -> GlanceTheme.colors.errorContainer
-        isOn -> GlanceTheme.colors.primaryContainer
+        isOn -> GlanceTheme.colors.primary
         else -> GlanceTheme.colors.surfaceVariant
     }
     val contentColor = when {
         isUnavailable -> GlanceTheme.colors.onErrorContainer
-        isOn -> GlanceTheme.colors.onPrimaryContainer
+        isOn -> GlanceTheme.colors.onPrimary
         else -> GlanceTheme.colors.onSurfaceVariant
     }
 
@@ -127,8 +127,8 @@ private fun LightContent(
         )
     } else baseModifier
 
-    // Wide: open brightness slider only for lights that support dimming.
-    // Lights without brightness support fall back to toggle.
+    // Dimmable lights: tap opens brightness slider on both compact and wide.
+    // Non-dimmable lights: tap toggles on/off.
     val controlIntent = Intent(context, RangeControlActivity::class.java).apply {
         putExtra(RangeControlActivity.EXTRA_ENTITY_ID, config.entityId)
         putExtra(RangeControlActivity.EXTRA_LABEL, label)
@@ -137,16 +137,16 @@ private fun LightContent(
         putExtra(RangeControlActivity.EXTRA_IS_ON, isOn)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    val wideModifier = if (state != null && !isUnavailable) {
-        if (attrs?.supportsBrightness == true) {
-            baseModifier.clickable(actionStartActivity(controlIntent))
-        } else {
-            toggleModifier
-        }
+    val dimmerModifier = if (state != null && !isUnavailable) {
+        baseModifier.clickable(actionStartActivity(controlIntent))
+    } else baseModifier
+
+    val activeModifier = if (state != null && !isUnavailable) {
+        if (attrs?.supportsBrightness == true) dimmerModifier else toggleModifier
     } else baseModifier
 
     Box(
-        modifier = if (isWide) wideModifier else toggleModifier,
+        modifier = activeModifier,
         contentAlignment = Alignment.Center,
     ) {
         if (isWide) {
@@ -183,10 +183,16 @@ private fun parseLightAttrs(attributesJson: String): LightAttrs {
         val attrs = JSONObject(attributesJson)
         val b = attrs.optInt("brightness", -1).takeIf { it >= 0 }
         val supportedFeatures = attrs.optInt("supported_features", 0)
+        // Modern HA uses supported_color_modes instead of supported_features bit 1.
+        // Any mode other than "onoff" means the light supports brightness control.
+        val supportedColorModes = attrs.optJSONArray("supported_color_modes")?.let { arr ->
+            (0 until arr.length()).map { arr.getString(it) }
+        } ?: emptyList()
+        val dimmableByColorMode = supportedColorModes.any { it != "onoff" && it.isNotEmpty() }
         LightAttrs(
             brightnessPercent = b?.let { (it * 100 / 255).coerceIn(0, 100) },
             friendlyName = attrs.optString("friendly_name").ifEmpty { null },
-            supportsBrightness = (supportedFeatures and 1) != 0 || b != null,
+            supportsBrightness = (supportedFeatures and 1) != 0 || b != null || dimmableByColorMode,
         )
     } catch (_: Exception) {
         LightAttrs(null, null, false)

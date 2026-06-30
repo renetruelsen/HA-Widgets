@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -22,8 +23,15 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
+import androidx.glance.layout.Column
+import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.height
 import androidx.glance.layout.size
+import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
+import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.WidgetConfigStore
 import dk.akait.hawidgets.web.WebViewActivity
@@ -55,10 +63,11 @@ class ShortcutWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            // One UI cells are not square. Use the smaller dimension so the tile
-            // is always square and centered within the allocated cell area.
+            // One UI cells are not square. Use the smaller dimension so the tile is always
+            // square and the same width as the neighboring entity widgets (which fill their cell).
             val cellSize = LocalSize.current
             val side = min(cellSize.width, cellSize.height)
+            val title = config?.title
 
             Box(
                 modifier = GlanceModifier.fillMaxSize(),
@@ -72,11 +81,25 @@ class ShortcutWidget : GlanceAppWidget() {
                         .clickable(actionStartActivity(intent)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        provider = ImageProvider(R.drawable.ic_dashboard),
-                        contentDescription = config?.title ?: context.getString(R.string.open_dashboard),
-                        modifier = GlanceModifier.size(28.dp)
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Image(
+                            provider = ImageProvider(R.drawable.ic_dashboard),
+                            contentDescription = title ?: context.getString(R.string.open_dashboard),
+                            modifier = GlanceModifier.size(28.dp)
+                        )
+                        if (title != null) {
+                            Spacer(modifier = GlanceModifier.height(4.dp))
+                            Text(
+                                text = title,
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White),
+                                    fontSize = 11.sp,
+                                    textAlign = TextAlign.Center,
+                                ),
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
         }
