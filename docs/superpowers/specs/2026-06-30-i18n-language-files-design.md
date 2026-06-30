@@ -22,35 +22,40 @@ HA-serveren selv, helt uafhængigt af app-localen.
 - `res/values/strings.xml` (qualifier-løs, default/fallback) bliver **engelsk**.
   Nuværende danske indhold flyttes til ny `res/values-da/strings.xml`.
 - Ny `res/values-sv/strings.xml` oprettes — alle 59 strenge oversat til svensk.
-- Mekanisme: AndroidX **per-app language API**, `AppCompatDelegate.setApplicationLocales(LocaleListCompat)`.
-  - API 33+: systemet (`LocaleManager`) persisterer valget og recreate'r Activity automatisk —
-    virker for enhver Activity-type, ingen AppCompat-tema krævet.
-  - "Følg system" = `LocaleListCompat.getEmptyLocaleList()`.
+- Mekanisme: **platform `android.app.LocaleManager`** direkte (API 33+), ingen ny dependency.
+  - `context.getSystemService(LocaleManager::class.java).applicationLocales = LocaleList.forLanguageTags("da")`.
+  - "Følg system" = `LocaleList.getEmptyLocaleList()`.
+  - Systemet persisterer valget og recreate'r alle åbne Activities automatisk — virker for
+    enhver Activity-type (ingen AppCompatActivity/AppCompat-tema krævet).
   - Ingen custom `SecureStore`-felt, ingen `attachBaseContext`-override nogen steder.
 
 **Fravalgte tilgange:**
+- `AppCompatDelegate.setApplicationLocales` (AndroidX-backport) — kræver `androidx.appcompat`-
+  dependency + at Activity er `AppCompatActivity`/AppCompat-tema for at virke på API <33.
+  Appen bruger ren `ComponentActivity` + Compose `MaterialTheme`. Da scope alligevel er
+  begrænset til API 33+ (se nedenfor), giver ren platform-API samme resultat med
+  **ingen ny dependency og ingen Activity-migrering** — simplere.
 - Manuel Context-wrapping (`attachBaseContext` per Activity) — mere kode, fejlbarlig.
 - Global `Locale.setDefault()` — persisterer ikke korrekt over proces-genstart.
 
-**Kendt begrænsning (opdaget under planlægning):** under API 33 kræver
-`AppCompatDelegate.setApplicationLocales` at Activity er `AppCompatActivity` + AppCompat-tema
-for at virke. Appen bruger ren `ComponentActivity` + Compose `MaterialTheme`, ingen
-`appcompat`-dependency. Beslutning: **ingen migrering til AppCompatActivity** — for invasivt
-for en ren Compose-app. Sprog-skift virker fuldt på **API 33+** (dækker emulator `pixel_test`
-API 34 og Galaxy S23 Android 14+ — alle nuværende testenheder). På API 26–32 er sprog-valget
-et no-op (forbliver på device-locale). minSdk forbliver 26; dette er en accepteret begrænsning.
+**Kendt begrænsning:** `LocaleManager` findes kun fra API 33. Sprog-skift virker fuldt på
+**API 33+** (dækker emulator `pixel_test` API 34 og Galaxy S23 Android 14+ — alle nuværende
+testenheder). På API 26–32 er sprog-valget et no-op (forbliver på device-locale). minSdk
+forbliver 26; dette er en accepteret begrænsning.
 
 ## UI
 
 Ny sektion i `MainActivity` (connected-state, ved siden af eksisterende batteri-knap):
 4 valg — **Dansk / English / Svenska / Følg system**. Valget anvendes med det samme
-(ingen restart krævet — AppCompat recreate'r Activity og genindlæser ressourcer).
+(ingen restart krævet — systemet recreate'r Activity og genindlæser ressourcer).
+Sektionen vises kun når `Build.VERSION.SDK_INT >= 33` (ellers ingen funktionel effekt,
+jf. kendte begrænsning).
 
 ## Data-flow
 
 1. Bruger trykker sprog-valg i `MainActivity`.
-2. `AppCompatDelegate.setApplicationLocales(...)` kaldes.
-3. System (`LocaleManager`, API 33+) persisterer valget + recreate'r alle åbne Activities.
+2. `LocaleManager.setApplicationLocales(...)` kaldes (kun udført hvis `Build.VERSION.SDK_INT >= 33`).
+3. Systemet persisterer valget + recreate'r alle åbne Activities.
 4. Resources genindlæses med ny qualifier (`values-da`/`values-sv`/default `values`).
 5. Ved koldstart efter valg: systemet anvender gemt locale automatisk — ingen ekstra
    boilerplate nødvendig.
