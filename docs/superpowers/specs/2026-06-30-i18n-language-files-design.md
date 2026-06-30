@@ -23,15 +23,22 @@ HA-serveren selv, helt uafhængigt af app-localen.
   Nuværende danske indhold flyttes til ny `res/values-da/strings.xml`.
 - Ny `res/values-sv/strings.xml` oprettes — alle 59 strenge oversat til svensk.
 - Mekanisme: AndroidX **per-app language API**, `AppCompatDelegate.setApplicationLocales(LocaleListCompat)`.
-  - API 33+: systemet persisterer valget.
-  - API 26–32 (app's minSdk er 26): AppCompat persisterer internt selv.
+  - API 33+: systemet (`LocaleManager`) persisterer valget og recreate'r Activity automatisk —
+    virker for enhver Activity-type, ingen AppCompat-tema krævet.
   - "Følg system" = `LocaleListCompat.getEmptyLocaleList()`.
-  - Ingen custom `SecureStore`-felt, ingen `attachBaseContext`-override nogen steder —
-    AppCompat recreate'r automatisk alle åbne Activities ved locale-skift.
+  - Ingen custom `SecureStore`-felt, ingen `attachBaseContext`-override nogen steder.
 
 **Fravalgte tilgange:**
 - Manuel Context-wrapping (`attachBaseContext` per Activity) — mere kode, fejlbarlig.
 - Global `Locale.setDefault()` — persisterer ikke korrekt over proces-genstart.
+
+**Kendt begrænsning (opdaget under planlægning):** under API 33 kræver
+`AppCompatDelegate.setApplicationLocales` at Activity er `AppCompatActivity` + AppCompat-tema
+for at virke. Appen bruger ren `ComponentActivity` + Compose `MaterialTheme`, ingen
+`appcompat`-dependency. Beslutning: **ingen migrering til AppCompatActivity** — for invasivt
+for en ren Compose-app. Sprog-skift virker fuldt på **API 33+** (dækker emulator `pixel_test`
+API 34 og Galaxy S23 Android 14+ — alle nuværende testenheder). På API 26–32 er sprog-valget
+et no-op (forbliver på device-locale). minSdk forbliver 26; dette er en accepteret begrænsning.
 
 ## UI
 
@@ -43,10 +50,10 @@ Ny sektion i `MainActivity` (connected-state, ved siden af eksisterende batteri-
 
 1. Bruger trykker sprog-valg i `MainActivity`.
 2. `AppCompatDelegate.setApplicationLocales(...)` kaldes.
-3. AppCompat persisterer valget + recreate'r alle åbne Activities.
+3. System (`LocaleManager`, API 33+) persisterer valget + recreate'r alle åbne Activities.
 4. Resources genindlæses med ny qualifier (`values-da`/`values-sv`/default `values`).
-5. Ved koldstart efter valg: AppCompat injicerer gemt locale automatisk før
-   `attachBaseContext` — ingen ekstra boilerplate nødvendig.
+5. Ved koldstart efter valg: systemet anvender gemt locale automatisk — ingen ekstra
+   boilerplate nødvendig.
 
 ## Fejlhåndtering
 
