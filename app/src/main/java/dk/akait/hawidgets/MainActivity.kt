@@ -7,6 +7,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.app.LocaleManager
+import android.os.Build
+import android.os.LocaleList
+import androidx.annotation.RequiresApi
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -216,6 +220,53 @@ private fun OnboardingScreen() {
 
                 Spacer(Modifier.height(8.dp))
 
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    var currentTag by remember { mutableStateOf(currentLanguageTag(context)) }
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(stringResource(R.string.section_language), style = MaterialTheme.typography.labelLarge)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                LanguageOption(
+                                    label = stringResource(R.string.language_danish),
+                                    selected = currentTag == "da"
+                                ) {
+                                    setAppLocale(context, "da")
+                                    currentTag = "da"
+                                }
+                                LanguageOption(
+                                    label = stringResource(R.string.language_english),
+                                    selected = currentTag == "en"
+                                ) {
+                                    setAppLocale(context, "en")
+                                    currentTag = "en"
+                                }
+                                LanguageOption(
+                                    label = stringResource(R.string.language_swedish),
+                                    selected = currentTag == "sv"
+                                ) {
+                                    setAppLocale(context, "sv")
+                                    currentTag = "sv"
+                                }
+                            }
+                            LanguageOption(
+                                label = stringResource(R.string.language_follow_system),
+                                selected = currentTag == null,
+                                fillWidth = true
+                            ) {
+                                setAppLocale(context, null)
+                                currentTag = null
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 OutlinedButton(
                     onClick = { showDisconnectDialog = true },
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -277,5 +328,34 @@ private fun OnboardingScreen() {
                 }
             }
         }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun currentLanguageTag(context: android.content.Context): String? {
+    val localeManager = context.getSystemService(LocaleManager::class.java)
+    val tag = localeManager.applicationLocales.toLanguageTags()
+    return tag.takeIf { it.isNotBlank() }
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun setAppLocale(context: android.content.Context, languageTag: String?) {
+    val localeManager = context.getSystemService(LocaleManager::class.java)
+    localeManager.applicationLocales =
+        if (languageTag == null) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(languageTag)
+}
+
+@Composable
+private fun LanguageOption(
+    label: String,
+    selected: Boolean,
+    fillWidth: Boolean = false,
+    onClick: () -> Unit
+) {
+    val modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier
+    if (selected) {
+        Button(onClick = onClick, modifier = modifier) { Text(label) }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = modifier) { Text(label) }
     }
 }
