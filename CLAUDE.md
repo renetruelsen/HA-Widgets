@@ -98,6 +98,30 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - **App 100% dansk:** `values-da`/`values-sv` fjernet, default `strings.xml` er nu dansk (var blandet
     engelsk/dansk — ingen reel i18n-ambition, kun én bruger).
   - Spec opdateret: `docs/widget-settings-spec.md`.
+- ✅ **v0.2.13 — i18n genindført: dansk/engelsk/svensk (2026-07-01):**
+  - **Baggrund:** v0.2.9-beslutningen ("kun én bruger") reverseret — appen skal fremover deles med
+    flere brugere, der ikke nødvendigvis taler dansk. Proces: brainstorming → spec →
+    plan → subagent-driven implementering → per-task review → device-QA → whole-branch review.
+    Spec: `docs/superpowers/specs/2026-06-30-i18n-language-files-design.md`,
+    plan: `docs/superpowers/plans/2026-06-30-i18n-language-files.md`.
+  - **Sprogfiler:** `res/values/strings.xml` (qualifier-løs default) er nu **engelsk**. Dansk
+    flyttet til `res/values-da/strings.xml`. Nyt `res/values-sv/strings.xml`. Alle 64 strenge
+    (59 eksisterende + 5 nye til sprog-vælgeren) oversat i alle tre filer.
+  - **Sprog-vælger:** dropdown (Material3 `ExposedDropdownMenuBox`) i `MainActivity`
+    (connected-state, ved batteri-knappen) — Dansk/English/Svenska/Følg system. Bruger
+    platform `android.app.LocaleManager` direkte (ikke `AppCompatDelegate`) — **kun API 33+**,
+    ingen ny dependency (appen har ingen AppCompat/`attachBaseContext`). På API 26–32 er
+    valget et no-op (accepteret begrænsning, minSdk forbliver 26). Oprindeligt designet som
+    4 knapper, ændret til dropdown efter brugerønske under implementering.
+  - **QA (2026-07-01):** verificeret på `pixel_test`-emulator (API 34) og Galaxy S23 (API 36,
+    `R3CWC00JY4M`) — sprog-skift, persist efter genstart, "Følg system"-rundtur, ingen crashes,
+    WebView/HA-dashboard upåvirket.
+  - **Fund undervejs:** dropdown-versionens `options.first { }`-opslag kunne kaste
+    `NoSuchElementException` hvis systemet rapporterer et locale-tag udenfor
+    {null, "da", "en", "sv"} (f.eks. sprog sat via Android-systemindstillinger udenom
+    denne picker) — rettet til `firstOrNull { } ?: fallback`.
+  - **WebView/HA-dashboard sprog er IKKE påvirket** — styres fortsat af HA-serveren selv,
+    helt uafhængigt af app-localen.
 
 ## Næste skridt
 
