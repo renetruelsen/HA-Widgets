@@ -45,8 +45,10 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - **Pre-warm + cache:** `HaWidgetsApp` forvarmer Chromium; WebView `cacheMode=LOAD_DEFAULT` + HA's
     service worker → hurtig genåbning. Ingen vedvarende forbindelse (batterivenligt).
 - ✅ **Genvej-model strammet op (2026-06-25, efter brugerfeedback):**
-  - Dashboard-genvej = **1x1 fast tile** (ikon, `resizeMode=none`), ikke en data-widget — "bare en genvej til webview".
-    Overlay-*vinduets* størrelse er stadig konfigurerbar (sliders); det er adskilt fra tile-størrelsen.
+  - Dashboard-genvej = ikon-tile, ikke en data-widget — "bare en genvej til webview".
+    (⚠️ "1x1 fast tile, `resizeMode=none`"-delen af denne beslutning reverseret i v0.2.15 —
+    se dér.) Overlay-*vinduets* størrelse er stadig konfigurerbar (sliders); det er adskilt
+    fra tile-størrelsen.
   - In-app **"Tilføj dashboard-genvej til hjemskærm"** via `requestPinAppWidget` + manuel vejledning som
     fallback (robust mod launchere uden pin-dialog).
   - Ukonfigureret tile-tryk → åbner config-skærm; konfigureret → åbner dashboard.
@@ -122,6 +124,84 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     denne picker) — rettet til `firstOrNull { } ?: fallback`.
   - **WebView/HA-dashboard sprog er IKKE påvirket** — styres fortsat af HA-serveren selv,
     helt uafhængigt af app-localen.
+- ✅ **v0.2.15 — ShortcutWidget gjort resizable (2026-07-01, efter brugerfeedback):**
+  - **Baggrund:** v0.2.9-beslutningen "Dashboard-genvej = fast 1x1 tile (`resizeMode=none`)"
+    reverseret — brugeren oplevede at launcheren (Galaxy S23/One UI) alligevel lod widgetten
+    ændre størrelse (2x2 vs 4x4), men ikon/tekst var hardcodet og skalerede ikke med, så
+    tilen så "klemt"/forkert ud ved mindre størrelser.
+  - `shortcut_widget_info.xml`: `resizeMode="none"` → `"horizontal|vertical"`,
+    `minWidth`/`minHeight` 80dp → 110dp (≈2 grid-celler, formel `70*n-30`),
+    nyt `minResizeWidth`/`minResizeHeight=110dp` (kan ikke formindskes under ~2x2),
+    `targetCellWidth`/`targetCellHeight` 1 → 2.
+  - `ShortcutWidget.kt`: fjernet den indre `.padding(4.dp)` helt — den blå boks fylder nu
+    hele den tildelte plads kant-til-kant (uændret: launcher-grid-gutter mellem nabo-widgets
+    er launcher-styret, ikke app-styret). Ikon- og tekststørrelse (samt spacer) skalerer nu
+    kontinuerligt med `LocalSize.current` (`SizeMode.Exact`) i stedet for hardcodet
+    28dp/11sp, med clamps så det ikke bliver absurd stort/lille ved ekstreme størrelser.
+- ✅ **v0.2.16 — ShortcutWidget gjort strukturelt IDENTISK med entity-widgets (2026-07-01,
+  efter brugerfeedback):**
+  - **Baggrund:** v0.2.15 løste skalering/padding, men genvejen opførte sig stadig
+    mærkeligt på Nova Launcher. Undersøgelse viste at ShortcutWidget var den ENESTE
+    widget i appen der brugte `SizeMode.Exact` + en unik `minResizeWidth`/
+    `minResizeHeight`-attribut og et 110dp/2x2-minimum — alle andre widgets
+    (light/switch/scene/sensor/climate osv.) bruger `SizeMode.Responsive` med et fast
+    sæt størrelser, `minWidth`/`minHeight=56dp` (1x1), `maxResizeWidth`/`Height`, og
+    ingen `minResizeWidth`/`Height`. Da entity-widgets er verificeret til at fungere
+    fint på Nova, blev ShortcutWidget lavet strukturelt identisk med dem i stedet for
+    at beholde sin egen unikke sizing-strategi.
+  - `shortcut_widget_info.xml`: `minWidth`/`minHeight` 110dp → 56dp,
+    `targetCellWidth`/`targetCellHeight` 2 → 1, `minResizeWidth`/`minResizeHeight`
+    fjernet helt, nyt `maxResizeWidth`/`maxResizeHeight=250dp` (kvadratisk loft,
+    symmetrisk fordi genvejen altid skal forblive kvadratisk — i modsætning til fx
+    climate der kun er bred, ikke høj).
+  - `ShortcutWidget.kt`: `sizeMode` skiftet fra `SizeMode.Exact` til
+    `SizeMode.Responsive` med fire kvadratiske buckets (56/110/180/250dp), samme
+    mekanisme som `LightWidget`/`ClimateWidget`. Den proportionale ikon/tekst-skalering
+    fra v0.2.15 (baseret på `LocalSize.current`) er bevaret uændret — `LocalSize.current`
+    matcher nu bare altid én af de deklarerede buckets i stedet for en vilkårlig
+    kontinuerlig værdi.
+  - Minimum/default-placeringsstørrelse er dermed 56dp/1x1 igen (som resten af
+    widget-familien), ikke 110dp/2x2 som i v0.2.15.
+  - **Superseret af v0.2.17** — kvadratisk `maxResizeWidth/Height=250dp` og den
+    bevarede kontinuerlige ikon/tekst-skalering viste sig stadig at afvige visuelt fra
+    entity-widgets ved direkte side-by-side-sammenligning på Nova (se v0.2.17).
+- ✅ **v0.2.17 — ShortcutWidget genbruger de FAKTISKE compact/wide-layouts (2026-07-01,
+  efter direkte side-by-side-sammenligning med LightWidget på brugerens forespørgsel):**
+  - **Baggrund:** v0.2.16 matchede XML-attributter og `SizeMode`, men brugeren bad om at
+    resize genvejen og en entity-widget til samme størrelse og sammenligne. Det viste en
+    reel forskel: LightWidget bruger et FAST compact/wide-layout (fast 26/28dp ikon,
+    fast padding) der bevidst IKKE fylder boksen ved store størrelser — mens
+    ShortcutWidgets bevarede kontinuerlige skalering gjorde noget andet (intet loft på
+    højden, forsøgte at fylde boksen). To forskellige visuelle paradigmer, uanset ens
+    XML-tal.
+  - **Fix:** `ShortcutWidget.kt` smed al bespoke skalerings-kode (proportional
+    ikon/tekst/spacer via `LocalSize.current`) væk og genbruger nu `WidgetCompactLayout`/
+    `WidgetWideLayout` fra `GlanceWidgetCommon.kt` 1:1 — samme funktioner som
+    Light/Switch/Scene/Sensor/Climate osv. kalder. `label` = dashboard-titel,
+    `statusText` = tom streng (genveje har ingen live tilstand). Uconfigureret tilstand
+    bruger nu også `UnconfiguredWidgetContent` (samme "Opsæt"-visning som alle andre
+    widgets) i stedet for sin egen ikon-uden-tekst-variant.
+  - `shortcut_widget_info.xml`: `sizeMode`-buckets ændret til `56x56dp`/`110x56dp`
+    (samme to buckets som `LightWidget`), `maxResizeHeight` 250dp → 120dp (matcher
+    `light_widget_info.xml` præcist — ikke længere kvadratisk-specifikt), tilføjet
+    `updatePeriodMillis="0"` for fuld paritet med de øvrige widget-info-filer.
+  - Verificeret på Nova: resize-håndtag fungerer nu pålideligt (brugte
+    `uiautomator dump` til at finde præcise handle-koordinater, da visuelt gættede
+    koordinater fra screenshots ofte ramte forkert — Nova's resize-menu-rækkefølge
+    varierer). Side-by-side sammenligning viser nu identisk adfærd: fast ikon+tekst i
+    en række, ingen skalering udover boksen, samme tomrum-ved-oversize-svaghed som
+    resten af familien.
+- ✅ **v0.2.18 — ikon/tekst vertikalt centreret ved 1x1 (2026-07-01, efter
+  brugerfeedback):**
+  - **Baggrund:** Efter v0.2.17 sad ikon+label en smule for højt i den kompakte (56dp)
+    boks i stedet for centreret. Årsag: `ShortcutContent` kalder `WidgetCompactLayout`/
+    `WidgetWideLayout` med `statusText = ""` (genveje har ingen live tilstand) — men en
+    tom `Text` reserverer stadig en linjes højde i `Column`/`Row`'et, så
+    "centrér-blokken" inkluderede en usynlig tom linje. Det gjorde blokkens midte
+    lavere end den synlige tekst, og skubbede det synlige indhold visuelt opad.
+  - `GlanceWidgetCommon.kt`: `WidgetCompactLayout` og `WidgetWideLayout` springer nu
+    status-`Text`'en helt over når `statusText` er tom, i stedet for at rendere en
+    usynlig linje. Ingen ændring for entity-widgets (de sender aldrig tom statusText).
 
 ## Næste skridt
 
@@ -189,6 +269,15 @@ JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assemble
   gates bag debug/fjernes før release.
 - Emulatorens AOSP-launcher viser ikke `requestPinAppWidget`-dialogen (returnerer `supported=true` men
   no-op). Test pin-knappen på rigtig enhed (One UI/Pixel). Manuel widget-tilføjelse virker på emulator.
+- **Nova Launcher + `resizeMode="none"` (historisk, forældet af v0.2.15):** i modsætning til
+  AOSP-launcheren (som strækker widgets til hele grid-cellen) tildelte Nova et
+  ikke-resizeable widget nøjagtigt de deklarerede `minWidth`/`minHeight` fra widget-info-xml'en
+  — ikke cellestørrelsen. `ShortcutWidget`s indhold (ikon+label i en `cornerRadius`-clippet Box)
+  blev derfor beskåret på Nova ved `minWidth/minHeight=40dp` (label helt usynlig), selvom
+  emulatoren viste det fint. v0.2.15 gjorde widgetten reelt resizable (`resizeMode="horizontal|vertical"`,
+  `minWidth/minHeight=110dp`) med indhold der skalerer via `LocalSize.current` — omgår problemet
+  ved at lade layoutet tilpasse sig den faktiske tildelte størrelse i stedet for at gætte en fast
+  størrelse. Verificér altid ShortcutWidget-ændringer på en Nova- og/eller One UI-enhed.
 - `KioskScript`-selektorer (`.header`, `hui-root`, `home-assistant-main`) er HA-versionsfølsomme;
   den rekursive shadow-root-tilgang er robust mod sti-ændringer, men selektor-navne kan kræve justering
   ved store frontend-opdateringer.

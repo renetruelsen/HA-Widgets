@@ -89,11 +89,16 @@ fun WidgetCompactLayout(iconResId: Int, label: String, statusText: String, conte
             colorFilter = ColorFilter.tint(contentColor),
         )
         Text(text = label, style = TextStyle(color = contentColor, fontSize = 11.sp), maxLines = 1)
-        Text(
-            text = statusText,
-            style = TextStyle(color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium),
-            maxLines = 1,
-        )
+        // Skip the status line entirely when empty (e.g. ShortcutWidget has no live state) —
+        // an empty Text still reserves a line of height, which biases the visible content
+        // above the box's true vertical center once the column is centered as a whole.
+        if (statusText.isNotEmpty()) {
+            Text(
+                text = statusText,
+                style = TextStyle(color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                maxLines = 1,
+            )
+        }
     }
 }
 
@@ -116,7 +121,12 @@ fun WidgetWideLayout(iconResId: Int, label: String, statusText: String, contentC
                 style = TextStyle(color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium),
                 maxLines = 1,
             )
-            Text(text = statusText, style = TextStyle(color = contentColor, fontSize = 11.sp), maxLines = 1)
+            // Skip the status line entirely when empty (e.g. ShortcutWidget has no live
+            // state) — an empty Text still reserves a line of height, which biases the
+            // visible content above the row's true vertical center.
+            if (statusText.isNotEmpty()) {
+                Text(text = statusText, style = TextStyle(color = contentColor, fontSize = 11.sp), maxLines = 1)
+            }
         }
     }
 }
