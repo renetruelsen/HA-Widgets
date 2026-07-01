@@ -160,14 +160,17 @@ per-instans-størrelse.
   = 1 slot-række + titel-linje (~74dp) — ens for alle instanser, uanset konfigureret N.
 - Widget med færre end 5 slots viser kun de N konfigurerede slot-bokse, venstre-justeret;
   resten af det faste fodaftryk er tomt/transparent.
-- Titel-linje-pladsen er altid reserveret (også når titel er tom — blank i så fald), af
-  samme årsag: kan ikke gøre højden betinget pr instans.
-- Hver slot: egen `Box` (`cornerRadius=16dp`), farve efter `actionEntityId`'s state (falder
-  tilbage til `displayEntityId`'s state hvis action=NONE) — samme konvention som
-  eksisterende entity-widgets (`primary`/`onPrimary` aktiv, `surfaceVariant` inaktiv,
-  `errorContainer` unavailable) — der genbruger `WidgetCompactLayout` (ikon+label+status
-  fra `displayEntityId`, `GlanceWidgetCommon.kt`) og egen `clickable`-modifier ud fra dens
-  `action`-type + `actionEntityId`.
+- Titel-tekstlinjen springes helt over (ikke render'et) når titlen er tom, samme mønster
+  som `WidgetCompactLayout`/`WidgetWideLayout` allerede bruger for `statusText`. Dette
+  ændrer IKKE det OS-tildelte fodaftryk (det er stadig fast metadata delt af alle
+  instanser, jf. ovenfor) — det betyder blot at slot-rækken centreres pænt i den fulde
+  højde i stedet for at efterlade en synlig tom linje, når widgetten ikke har en titel.
+- Hver slot: egen `Box` (`cornerRadius=16dp`), farve efter **`displayEntityId`'s** state
+  (boksen er en visuel repræsentation af det der VISES — samme konvention som eksisterende
+  entity-widgets: `primary`/`onPrimary` aktiv, `surfaceVariant` inaktiv, `errorContainer`
+  unavailable). Genbruger `WidgetCompactLayout` (ikon+label+status fra `displayEntityId`,
+  `GlanceWidgetCommon.kt`) og egen `clickable`-modifier ud fra dens `action`-type +
+  `actionEntityId` (action-målet styrer kun HVAD der sker ved tryk, ikke farven).
 - Ukonfigureret widget (0 slots): genbruger `UnconfiguredWidgetContent`-mønsteret.
 
 ## Sync/fan-out-integration
