@@ -388,6 +388,11 @@ import android.app.LocaleManager
 import android.os.Build
 import android.os.LocaleList
 import androidx.annotation.RequiresApi
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 ```
 
 - [ ] **Step 2: Tilføj locale-helper-funktioner**
@@ -409,21 +414,51 @@ private fun setAppLocale(context: android.content.Context, languageTag: String?)
         if (languageTag == null) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(languageTag)
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun LanguageOption(
-    label: String,
-    selected: Boolean,
-    fillWidth: Boolean = false,
-    onClick: () -> Unit
-) {
-    val modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier
-    if (selected) {
-        Button(onClick = onClick, modifier = modifier) { Text(label) }
-    } else {
-        OutlinedButton(onClick = onClick, modifier = modifier) { Text(label) }
+private fun LanguageDropdown(currentTag: String?, onSelect: (String?) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        null to stringResource(R.string.language_follow_system),
+        "da" to stringResource(R.string.language_danish),
+        "en" to stringResource(R.string.language_english),
+        "sv" to stringResource(R.string.language_swedish)
+    )
+    val selectedLabel = options.first { it.first == currentTag }.second
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.section_language)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (tag, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSelect(tag)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 ```
+
+**Fallback note:** if `Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)` does not resolve against the project's Compose BOM (`2024.10.01`), use the parameterless `Modifier.menuAnchor()` overload instead (deprecated but functional — the project already tolerates pre-existing build warnings). Document in the report which variant was used.
 
 - [ ] **Step 3: Tilføj sprog-sektion i connected-state UI**
 
@@ -456,46 +491,9 @@ Erstat det med (tilføjer sprog-sektionen mellem batteri-status og den eksistere
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     var currentTag by remember { mutableStateOf(currentLanguageTag(context)) }
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(stringResource(R.string.section_language), style = MaterialTheme.typography.labelLarge)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                LanguageOption(
-                                    label = stringResource(R.string.language_danish),
-                                    selected = currentTag == "da"
-                                ) {
-                                    setAppLocale(context, "da")
-                                    currentTag = "da"
-                                }
-                                LanguageOption(
-                                    label = stringResource(R.string.language_english),
-                                    selected = currentTag == "en"
-                                ) {
-                                    setAppLocale(context, "en")
-                                    currentTag = "en"
-                                }
-                                LanguageOption(
-                                    label = stringResource(R.string.language_swedish),
-                                    selected = currentTag == "sv"
-                                ) {
-                                    setAppLocale(context, "sv")
-                                    currentTag = "sv"
-                                }
-                            }
-                            LanguageOption(
-                                label = stringResource(R.string.language_follow_system),
-                                selected = currentTag == null,
-                                fillWidth = true
-                            ) {
-                                setAppLocale(context, null)
-                                currentTag = null
-                            }
-                        }
+                    LanguageDropdown(currentTag = currentTag) { tag ->
+                        setAppLocale(context, tag)
+                        currentTag = tag
                     }
 
                     Spacer(Modifier.height(8.dp))

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HA Widgets</string>
+
+    <!-- Widget metadata -->
+    <string name="shortcut_widget_label">HA Instrumentpanelsgenväg</string>
+    <string name="shortcut_widget_description">Öppnar en Home Assistant-instrumentpanel.</string>
+    <string name="open_dashboard">Öppna instrumentpanel</string>
+
+    <!-- Common -->
+    <string name="cancel">Avbryt</string>
+    <string name="disconnect">Koppla från</string>
+    <string name="connect">Anslut</string>
+    <string name="connecting">Ansluter…</string>
+    <string name="checking_connection">Kontrollerar anslutning…</string>
+    <string name="ha_url_label">HA-URL</string>
+    <string name="token_label">Long-lived access token</string>
+
+    <!-- MainActivity -->
+    <string name="disconnect_dialog_title">Koppla från HA?</string>
+    <string name="disconnect_dialog_body">Detta tar bort din anslutning. Befintliga widgetar slutar fungera tills du ansluter igen.</string>
+    <string name="connected_to">Ansluten till</string>
+    <string name="add_widget_to_home">Lägg till instrumentpanelsgenväg på hemskärmen</string>
+    <string name="pin_manual_instructions">Håll ner ett tomt ställe på hemskärmen → Widgetar → hitta \'HA Widgets\' → dra ut genvägen.</string>
+    <string name="pin_button_instructions">Tryck på knappen och bekräfta i dialogrutan. Fungerar det inte? Håll ner hemskärmen → Widgetar → \'HA Widgets\'.</string>
+    <string name="how_to_use_title">Så använder du HA Widgets</string>
+    <string name="how_to_use_step1">1. Tryck på \'Lägg till instrumentpanelsgenväg\' ovan</string>
+    <string name="how_to_use_step2">2. Välj instrumentpanel och vy i konfigurationen</string>
+    <string name="how_to_use_step3">3. Tryck på widgetikonen på hemskärmen för att öppna din instrumentpanel</string>
+    <string name="onboarding_intro">Anslut din Home Assistant-instans nedan. Du kan även hoppa över detta och ansluta första gången du lägger till en widget.</string>
+
+    <!-- Language picker -->
+    <string name="section_language">Språk</string>
+    <string name="language_danish">Dansk</string>
+    <string name="language_english">English</string>
+    <string name="language_swedish">Svenska</string>
+    <string name="language_follow_system">Följ system</string>
+
+    <!-- ShortcutWidgetConfigActivity -->
+    <string name="configure_widget_title">Konfigurera widget</string>
+    <string name="save_widget">Spara widget</string>
+    <string name="select_dashboard">Välj instrumentpanel</string>
+    <string name="section_dashboard">Instrumentpanel</string>
+    <string name="section_display">Visning</string>
+    <string name="display_fullscreen">Helskärm</string>
+    <string name="display_overlay">Overlay (fönster)</string>
+    <string name="overlay_width">Bredd: %1$d %%</string>
+    <string name="overlay_height">Höjd: %1$d %%</string>
+    <string name="connect_to_ha_title">Anslut till Home Assistant</string>
+    <string name="connect_to_ha_body">Ange din HA-adress och en long-lived access token (HA → Profil → Long-Lived Access Tokens).</string>
+    <string name="load_dashboards_error">Kunde inte hämta instrumentpaneler: %1$s</string>
+
+    <!-- Battery optimization dialog -->
+    <string name="battery_dialog_title">Tillåt bakgrundsåtkomst</string>
+    <string name="battery_dialog_body">Widgetar synkroniserar med Home Assistant i bakgrunden. Om systemet begränsar bakgrundsaktivitet kan tryck på en widget visa inaktuell data eller misslyckas med att uppdatera.\n\nTryck på \"Tillåt\" för att undanta HA Widgets från batterioptimering — det håller widgetarna responsiva.</string>
+    <string name="battery_dialog_allow">Tillåt</string>
+    <string name="battery_dialog_later">Inte nu</string>
+    <string name="battery_manage">Batterioptimering</string>
+    <string name="battery_status_exempt">Undantagen från batterioptimering</string>
+    <string name="battery_status_restricted">Begränsad av batterioptimering</string>
+
+    <!-- LightWidget -->
+    <string name="light_widget_label">HA Ljus</string>
+    <string name="light_widget_description">Styr ljuskällor</string>
+
+    <!-- SwitchWidget -->
+    <string name="switch_widget_label">HA Strömbrytare</string>
+    <string name="switch_widget_description">Slå på/av strömbrytare</string>
+
+    <!-- SceneWidget -->
+    <string name="scene_widget_label">HA Scen</string>
+    <string name="scene_widget_description">Aktivera scener</string>
+
+    <!-- ScriptWidget -->
+    <string name="script_widget_label">HA Skript</string>
+    <string name="script_widget_description">Kör skript</string>
+
+    <!-- AutomationWidget -->
+    <string name="automation_widget_label">HA Automatisering</string>
+    <string name="automation_widget_description">Utlös automatiseringar</string>
+
+    <!-- SensorWidget -->
+    <string name="sensor_widget_label">HA Sensor</string>
+    <string name="sensor_widget_description">Visa sensorvärden</string>
+
+    <!-- BinarySensorWidget -->
+    <string name="binary_sensor_widget_label">HA Binär sensor</string>
+    <string name="binary_sensor_widget_description">Visa binära sensorer</string>
+
+    <!-- CoverWidget -->
+    <string name="cover_widget_label">HA Cover</string>
+    <string name="cover_widget_description">Styr persienner och rullgardiner</string>
+
+    <!-- ClimateWidget -->
+    <string name="climate_widget_label">HA Klimat</string>
+    <string name="climate_widget_description">Visa och styr temperatur (2×1)</string>
+</resources>

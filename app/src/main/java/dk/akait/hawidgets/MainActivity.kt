@@ -7,11 +7,18 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.app.LocaleManager
+import android.os.Build
+import android.os.LocaleList
+import androidx.annotation.RequiresApi
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -216,6 +223,16 @@ private fun OnboardingScreen() {
 
                 Spacer(Modifier.height(8.dp))
 
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    var currentTag by remember { mutableStateOf(currentLanguageTag(context)) }
+                    LanguageDropdown(currentTag = currentTag) { tag ->
+                        setAppLocale(context, tag)
+                        currentTag = tag
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 OutlinedButton(
                     onClick = { showDisconnectDialog = true },
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -275,6 +292,64 @@ private fun OnboardingScreen() {
                     Text(status, color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall)
                 }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun currentLanguageTag(context: android.content.Context): String? {
+    val localeManager = context.getSystemService(LocaleManager::class.java)
+    val tag = localeManager.applicationLocales.toLanguageTags()
+    return tag.takeIf { it.isNotBlank() }
+}
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+private fun setAppLocale(context: android.content.Context, languageTag: String?) {
+    val localeManager = context.getSystemService(LocaleManager::class.java)
+    localeManager.applicationLocales =
+        if (languageTag == null) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(languageTag)
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun LanguageDropdown(currentTag: String?, onSelect: (String?) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        null to stringResource(R.string.language_follow_system),
+        "da" to stringResource(R.string.language_danish),
+        "en" to stringResource(R.string.language_english),
+        "sv" to stringResource(R.string.language_swedish)
+    )
+    val selectedLabel = options.firstOrNull { it.first == currentTag }?.second
+        ?: stringResource(R.string.language_follow_system)
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it }
+    ) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.section_language)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth()
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (tag, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSelect(tag)
+                        expanded = false
+                    }
+                )
             }
         }
     }

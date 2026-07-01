@@ -46,10 +46,12 @@ forbliver 26; dette er en accepteret begrænsning.
 ## UI
 
 Ny sektion i `MainActivity` (connected-state, ved siden af eksisterende batteri-knap):
-4 valg — **Dansk / English / Svenska / Følg system**. Valget anvendes med det samme
-(ingen restart krævet — systemet recreate'r Activity og genindlæser ressourcer).
-Sektionen vises kun når `Build.VERSION.SDK_INT >= 33` (ellers ingen funktionel effekt,
-jf. kendte begrænsning).
+en dropdown (Material3 `ExposedDropdownMenuBox`) med 4 valg — **Dansk / English / Svenska /
+Følg system**. Valget anvendes med det samme (ingen restart krævet — systemet recreate'r
+Activity og genindlæser ressourcer). Sektionen vises kun når `Build.VERSION.SDK_INT >= 33`
+(ellers ingen funktionel effekt, jf. kendte begrænsning).
+
+*(Rettet 2026-06-30 efter brugerønske: oprindeligt designet som 4 knapper, ændret til dropdown.)*
 
 ## Data-flow
 
