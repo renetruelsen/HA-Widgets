@@ -94,4 +94,8 @@
     <!-- ClimateWidget -->
     <string name="climate_widget_label">HA Klima</string>
     <string name="climate_widget_description">Vis og styr temperatur (2×1)</string>
+
+    <!-- MultiEntityWidget -->
+    <string name="multi_entity_widget_label">HA Multi</string>
+    <string name="multi_entity_widget_description">Kombinér op til 5 entiteter</string>
 </resources>
