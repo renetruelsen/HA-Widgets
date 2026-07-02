@@ -8,15 +8,18 @@ import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.worker.SyncWorker
 
-/** Generic toggle on↔off — for switch and any other on/off domain (not light, light uses its own). */
+/** Generisk toggle — domain-bevidst service-mapping. Bruges af switch, lock, cover, automation osv. */
 class ToggleEntityAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val entityId = parameters[entityIdKey] ?: return
         val domain = parameters[domainKey] ?: return
         val current = AppDatabase.get(context).entityStateDao().get(entityId) ?: return
-        val target = if (current.state == "on") "off" else "on"
-        val service = if (target == "on") "turn_on" else "turn_off"
-        EntityRepository.command(context, domain, service, entityId, target, current.state)
+        val (targetState, service) = when (domain) {
+            "lock" -> if (current.state == "locked") "unlocked" to "unlock" else "locked" to "lock"
+            "cover" -> if (current.state == "open") "closed" to "close_cover" else "open" to "open_cover"
+            else -> if (current.state == "on") "off" to "turn_off" else "on" to "turn_on"
+        }
+        EntityRepository.command(context, domain, service, entityId, targetState, current.state)
     }
 
     companion object {
