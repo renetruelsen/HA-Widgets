@@ -8,6 +8,7 @@ import dk.akait.hawidgets.widget.automation.AutomationWidget
 import dk.akait.hawidgets.widget.binarysensor.BinarySensorWidget
 import dk.akait.hawidgets.widget.climate.ClimateWidget
 import dk.akait.hawidgets.widget.light.LightWidget
+import dk.akait.hawidgets.widget.multientity.MultiEntityWidget
 import dk.akait.hawidgets.widget.scene.SceneWidget
 import dk.akait.hawidgets.widget.script.ScriptWidget
 import dk.akait.hawidgets.widget.sensor.SensorWidget
@@ -34,15 +35,21 @@ object WidgetUpdater {
 
     /** Opdatér alle widgets der viser [entityId]. */
     suspend fun updateForEntity(context: Context, entityId: String) {
-        val domains = AppDatabase.get(context).entityWidgetDao()
-            .widgetsForEntity(entityId).map { it.domain }.toSet()
-        if (domains.isEmpty()) return
+        val db = AppDatabase.get(context)
+        val domains = db.entityWidgetDao().widgetsForEntity(entityId).map { it.domain }.toSet()
+        val hasMultiWidgetMatch = db.multiWidgetDao().slotsForEntity(entityId).isNotEmpty()
+        if (domains.isEmpty() && !hasMultiWidgetMatch) return
 
         val manager = GlanceAppWidgetManager(context)
         for (domain in domains) {
             val widget = domainWidgets[domain] ?: continue
             manager.getGlanceIds(widget::class.java)
                 .forEach { glanceId -> runCatching { widget.update(context, glanceId) } }
+        }
+        if (hasMultiWidgetMatch) {
+            val multiWidget = MultiEntityWidget()
+            manager.getGlanceIds(multiWidget::class.java)
+                .forEach { glanceId -> runCatching { multiWidget.update(context, glanceId) } }
         }
     }
 }
