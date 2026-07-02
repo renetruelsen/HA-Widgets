@@ -240,6 +240,29 @@
                 android:resource="@xml/cover_widget_info" />
         </receiver>
 
+        <!-- Multi-entity -->
+        <activity
+            android:name=".widget.multientity.MultiEntityWidgetConfigActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.HaWidgets">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+        <receiver
+            android:name=".widget.multientity.MultiEntityWidgetReceiver"
+            android:label="@string/multi_entity_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/multi_entity_widget_info" />
+        </receiver>
+
         <activity
             android:name=".widget.common.RangeControlActivity"
             android:exported="false"
