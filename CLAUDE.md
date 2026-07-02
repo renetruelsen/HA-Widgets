@@ -275,6 +275,22 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     grøn — bekræftede scroll/knapper nåbare + legacy-normaliseringen (fandt fejlen her).
     UX-review: APPROVE WITH CHANGES (hovedpunkt FRA-caption rettet; rest er valgfri polish /
     bevidst design). Fuld spec: `docs/widget-settings-spec.md` §7.
+- ✅ **v0.2.26 — code-review-fixes før merge (2026-07-02):** 8-vinklet code-review
+  (line-scan/removed-behavior/cross-file/reuse/simplify/efficiency/altitude/conventions)
+  fandt 9 fund; 2 reelle fejl rettet:
+  - **OverflowBadge klikbar:** «+N»-badgen åbner nu config-activity ved tryk — før var
+    slots i overflow både usynlige OG uopnåelige (ingen adgangsvej uden manuel resize).
+  - **Kontakt-hukommelse:** «Reagér på tryk» FRA→TIL genopretter nu brugerens seneste
+    handlings-valg (`rememberedAction`, keyed på display/mål-entitet) i stedet for altid
+    at nulstille til `opts.first()` — fx valgt «Åbn skyder» overlevede ikke en toggle før.
+  - **Kendte, accepterede fund (ikke rettet):** (1) slot-loft er 5 uanset variant —
+    bevidst plan-beslutning (delt config, resize+overflow som sikkerhedsnet); badge-klik
+    giver nu adgangsvejen. (2) `MultiWidgetEntity.title`-kolonnen + `get()/observe()` er
+    død plumbing; gen-gem nulstiller gamle titler (featuren er fjernet — acceptabelt).
+    (3) OverflowBadge bruger tema-farver inde i den faste grå ramme — mulig
+    mørk-tilstands-kontrastklask; observér ved device-brug. (4) 4 receiver-klasser er
+    identiske kopier — kandidat til delt base ved næste variant. (5) Handling-sektionens
+    nesting → sealed HandlingState-kandidat. Verificeret på emulator; merged til main.
 
 ## Næste skridt
 

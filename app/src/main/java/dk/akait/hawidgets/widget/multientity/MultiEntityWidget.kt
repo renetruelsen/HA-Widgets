@@ -100,7 +100,7 @@ class MultiEntityWidget : GlanceAppWidget() {
                         context, appWidgetId, MultiEntityWidgetConfigActivity::class.java, R.drawable.ic_multi_entity,
                     )
                 } else {
-                    MultiEntityContent(context, slots, states)
+                    MultiEntityContent(context, appWidgetId, slots, states)
                 }
             }
         }
@@ -156,6 +156,7 @@ private fun computeBoxHeight(availableHeight: Dp): Dp =
 @Composable
 private fun MultiEntityContent(
     context: Context,
+    appWidgetId: Int,
     slots: List<MultiWidgetSlotEntity>,
     states: Map<String, EntityStateEntity?>,
 ) {
@@ -183,7 +184,7 @@ private fun MultiEntityContent(
                 }
                 if (layout.overflowCount > 0) {
                     if (layout.visibleSlots > 0) Spacer(modifier = GlanceModifier.width(SLOT_GAP_DP.dp))
-                    OverflowBadge(layout.overflowCount, layout.boxWidth, boxHeight)
+                    OverflowBadge(context, appWidgetId, layout.overflowCount, layout.boxWidth, boxHeight)
                 }
             }
         }
@@ -191,10 +192,18 @@ private fun MultiEntityContent(
 }
 
 @Composable
-private fun OverflowBadge(count: Int, boxWidth: Dp, boxHeight: Dp) {
+private fun OverflowBadge(context: Context, appWidgetId: Int, count: Int, boxWidth: Dp, boxHeight: Dp) {
+    // Badgen skal give ADGANG til de skjulte slots, ikke kun tælle dem — tryk åbner config,
+    // hvor alle slots kan ses/redigeres (code-review-fund: uklikkelig badge = uopnåelige
+    // entiteter indtil manuel resize).
+    val intent = Intent(context, MultiEntityWidgetConfigActivity::class.java).apply {
+        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
     Box(
         modifier = GlanceModifier.width(boxWidth).height(boxHeight)
-            .background(GlanceTheme.colors.surfaceVariant).cornerRadius(16.dp),
+            .background(GlanceTheme.colors.surfaceVariant).cornerRadius(16.dp)
+            .clickable(actionStartActivity(intent)),
         contentAlignment = Alignment.Center,
     ) {
         Text(

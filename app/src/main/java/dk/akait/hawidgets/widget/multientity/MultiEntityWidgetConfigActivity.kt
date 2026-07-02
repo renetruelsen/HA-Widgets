@@ -333,6 +333,12 @@ private fun SlotEditorScreen(
     // Ugyldigt: bruger valgte et andet mål der ikke kan handles på (fx en sensor) → bloker gem.
     val invalidTarget = targetDiffers && readOnly
     val reactsToTap = draft.action != "NONE"
+    // Husk seneste rigtige handlings-valg, så kontakt FRA→TIL genopretter brugerens valg (fx
+    // RANGE) i stedet for altid at nulstille til opts.first() (code-review-fund). Nulstilles
+    // når mål/visning skifter (remember-keys), hvor opts alligevel genberegnes.
+    var rememberedAction by remember(display.entityId, action.entityId) {
+        mutableStateOf(draft.action.takeIf { it != "NONE" })
+    }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Tilpas entitet") }) }) { padding ->
         Column(
@@ -389,7 +395,12 @@ private fun SlotEditorScreen(
                                 Text("Reagér på tryk", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                                 Switch(
                                     checked = reactsToTap,
-                                    onCheckedChange = { on -> onActionChange(if (on) opts.first() else "NONE") },
+                                    onCheckedChange = { on ->
+                                        onActionChange(
+                                            if (on) rememberedAction?.takeIf { it in opts } ?: opts.first()
+                                            else "NONE"
+                                        )
+                                    },
                                 )
                             }
                         }
@@ -403,14 +414,18 @@ private fun SlotEditorScreen(
                                 )
                             } else {
                                 opts.forEach { actionType ->
+                                    val pick = {
+                                        rememberedAction = actionType
+                                        onActionChange(actionType)
+                                    }
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable { onActionChange(actionType) }
+                                            .clickable(onClick = pick)
                                             .padding(vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        RadioButton(selected = draft.action == actionType, onClick = { onActionChange(actionType) })
+                                        RadioButton(selected = draft.action == actionType, onClick = pick)
                                         Spacer(Modifier.width(8.dp))
                                         Text(actionShortLabel(actionType))
                                     }
