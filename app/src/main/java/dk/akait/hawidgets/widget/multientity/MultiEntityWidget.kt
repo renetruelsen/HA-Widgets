@@ -171,6 +171,13 @@ private fun slotClickModifier(
     slot: MultiWidgetSlotEntity,
     actionState: EntityStateEntity?,
 ): GlanceModifier {
+    if (slot.action == "NONE") {
+        return base.clickable(
+            actionRunCallback<RefreshEntityAction>(
+                actionParametersOf(RefreshEntityAction.entityIdKey to slot.displayEntityId)
+            )
+        )
+    }
     if (actionState == null || actionState.state == "unavailable") return base
     return when (slot.action) {
         "TOGGLE" -> base.clickable(
@@ -198,7 +205,7 @@ private fun slotClickModifier(
             }
             base.clickable(actionStartActivity(intent))
         }
-        "TRIGGER" -> {
+        else -> { // "TRIGGER"
             val service = if (slot.actionDomain == "automation") "trigger" else "turn_on"
             base.clickable(
                 actionRunCallback<TriggerEntityAction>(
@@ -210,11 +217,6 @@ private fun slotClickModifier(
                 )
             )
         }
-        else -> base.clickable( // "NONE" → refresh den viste entitet
-            actionRunCallback<RefreshEntityAction>(
-                actionParametersOf(RefreshEntityAction.entityIdKey to slot.displayEntityId)
-            )
-        )
     }
 }
 
