@@ -24,6 +24,7 @@ class HaApiClient(
         val entityId: String,
         val friendlyName: String,
         val state: String,
+        val domain: String = entityId.substringBefore('.'),
     )
 
     private val base get() = baseUrl.trimEnd('/')
@@ -103,8 +104,11 @@ class HaApiClient(
         }
     }
 
-    /** Henter alle states og filtrerer på domæne — bruges til config-skærm. */
-    suspend fun listStatesByDomain(domain: String): List<EntityBrief> = withContext(Dispatchers.IO) {
+    /** Henter alle states og filtrerer på ét domæne — bruges til enkelt-entity widget-config. */
+    suspend fun listStatesByDomain(domain: String): List<EntityBrief> = listStatesByDomains(setOf(domain))
+
+    /** Henter alle states og filtrerer på flere domæner — bruges til multi-entity widget-config. */
+    suspend fun listStatesByDomains(domains: Set<String>): List<EntityBrief> = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
                 .url("$base/api/states")
@@ -119,12 +123,14 @@ class HaApiClient(
                     for (i in 0 until array.length()) {
                         val obj = array.getJSONObject(i)
                         val id = obj.getString("entity_id")
-                        if (!id.startsWith("$domain.")) continue
+                        val entityDomain = id.substringBefore('.')
+                        if (entityDomain !in domains) continue
                         val attrs = obj.optJSONObject("attributes")
                         add(EntityBrief(
                             entityId = id,
                             friendlyName = attrs?.optString("friendly_name")?.ifEmpty { null } ?: id,
                             state = obj.getString("state"),
+                            domain = entityDomain,
                         ))
                     }
                 }

@@ -39,6 +39,8 @@ class RangeControlActivity : ComponentActivity() {
         const val EXTRA_MAX_VALUE = "max_value"
         /** Actual measured temperature for climate domain. Int.MIN_VALUE = not provided. */
         const val EXTRA_ACTUAL_TEMP = "actual_temp"
+        /** Valgfri unit-override til value-label (fx "W", "kWh") — bruges af number-domain. Tom/null = domain-default (%). */
+        const val EXTRA_UNIT_SUFFIX = "unit_suffix"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,6 +54,7 @@ class RangeControlActivity : ComponentActivity() {
         val minValue = intent.getIntExtra(EXTRA_MIN_VALUE, 1)
         val maxValue = intent.getIntExtra(EXTRA_MAX_VALUE, 100)
         val actualTemp = intent.getIntExtra(EXTRA_ACTUAL_TEMP, Int.MIN_VALUE)
+        val unitSuffixOverride = intent.getStringExtra(EXTRA_UNIT_SUFFIX)
 
         setContent {
             MaterialTheme {
@@ -82,6 +85,10 @@ class RangeControlActivity : ComponentActivity() {
                                 "climate" -> api.callService(
                                     "climate", "set_temperature", entityId,
                                     extraData = mapOf("temperature" to value)
+                                )
+                                "number" -> api.callService(
+                                    "number", "set_value", entityId,
+                                    extraData = mapOf("value" to value)
                                 )
                             }
                             EntityRepository.refresh(applicationContext, entityId)
@@ -140,9 +147,10 @@ class RangeControlActivity : ComponentActivity() {
                         val valueLabel = when (domain) {
                             "cover" -> "Position"
                             "climate" -> "Temperatur"
+                            "number" -> "Værdi"
                             else -> "Lysstyrke"
                         }
-                        val unitSuffix = when (domain) {
+                        val unitSuffix = unitSuffixOverride ?: when (domain) {
                             "climate" -> "°C"
                             else -> "%"
                         }
@@ -156,8 +164,10 @@ class RangeControlActivity : ComponentActivity() {
                                 "$valueLabel: ${sliderValue.toInt()}$unitSuffix",
                                 style = MaterialTheme.typography.bodyLarge,
                             )
-                            OutlinedButton(onClick = { sendToggle() }, enabled = !busy) {
-                                Text(toggleLabel)
+                            if (domain != "number") {
+                                OutlinedButton(onClick = { sendToggle() }, enabled = !busy) {
+                                    Text(toggleLabel)
+                                }
                             }
                         }
 
@@ -166,7 +176,7 @@ class RangeControlActivity : ComponentActivity() {
                             onValueChange = { sliderValue = it },
                             onValueChangeFinished = { sendRangeCommand(sliderValue.toInt()) },
                             valueRange = minValue.toFloat()..maxValue.toFloat(),
-                            enabled = isOn,
+                            enabled = domain == "number" || isOn,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

@@ -6,13 +6,19 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [EntityStateEntity::class, EntityWidgetEntity::class],
-    version = 1,
+    entities = [
+        EntityStateEntity::class,
+        EntityWidgetEntity::class,
+        MultiWidgetEntity::class,
+        MultiWidgetSlotEntity::class,
+    ],
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun entityStateDao(): EntityStateDao
     abstract fun entityWidgetDao(): EntityWidgetDao
+    abstract fun multiWidgetDao(): MultiWidgetDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
@@ -23,7 +29,10 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "ha_widgets.db",
-                ).build().also { instance = it }
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build().also { instance = it }
             }
     }
 }
+

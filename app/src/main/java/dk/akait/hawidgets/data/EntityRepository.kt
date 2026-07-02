@@ -46,7 +46,12 @@ object EntityRepository {
     suspend fun refreshAll(context: Context): Boolean {
         val api = client(context) ?: return true
         val db = AppDatabase.get(context)
-        val ids = db.entityWidgetDao().allEntityIds()
+        val multiDao = db.multiWidgetDao()
+        val ids = (
+            db.entityWidgetDao().allEntityIds() +
+                multiDao.allDisplayEntityIds() +
+                multiDao.allActionEntityIds()
+            ).distinct()
         var allOk = true
         for (id in ids) {
             val state = api.getState(id)

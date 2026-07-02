@@ -19,10 +19,13 @@ building blocks (generalized where needed) — no parallel action system is intr
 **Spec:** `docs/superpowers/specs/2026-07-01-multi-entity-widget-design.md`
 
 **Task order note:** tasks are sequenced so every file compiles the moment it's created —
-no task references a Kotlin class that a *later* task creates. In particular the config
-Activity (Task 8) is built before the widget rendering file (Task 9) that references it via
-`::class.java`, and the sync/fan-out extension (Task 10) comes after the widget class (Task
-9) that it instantiates.
+no task references a Kotlin class or resource that a *later* task creates. The drawables
+(Task 3) come before the domain-support helpers (Task 4) that reference
+`R.drawable.ic_lock`/`ic_number`/`ic_device_tracker`. The config Activity (Task 8) is built
+before the widget rendering file (Task 9) that references it via `::class.java`, and the
+sync/fan-out extension (Task 10) comes after the widget class (Task 9) that it instantiates.
+(Caught during pre-flight plan review — the original draft had drawables and the
+config-activity/widget/fan-out trio in the reverse, non-compiling order.)
 
 ## Global Constraints
 
@@ -354,13 +357,106 @@ git commit -m "feat: tilføj domain-felt + listStatesByDomains til HaApiClient"
 
 ---
 
-### Task 3: Shared domain-support helpers
+### Task 3: New domain drawables
+
+**Reordered ahead of the domain-support helpers task** (originally Task 6) — `Task 4`
+(`domainIconResId`, below) references `R.drawable.ic_lock`/`ic_number`/`ic_device_tracker`,
+so those resources must compile first.
+
+**Files:**
+- Create: `app/src/main/res/drawable/ic_lock.xml`
+- Create: `app/src/main/res/drawable/ic_number.xml`
+- Create: `app/src/main/res/drawable/ic_device_tracker.xml`
+- Create: `app/src/main/res/drawable/ic_multi_entity.xml`
+
+**Interfaces:**
+- Produces: `R.drawable.ic_lock`, `R.drawable.ic_number`, `R.drawable.ic_device_tracker`
+  (consumed by `domainIconResId` in Task 4), `R.drawable.ic_multi_entity` (widget picker
+  preview + unconfigured-state icon, Task 9/11).
+
+- [ ] **Step 1: Create `ic_lock.xml`**
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,17c1.1,0,2,-0.9,2,-2s-0.9,-2,-2,-2,-2,0.9,-2,2S10.9,17,12,17z M18,8h-1V6c0,-2.76,-2.24,-5,-5,-5S7,3.24,7,6v2H6c-1.1,0,-2,0.9,-2,2v10c0,1.1,0.9,2,2,2h12c1.1,0,2,-0.9,2,-2V10C20,8.9,19.1,8,18,8z M8.9,6c0,-1.71,1.39,-3.1,3.1,-3.1s3.1,1.39,3.1,3.1v2H8.9V6z M18,20H6V10h12V20z" />
+</vector>
+```
+
+- [ ] **Step 2: Create `ic_number.xml`**
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,17v2h6v-2H3z M3,5v2h10V5H3z M13,21v-2h8v-2h-8v-2h-2v6H13z M7,9v2H3v2h4v2h2V9H7z M21,13v-2h-8v2H21z M11,3v2h-2v2h2v2h2V3z" />
+</vector>
+```
+
+- [ ] **Step 3: Create `ic_device_tracker.xml`**
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,2C8.13,2,5,5.13,5,9c0,5.25,7,13,7,13s7,-7.75,7,-13C19,5.13,15.87,2,12,2z M12,11.5c-1.38,0,-2.5,-1.12,-2.5,-2.5s1.12,-2.5,2.5,-2.5,2.5,1.12,2.5,2.5S13.38,11.5,12,11.5z" />
+</vector>
+```
+
+- [ ] **Step 4: Create `ic_multi_entity.xml`**
+
+Three small tiles side by side — represents "multiple slots in a row", distinct from the
+existing `ic_dashboard` (used by `ShortcutWidget`, a 4-quadrant asymmetric grid).
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M2,9h6v6H2z M9,9h6v6H9z M16,9h6v6H16z" />
+</vector>
+```
+
+- [ ] **Step 5: Build**
+
+Run: `JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assembleDebug`
+Expected: `BUILD SUCCESSFUL`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add app/src/main/res/drawable/ic_lock.xml app/src/main/res/drawable/ic_number.xml app/src/main/res/drawable/ic_device_tracker.xml app/src/main/res/drawable/ic_multi_entity.xml
+git commit -m "feat: tilføj ikoner for lock/number/device_tracker + multi-entity widget"
+```
+
+---
+
+### Task 4: Shared domain-support helpers
 
 **Files:**
 - Create: `app/src/main/java/dk/akait/hawidgets/widget/common/MultiDomainSupport.kt`
 
 **Interfaces:**
-- Consumes: nothing new.
+- Consumes: `R.drawable.ic_lock`/`ic_number`/`ic_device_tracker` (Task 3).
 - Produces: `MULTI_ENTITY_DOMAINS: List<String>`, `domainIconResId(domain: String): Int`,
   `formatEntityState(domain: String, state: String?): String`,
   `isActiveState(domain: String, state: String?): Boolean`,
@@ -464,7 +560,7 @@ git commit -m "feat: tilføj delt domain-metadata for multi-entity widget"
 
 ---
 
-### Task 4: Generalize `ToggleEntityAction`
+### Task 5: Generalize `ToggleEntityAction`
 
 **Files:**
 - Modify: `app/src/main/java/dk/akait/hawidgets/widget/common/EntityActions.kt:11-26`
@@ -525,7 +621,7 @@ git commit -m "refactor: generalisér ToggleEntityAction til domain-bevidst serv
 
 ---
 
-### Task 5: Extend `RangeControlActivity` for `number` domain
+### Task 6: Extend `RangeControlActivity` for `number` domain
 
 **Files:**
 - Modify: `app/src/main/java/dk/akait/hawidgets/widget/common/RangeControlActivity.kt`
@@ -625,95 +721,6 @@ git commit -m "feat: udvid RangeControlActivity til number-domain"
 
 ---
 
-### Task 6: New domain drawables
-
-**Files:**
-- Create: `app/src/main/res/drawable/ic_lock.xml`
-- Create: `app/src/main/res/drawable/ic_number.xml`
-- Create: `app/src/main/res/drawable/ic_device_tracker.xml`
-- Create: `app/src/main/res/drawable/ic_multi_entity.xml`
-
-**Interfaces:**
-- Produces: `R.drawable.ic_lock`, `R.drawable.ic_number`, `R.drawable.ic_device_tracker`
-  (consumed by `domainIconResId` in Task 3 — already written assuming these exist),
-  `R.drawable.ic_multi_entity` (widget picker preview + unconfigured-state icon, Task 9/11).
-
-- [ ] **Step 1: Create `ic_lock.xml`**
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M12,17c1.1,0,2,-0.9,2,-2s-0.9,-2,-2,-2,-2,0.9,-2,2S10.9,17,12,17z M18,8h-1V6c0,-2.76,-2.24,-5,-5,-5S7,3.24,7,6v2H6c-1.1,0,-2,0.9,-2,2v10c0,1.1,0.9,2,2,2h12c1.1,0,2,-0.9,2,-2V10C20,8.9,19.1,8,18,8z M8.9,6c0,-1.71,1.39,-3.1,3.1,-3.1s3.1,1.39,3.1,3.1v2H8.9V6z M18,20H6V10h12V20z" />
-</vector>
-```
-
-- [ ] **Step 2: Create `ic_number.xml`**
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M3,17v2h6v-2H3z M3,5v2h10V5H3z M13,21v-2h8v-2h-8v-2h-2v6H13z M7,9v2H3v2h4v2h2V9H7z M21,13v-2h-8v2H21z M11,3v2h-2v2h2v2h2V3z" />
-</vector>
-```
-
-- [ ] **Step 3: Create `ic_device_tracker.xml`**
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M12,2C8.13,2,5,5.13,5,9c0,5.25,7,13,7,13s7,-7.75,7,-13C19,5.13,15.87,2,12,2z M12,11.5c-1.38,0,-2.5,-1.12,-2.5,-2.5s1.12,-2.5,2.5,-2.5,2.5,1.12,2.5,2.5S13.38,11.5,12,11.5z" />
-</vector>
-```
-
-- [ ] **Step 4: Create `ic_multi_entity.xml`**
-
-Three small tiles side by side — represents "multiple slots in a row", distinct from the
-existing `ic_dashboard` (used by `ShortcutWidget`, a 4-quadrant asymmetric grid).
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M2,9h6v6H2z M9,9h6v6H9z M16,9h6v6H16z" />
-</vector>
-```
-
-- [ ] **Step 5: Build**
-
-Run: `JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assembleDebug`
-Expected: `BUILD SUCCESSFUL`
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add app/src/main/res/drawable/ic_lock.xml app/src/main/res/drawable/ic_number.xml app/src/main/res/drawable/ic_device_tracker.xml app/src/main/res/drawable/ic_multi_entity.xml
-git commit -m "feat: tilføj ikoner for lock/number/device_tracker + multi-entity widget"
-```
-
----
-
 ### Task 7: Widget-picker strings (3 locales)
 
 **Files:**
@@ -772,7 +779,7 @@ this class must exist first.
 
 **Interfaces:**
 - Consumes: `HaApiClient.listStatesByDomains` (Task 2), `MULTI_ENTITY_DOMAINS`/
-  `domainIconResId`/`formatEntityState`/`compatibleActionsFor` (Task 3),
+  `domainIconResId`/`formatEntityState`/`compatibleActionsFor` (Task 4),
   `MultiWidgetEntity`/`MultiWidgetSlotEntity`/`MultiWidgetDao` (Task 1), `SecureStore`,
   `SyncWorker` (existing).
 - Produces: `MultiEntityWidgetConfigActivity` — consumed by `MultiEntityWidget.kt` (Task 9,
@@ -1234,10 +1241,10 @@ git commit -m "feat: implementér MultiEntityWidgetConfigActivity (liste-baseret
 
 **Interfaces:**
 - Consumes: `MultiWidgetDao` (Task 1), `domainIconResId`/`formatEntityState`/
-  `isActiveState` (Task 3), `ToggleEntityAction`/`TriggerEntityAction`/`RefreshEntityAction`
-  (Task 4, `EntityActions.kt`), `RangeControlActivity` (Task 5), `WidgetCompactLayout`/
+  `isActiveState` (Task 4), `ToggleEntityAction`/`TriggerEntityAction`/`RefreshEntityAction`
+  (Task 5, `EntityActions.kt`), `RangeControlActivity` (Task 6), `WidgetCompactLayout`/
   `UnconfiguredWidgetContent`/`friendlyNameFromJson`/`isStale()` (existing
-  `GlanceWidgetCommon.kt`), `R.drawable.ic_multi_entity` (Task 6),
+  `GlanceWidgetCommon.kt`), `R.drawable.ic_multi_entity` (Task 3),
   `MultiEntityWidgetConfigActivity` (Task 8).
 - Produces: `MultiEntityWidget` (`GlanceAppWidget`), `MultiEntityWidgetReceiver`
   (`GlanceAppWidgetReceiver`) — consumed by `WidgetUpdater` (Task 10) and
@@ -1633,7 +1640,7 @@ git commit -m "feat: udvid sync/fan-out til multi-entity widget-slots"
 
 **Interfaces:**
 - Consumes: `@string/multi_entity_widget_label`/`description` (Task 7),
-  `@drawable/ic_multi_entity` (Task 6), `MultiEntityWidgetConfigActivity` (Task 8),
+  `@drawable/ic_multi_entity` (Task 3), `MultiEntityWidgetConfigActivity` (Task 8),
   `MultiEntityWidgetReceiver` (Task 9).
 
 - [ ] **Step 1: Create `multi_entity_widget_info.xml`**
