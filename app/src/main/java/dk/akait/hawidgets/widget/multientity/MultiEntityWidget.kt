@@ -66,6 +66,14 @@ class MultiEntityWidget : GlanceAppWidget() {
         val db = AppDatabase.get(context)
         val initialTitle = db.multiWidgetDao().get(appWidgetId)?.title.orEmpty()
         val initialSlots = db.multiWidgetDao().getSlots(appWidgetId)
+        // Preload states too (not just title+slots) — every entity tap re-invokes provideGlance
+        // via WidgetUpdater.updateForEntity()'s explicit widget.update() call, on top of the
+        // reactive Flow recomposition already triggered by the Room write. Without this preload,
+        // that extra provideGlance call's first frame used an empty states map → every SlotBox
+        // briefly rendered as "off"/"Henter status…" before the Flow's first emission caught up,
+        // perceived as a visual "hop" on every click. Mirrors LightWidget's initialState preload.
+        val initialStateIds = initialSlots.flatMap { listOf(it.displayEntityId, it.actionEntityId) }.distinct()
+        val initialStates = initialStateIds.associateWith { entityId -> db.entityStateDao().get(entityId) }
 
         provideContent {
             val viewState by db.multiWidgetDao().observe(appWidgetId)
@@ -76,7 +84,7 @@ class MultiEntityWidget : GlanceAppWidget() {
                     statesFlow(db, slots).map { states -> Triple(title, slots, states) }
                 }
                 .collectAsState(
-                    initial = Triple(initialTitle, initialSlots, emptyMap<String, EntityStateEntity?>())
+                    initial = Triple(initialTitle, initialSlots, initialStates)
                 )
             val (title, slots, states) = viewState
 

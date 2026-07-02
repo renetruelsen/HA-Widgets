@@ -248,3 +248,121 @@ Checkliste ved tilføjelse af ny widget-type:
 - [ ] Tilføj domain til `SyncWorker` entitets-fetch
 - [ ] UX-review: screenshot compact + wide + ukonfigureret tilstand
 - [ ] QA: test på emulator + rigtig enhed
+
+---
+
+## 5. MultiEntityWidget config: slot-liste-redesign
+
+**FORSLAG — AFVENTER GODKENDELSE**
+
+**Status:** Kun analyse + spec-tekst. Ingen kode ændret. Kræver brugergodkendelse før implementering
+(jf. `docs/ux-process.md`: UX-oplæg → impl → UX-review-loop → QA-loop).
+
+**Kildefil (ved implementering):** `MultiEntityWidgetConfigActivity.kt`, funktionen `ListScreen` (nuværende linje ~224-295).
+
+### Problem
+
+Hver slot-række i `ListScreen` er i dag én `Row`: ikon (24dp) + `Column(weight=1f)` med to
+tekstlinjer (label/entity-id, actionSummary) + 4 `TextButton`s i samme `Row` ("↑", "↓", "Rediger",
+"Fjern"). De fire tekstknapper (danske labels "Rediger"/"Fjern" er brede) optager tilsammen langt
+mere vandret plads end deres visuelle vægt tilsiger — verificeret på emulator (`pixel_test`,
+appWidgetId 9, "Test"-widgetten) med rigtige HA-entitets-ID'er:
+
+- `climate.spav2_spa_thermostat` ombrydes til 3 linjer.
+- `sensor.zone9_rogdetektor_ovenpa_battery_level` ombrydes til 4 linjer, og action-summary
+  (`"Udløs automatisering/script → script.sonos_stue_p4"`) ombrydes til yderligere 3 linjer under det —
+  hvilket skubber ↑/↓/Rediger/Fjern-knapperne helt uden for rækkens synlige/forventede areal på
+  skærmen. Det er altså ikke kun et læsbarheds-problem, men i praksis et **funktionsproblem**:
+  handlingsknapperne for den slot kan blive utilgængelige.
+
+Årsagen er ikke primært at navne er "for lange" — det er at kun ca. 40-45% af rækkens bredde er
+tilbage til tekstkolonnen, fordi fire separate `TextButton`s (hver med Material3-standard min. 40dp
+højde + vandret indre padding der vokser med tekstlængden) spiser resten.
+
+### Vurderet: brugerens forslag (3 rækker pr. slot)
+
+Brugerens forslag — visningsnavn / handlingsnavn / handlingsknapper som 3 separate rækker — **løser
+læsbarheden**, men er ikke den anbefalede løsning:
+
+- Det adresserer symptomet (for lidt plads) ved at hælde MERE plads i, i stedet for at fjerne
+  årsagen (fire brede knapper). Det tredobler den vertikale plads pr. slot (fra ~56-64dp til
+  ~150-180dp), hvilket ved 5 slots (det tilladte maksimum, `enabled = slots.size < 5`) gør listen
+  betydeligt tungere at scrolle og scanne — for et simpelt CRUD-flow, hvor brugeren typisk kun vil
+  overskue "hvilke 5 ting har jeg tilføjet" på ét blik.
+- Det bryder med det etablerede kompakte ét-linjers-radio-mønster andre steder i samme activity
+  (`EntityPickerSubScreen`: ikon + to tekstlinjer + chip, alt i én række) — inkonsistent visuel
+  rytme i samme skærmflow.
+- Det løser ikke roden: selv med 3 rækker vil et ekstremt langt navn (se `sensor.zone9…`-eksemplet)
+  stadig kunne ombrydes over flere linjer på den brede visningsnavn-række, blot uden at kollidere med
+  knapperne. Problemet er delvist afbødet, ikke elimineret.
+
+### Anbefalet løsning: behold 1 række pr. slot, reclaim vandret plads i stedet
+
+**Anbefaling: modificeret variant, IKKE brugerens 3-rækker-forslag**, fordi den løser både
+læsbarheds- og funktions-problemet med mindre strukturel ændring, bevarer listens kompakthed, og er
+mere konsistent med resten af config-UI'en.
+
+**Kernefix:** erstat de 4 `TextButton`s (der isoleret spiser det meste af rækkens bredde) med et
+kompakt sæt ikon-only `IconButton`s (48dp touch-target hver, ingen synlig tekst) samlet i en
+overflow-menu for de sjældnere handlinger. Det frigiver den vandrette plads til tekstkolonnen uden at
+tilføje en eneste ny linje til layoutet.
+
+**Præcist layout (uændret 1-rows-struktur):**
+
+```
+Row (fillMaxWidth, padding vertical=8dp, verticalAlignment=CenterVertically)
+  ├── Icon: domainIconResId(slot.displayDomain), 24dp
+  ├── Spacer 12dp
+  ├── Column (weight=1f, min bredde reclaimet fra knap-området)
+  │     ├── Text: displayLabel, bodyLarge, maxLines=1, overflow=Ellipsis
+  │     └── Text: actionSummary, bodySmall, onSurfaceVariant, maxLines=1, overflow=Ellipsis
+  │           — vises KUN hvis slot.action != "NONE" ELLER actionEntityId != displayEntityId
+  │           (samme betingelse som i dag — bevares uændret)
+  ├── IconButton: ↑ (Icons.Default.KeyboardArrowUp), 40dp, enabled=index>0,
+  │     contentDescription="Flyt op"
+  ├── IconButton: ↓ (Icons.Default.KeyboardArrowDown), 40dp, enabled=index<slots.size-1,
+  │     contentDescription="Flyt ned"
+  └── IconButton: ⋮ (Icons.Default.MoreVert), 40dp, contentDescription="Flere valgmuligheder"
+        → åbner DropdownMenu med to items: "Rediger" / "Fjern"
+HorizontalDivider (uændret)
+```
+
+**Tekststile (uændret fra i dag, kun `maxLines`/`overflow` tilføjet):**
+
+| Element | Stil | Ny egenskab |
+|---|---|---|
+| Visningsnavn | `bodyLarge` | `maxLines=1, overflow=TextOverflow.Ellipsis` |
+| Action-summary | `bodySmall`, `onSurfaceVariant` | `maxLines=1, overflow=TextOverflow.Ellipsis` |
+
+**Hvorfor ellipsis er acceptabelt her (og ikke et kompromis):** Radikalt fuld navnevisning er ikke
+et hårdt krav — brugeren skal kunne *genkende* hvilken slot er hvilken ved et scan, ikke nødvendigvis
+læse hele entity-navnet i listen. "Rediger" (uændret) viser allerede fuldt, ikke-afkortet
+`friendlyName` + `entityId` på `SlotEditorScreen`. Ellipsis + "Rediger for detaljer" er samme mønster
+som resten af appen (fx compact widget-layouts afkorter også label til 1 linje). Med vandret plads
+reclaimet fra knapperne (~150dp+ mere til tekstkolonnen på en typisk telefonbredde) vil de fleste
+realistiske HA friendly names (2-4 ord) formentlig slet ikke ombrydes længere — ellipsis bliver et
+sikkerhedsnet for enkelte pato­logiske tilfælde, ikke normaltilstanden.
+
+**Edge cases:**
+
+| Case | Adfærd |
+|---|---|
+| Meget langt visningsnavn (fx `sensor.zone9_rogdetektor_ovenpa_battery_level` uden `friendlyName`) | Afkortes med ellipsis på én linje. Fuldt navn ses via "Rediger". |
+| Meget kort navn (fx "Bad") | Ingen ombrydning, ingen visuel ændring fra i dag. |
+| Visning = handling (samme entity) | Kun visningsnavnet vises; action-summary-linjen udelades helt (som i dag — `if (slot.actionEntityId == slot.displayEntityId) actionLabel(slot.action) else …`). For `action=="NONE"` udelades linjen helt (ingen handling at opsummere). |
+| Visning ≠ handling (fx climate viser temperatur, men styrer en `input_boolean`) | Action-summary-linjen vises: `"<actionLabel> → <actionEntityId eller actionLabel>"`, afkortet med ellipsis hvis nødvendig. |
+| 5 slots (maks) | Uændret listehøjde ift. i dag (stadig 1 række pr. slot) — ingen ekstra scroll introduceret af dette redesign. |
+| Screen-reader / Talkback | Alle 3 `IconButton`s får eksplicit `contentDescription` — reelt en tilgængeligheds-forbedring ift. i dag, hvor `TextButton`s implicit tekst ("↑", "↓") er svagt beskrivende for skærmlæsere. |
+
+### Fravalgte alternativer (og hvorfor)
+
+- **Kun ellipsis, ingen knap-ændring:** løser læsbarhed for label, men gør intet ved at
+  action-summary-linjen (som i sig selv kan blive lang, fx `"Udløs automatisering/script →
+  script.sonos_stue_p4"`) stadig kan skubbe knapperne ud af rækken, som observeret i reproduktionen.
+  Root cause (fire brede tekstknapper) forbliver.
+- **Drag-to-reorder i stedet for ↑/↓:** teknisk mere "moderne", men kræver ny afhængighed/gestik-håndtering,
+  er sværere at gøre tilgængelig (Talkback-drag er besværligt), og løser ikke det akutte
+  bredde-problem alene — kan overvejes som separat, senere forbedring, men er ude af scope for denne fix.
+- **Alt i overflow-menu (inkl. ↑/↞ done via array of pending)** dvs. også flytte ↑/↓ ind i ⋮-menuen:
+  overvejet, men reorder er en hyppig nok handling (bruges ved hver ny slot-tilføjelse for at style
+  rækkefølgen) til at fortjene synlige, direkte-tilgængelige knapper frem for et ekstra tryk gennem en menu.
