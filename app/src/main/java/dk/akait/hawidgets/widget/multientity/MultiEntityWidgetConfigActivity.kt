@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -101,13 +104,30 @@ private fun actionLabel(action: String): String = when (action) {
     else -> "Kun visning"
 }
 
+/** Kort variant til radios + auto-linjen i SlotEditorScreen (undgår den lange TRIGGER-tekst). */
+private fun actionShortLabel(action: String): String = when (action) {
+    "TOGGLE" -> "Slå til/fra"
+    "RANGE" -> "Åbn skyder"
+    "TRIGGER" -> "Udløs"
+    else -> "Vis kun status"
+}
+
+/** Handlings-typer (ex. NONE) et domæne understøtter som action-mål. Tom = read-only. */
+private fun actionOptionsFor(domain: String): List<String> =
+    compatibleActionsFor(domain).filter { it != "NONE" }
+
+/** Default-handling når et mål (eller ny visnings-entitet) vælges: første rigtige handling, ellers
+ * NONE for read-only domæner. Bruges til at snap'e action ved mål-skift, så UI aldrig står med en
+ * handling målet ikke understøtter. */
+private fun defaultActionFor(domain: String): String =
+    actionOptionsFor(domain).firstOrNull() ?: "NONE"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var titleInput by remember { mutableStateOf("") }
     var slots by remember { mutableStateOf<List<MultiWidgetSlotEntity>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var allEntities by remember { mutableStateOf<List<HaApiClient.EntityBrief>>(emptyList()) }
@@ -124,7 +144,6 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         val client = HaApiClient(store.baseUrl!!, store.token!!)
         allEntities = client.listStatesByDomains(MULTI_ENTITY_DOMAINS.toSet()).sortedBy { it.friendlyName }
         val db = AppDatabase.get(context)
-        titleInput = db.multiWidgetDao().get(appWidgetId)?.title.orEmpty()
         slots = db.multiWidgetDao().getSlots(appWidgetId)
         isLoading = false
     }
@@ -132,9 +151,19 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     fun draftFromSlot(slot: MultiWidgetSlotEntity): SlotDraft {
         val display = allEntities.find { it.entityId == slot.displayEntityId }
             ?: HaApiClient.EntityBrief(slot.displayEntityId, slot.displayEntityId, "unknown", slot.displayDomain)
-        val action = allEntities.find { it.entityId == slot.actionEntityId }
+        val actionEntity = allEntities.find { it.entityId == slot.actionEntityId }
             ?: HaApiClient.EntityBrief(slot.actionEntityId, slot.actionEntityId, "unknown", slot.actionDomain)
-        return SlotDraft(display, action, slot.action, slot.label)
+        // Normalisér gammelt data: en slot gemt med action=NONE men et ANDET mål var muligt i den
+        // gamle UI, men er ugyldigt i den nye model (mål ≠ visning ⇒ altid en handling, ingen
+        // "Kun visning"-radio at vælge). Snap til første gyldige handling, så en radio er valgt.
+        val targetDiffers = actionEntity.entityId != display.entityId
+        val opts = actionOptionsFor(actionEntity.domain)
+        val normalizedAction = if (targetDiffers && slot.action !in opts) {
+            opts.firstOrNull() ?: slot.action
+        } else {
+            slot.action
+        }
+        return SlotDraft(display, actionEntity, normalizedAction, slot.label)
     }
 
     fun saveSlot(editIndex: Int?, draft: SlotDraft) {
@@ -157,8 +186,6 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 
     when (val s = step) {
         Step.ListScreen -> ListScreen(
-            titleInput = titleInput,
-            onTitleChange = { titleInput = it },
             slots = slots,
             onAddSlot = { step = Step.EntityPicker(PickerTarget.DISPLAY, null, SlotDraft()) },
             onEditSlot = { index -> step = Step.SlotEditor(index, draftFromSlot(slots[index])) },
@@ -179,7 +206,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onSave = {
                 scope.launch {
                     val db = AppDatabase.get(context)
-                    db.multiWidgetDao().upsert(MultiWidgetEntity(appWidgetId, titleInput.trim()))
+                    db.multiWidgetDao().upsert(MultiWidgetEntity(appWidgetId, ""))
                     db.multiWidgetDao().deleteAllSlots(appWidgetId)
                     slots.forEachIndexed { i, sl -> db.multiWidgetDao().upsertSlot(sl.copy(slotIndex = i)) }
                     SyncWorker.runNow(context)
@@ -195,10 +222,13 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             isLoading = isLoading,
             error = loadError,
             onSelected = { brief ->
+                // Snap action til domænets default (opts[0], ellers NONE) — både når visnings-
+                // entiteten og når action-målet vælges. Sikrer at action altid er gyldig for det
+                // valgte måls domæne (ingen "Åbn skyder" på en kontakt osv.).
                 val updatedDraft = if (s.forTarget == PickerTarget.DISPLAY) {
-                    s.draft.copy(displayEntity = brief, actionEntity = brief, action = "NONE")
+                    s.draft.copy(displayEntity = brief, actionEntity = brief, action = defaultActionFor(brief.domain))
                 } else {
-                    s.draft.copy(actionEntity = brief, action = "NONE")
+                    s.draft.copy(actionEntity = brief, action = defaultActionFor(brief.domain))
                 }
                 step = Step.SlotEditor(s.editIndex, updatedDraft)
             },
@@ -222,8 +252,6 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ListScreen(
-    titleInput: String,
-    onTitleChange: (String) -> Unit,
     slots: List<MultiWidgetSlotEntity>,
     onAddSlot: () -> Unit,
     onEditSlot: (Int) -> Unit,
@@ -239,15 +267,6 @@ private fun ListScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            OutlinedTextField(
-                value = titleInput,
-                onValueChange = onTitleChange,
-                label = { Text("Widget-titel (valgfrit)") },
-                placeholder = { Text("f.eks. Mercedes") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            Spacer(Modifier.padding(8.dp))
             if (slots.isEmpty()) {
                 Text(
                     "Ingen slots endnu — tryk \"Tilføj slot\" for at starte.",
@@ -307,19 +326,22 @@ private fun SlotEditorScreen(
 ) {
     val display = draft.displayEntity ?: return
     val action = draft.actionEntity ?: display
-    val compatible = compatibleActionsFor(action.domain)
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Tilpas handling") }) }) { padding ->
+    val targetDiffers = action.entityId != display.entityId
+    val opts = actionOptionsFor(action.domain)
+    val readOnly = opts.isEmpty()
+    // Ugyldigt: bruger valgte et andet mål der ikke kan handles på (fx en sensor) → bloker gem.
+    val invalidTarget = targetDiffers && readOnly
+    val reactsToTap = draft.action != "NONE"
+
+    Scaffold(topBar = { TopAppBar(title = { Text("Tilpas entitet") }) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
         ) {
-            Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
-            Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = onChangeDisplay) { Text("Skift entitet") }
-            Spacer(Modifier.padding(8.dp))
             OutlinedTextField(
                 value = draft.label,
                 onValueChange = { if (it.length <= 12) onLabelChange(it) },
@@ -329,30 +351,118 @@ private fun SlotEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
-            Spacer(Modifier.padding(12.dp))
-            Text("Handling", style = MaterialTheme.typography.titleSmall)
-            Text(
-                if (action.entityId == display.entityId) "Mål: samme entitet" else "Mål: ${action.friendlyName}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            TextButton(onClick = onChangeTarget) { Text("Skift mål") }
-            compatible.forEach { actionType ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onActionChange(actionType) }
-                        .padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = draft.action == actionType, onClick = { onActionChange(actionType) })
-                    Spacer(Modifier.width(8.dp))
-                    Text(actionLabel(actionType))
-                }
+            Spacer(Modifier.padding(8.dp))
+
+            // ── VISNING ──
+            SectionCard(title = "Visning") {
+                Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
+                Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = onChangeDisplay, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) { Text("Skift entitet") }
             }
             Spacer(Modifier.padding(8.dp))
-            Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) { Text("Tilføj til widget") }
+
+            // ── HANDLING ──
+            SectionCard(title = "Handling") {
+                when {
+                    invalidTarget -> {
+                        Text(
+                            "Denne enhed kan ikke handles på — vælg et andet mål.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    readOnly -> {
+                        Text(
+                            "Denne enhed kan kun vises — intet sker ved tryk.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    else -> {
+                        // "Reagér på tryk"-kontakt: kun når mål == visning. Ved andet mål er en
+                        // handling altid underforstået, så kontakten (og dermed NONE) findes ikke.
+                        if (!targetDiffers) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text("Reagér på tryk", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = reactsToTap,
+                                    onCheckedChange = { on -> onActionChange(if (on) opts.first() else "NONE") },
+                                )
+                            }
+                        }
+                        val showActionChoice = targetDiffers || reactsToTap
+                        if (showActionChoice) {
+                            if (opts.size == 1) {
+                                Text(
+                                    "Ved tryk: ${actionShortLabel(opts[0])}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                )
+                            } else {
+                                opts.forEach { actionType ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onActionChange(actionType) }
+                                            .padding(vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        RadioButton(selected = draft.action == actionType, onClick = { onActionChange(actionType) })
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(actionShortLabel(actionType))
+                                    }
+                                }
+                            }
+                        } else {
+                            // Kontakt FRA (mål == visning): slotten viser kun status.
+                            Text(
+                                "Slotten viser kun status — tryk gør ingenting.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 2.dp),
+                            )
+                        }
+                    }
+                }
+                if (targetDiffers) {
+                    Text(
+                        "Mål: ${action.friendlyName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                TextButton(onClick = onChangeTarget, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
+                    Text(if (targetDiffers) "Vælg andet mål" else "Handl på en anden enhed")
+                }
+            }
+            Spacer(Modifier.padding(12.dp))
+
             TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Annullér") }
+            Spacer(Modifier.padding(2.dp))
+            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) { Text("Tilføj til widget") }
         }
+    }
+}
+
+/** Lys indrammet sektion med overskrift — bruges til «Visning» og «Handling». */
+@Composable
+private fun SectionCard(title: String, content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .padding(16.dp),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+        content()
     }
 }
 

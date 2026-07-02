@@ -366,3 +366,122 @@ sikkerhedsnet for enkelte pato­logiske tilfælde, ikke normaltilstanden.
 - **Alt i overflow-menu (inkl. ↑/↞ done via array of pending)** dvs. også flytte ↑/↓ ind i ⋮-menuen:
   overvejet, men reorder er en hyppig nok handling (bruges ved hver ny slot-tilføjelse for at style
   rækkefølgen) til at fortjene synlige, direkte-tilgængelige knapper frem for et ekstra tryk gennem en menu.
+
+---
+
+## 6. MultiEntityWidget: varianter + elastisk sizing (v0.2.23)
+
+**Baggrund:** widgetten viste sig som "4 rækker høj, fuld bredde" ved placering, uanset antal
+konfigurerede slots (2-5). Root cause: `resizeMode="none"` + fast `minWidth=280dp`/`minHeight=74dp`
+i widget-info-XML'en — Android låser widgettens grid-footprint ved PLACERING, FØR config-activity
+kører, så appen aldrig kan kende det faktiske slot-antal i det øjeblik. Løst efter UX-review
+(2 runder: design-godkendelse før kode, implementerings-godkendelse efter).
+
+### Fire widget-varianter
+
+Widget-pickeren viser nu 4 separate entries — hver med sin egen `minWidth` matchende det
+tilsigtede slot-antal, så widgetten har korrekt startstørrelse fra placering i det almindelige
+tilfælde. Al config-logik (tilføj/fjern/rediger slot, 1-5 slots) er 100% delt mellem varianterne —
+varianten bestemmer KUN XML-footprint'en.
+
+| Variant | Fil / Receiver-klasse | minWidth | minHeight | targetCellWidth |
+|---|---|---|---|---|
+| 2 pladser | `multi_entity_2_widget_info.xml` / `MultiEntityWidget2Receiver` | 124dp | 56dp | 2 |
+| 3 pladser | `multi_entity_3_widget_info.xml` / `MultiEntityWidget3Receiver` | 184dp | 56dp | 3 |
+| 4 pladser | `multi_entity_4_widget_info.xml` / `MultiEntityWidget4Receiver` | 244dp | 56dp | 4 |
+| 5 pladser | `multi_entity_widget_info.xml` / `MultiEntityWidgetReceiver` (oprindeligt navn bevaret) | 304dp | 56dp | 5 |
+
+Fælles: `resizeMode="horizontal|vertical"`, `maxResizeWidth=320dp`, `maxResizeHeight=120dp`,
+samme `MultiEntityWidgetConfigActivity`, samme `MultiEntityWidget`-Glance-klasse (kun
+manifest-registrering + XML-footprint differentierer). `minHeight=56dp` matcher familiens øvrige
+1-rækkes widgets (climate/cover/light) præcist — verificeret via widget-pickerens egen
+grid-beregning (viser "2×1"/"3×1", samme som `HA Climate`s "2×1").
+
+**Bagudkompatibilitet:** `MultiEntityWidgetReceiver`/`multi_entity_widget_info.xml` bevarer sit
+oprindelige class-/filnavn (Android binder en placeret widget til pakke+class-navn, ikke til
+XML-indholdet) — allerede placerede widgets fortsætter uændret som de facto "5-plads"-varianten.
+Kun 3 NYE receiver-klasser/XML-filer tilføjes for 2/3/4-plads.
+
+**Picker-differentiering:** navne leder med tallet ("2-Entity HA Multi" ikke "HA Multi (2)") for
+hurtigere skimning i en lang, uafiltreret OS-liste. 4 nye preview-ikoner
+(`ic_multi_entity_2/3/4/5.xml`) viser N udfyldte bokse ud af 5 — ikke kun et tal.
+
+### Elastisk boks-sizing (`MultiEntityWidget.kt`)
+
+`sizeMode = SizeMode.Exact` (ikke `SizeMode.Responsive` med diskrete buckets som lys/climate/
+cover) — bevidst afvigelse fra familiemønsteret, fordi denne widget har ÉT kontinuerligt-skalerende
+layout (elastisk N-boks-række), ikke et discrete compact/wide-valg. Boks-BREDDE og -HØJDE beregnes
+separat:
+
+- **Bredde:** `boxWidth = ((tilgængelig bredde − 2×4dp ramme-padding − (n-1)×4dp mellemrum) / n)`,
+  clamped til `[48dp, 56dp]`. 48dp = Android tap-target-minimum (skærpet efter UX-review — oprindeligt
+  forslag var 32dp, for lille til tappable slot-bokse). 56dp = samme boksstørrelse som øvrige
+  entity-widgets' compact-layout.
+- **Højde:** `boxHeight = (tilgængelig højde − 2×4dp) clamped til [48dp, 56dp]` — beregnet UAFHÆNGIGT
+  af bredden, så widgettens totalhøjde kan forblive 56dp (matcher familien) uden at boks-bredden
+  behøver være kvadratisk med højden.
+- **Overflow:** hvis beregnet breddeboks ville komme under 48dp (bruger har konfigureret flere
+  slots end den valgte variant er dimensioneret til), vises kun så mange slots som får plads ved
+  48dp, og resten samles i én "+N"-overflow-badge (samme 48-56dp boksstørrelse, `surfaceVariant`-
+  baggrund, tal-tekst) — aldrig et tap-mål under 48dp.
+
+### Ramme
+
+Hele slot-rækken (+ evt. overflow-badge) wrappes i én `Box`: `fillMaxSize`, baggrund = **literal
+fast farve** `Color(0x80808080)` (grå, 50% alpha — IKKE `GlanceTheme.colors.surfaceVariant`),
+`cornerRadius=16.dp`, `padding=4.dp`. Bevidst valg (fastholdt efter UX-review-anbefaling om
+tema-farve): matcher brugerens eksplicitte spec-ord "grå", og alpha-blanding af Glance's
+tema-`ColorProvider`-API har intet etableret mønster i denne kodebase — vurderet som
+disproportioneret risiko for lav gevinst. Verificeret empirisk OK i både lys/mørk baggrund på
+emulator; justér farve/alpha hvis det ser forkert ud på rigtig enhed.
+
+### Fjernet: widget-titel
+
+`MultiWidgetEntity.title`-feltet er UBRUGT af UI (gemmes altid som tom streng ved save) — ingen
+DB-migration. Fjernet fra: `ListScreen`s `OutlinedTextField` (config Skærm 1) og
+`MultiEntityContent`s betingede `Text`-linje (hjemmeskærm-render). Ingen ny "overskrift"-tilstand
+introduceret nogen steder.
+
+---
+
+## 7. MultiEntityWidget slot-editor: Visning/Handling + auto-detekteret handling (v0.2.25)
+
+**Kildefil:** `MultiEntityWidgetConfigActivity.kt`, `SlotEditorScreen` + `SectionCard`.
+
+Skærmen konfigurerer én slot (visnings-entitet, handlings-mål, handlings-type, kort label).
+Titel: **«Tilpas entitet»**. Layout (scrollbar `Column`, 16dp padding):
+
+```
+[ Kort label (valgfrit) ]  OutlinedTextField, maxLength 12 — ØVERST
+┌ Visning ┐   SectionCard: 1dp outlineVariant, 12dp radius, 16dp padding, titleSmall/primary
+│ friendlyName / entityId / [Skift entitet]
+└─────────┘
+┌ Handling ┐  (tilstandsmaskine, se nedenfor)
+└──────────┘
+[Annullér]           TextButton, fillMaxWidth
+[Tilføj til widget]  filled Button, disabled ved ugyldigt mål
+```
+
+### Handling-tilstandsmaskine
+
+`targetDiffers = actionEntity ≠ displayEntity`; `opts = compatibleActionsFor(target.domain) − NONE`.
+
+| Tilfælde | Vises |
+|---|---|
+| `opts` tom, mål==visning | caption «Denne enhed kan kun vises — intet sker ved tryk.» |
+| `opts` tom, mål≠visning (ugyldigt) | fejl-caption + «Tilføj til widget» disabled |
+| mål==visning, styrbar | `Switch` «Reagér på tryk» (default TIL). TIL+1 valg → auto-linje «Ved tryk: X». TIL+2 valg → 2 radios. FRA → caption «viser kun status» |
+| mål≠visning | INGEN kontakt. 1 valg → auto-linje; 2 valg → 2 radios. + «Mål: {navn}» |
+
+«Kun visning» (NONE) er ALDRIG et radio-valg — det er kontaktens FRA-tilstand. Ved mål≠visning
+findes kontakten ikke, så NONE kan ikke opstå (fikser den oprindelige fejl strukturelt).
+
+### Snap-regler (data-integritet)
+
+- `defaultActionFor(domain)` = `opts.firstOrNull() ?: "NONE"`. Kaldes i entity-picker-callbacken
+  når visnings-entitet ELLER mål vælges → action snappes til domænets første gyldige handling.
+- `draftFromSlot` normaliserer ÆLDRE data ved indlæsning: en slot gemt med `action=NONE` + andet
+  mål (muligt i gammel UI) snappes til `opts.first()`, så en radio altid er valgt.
+- Data-model uændret: `MultiWidgetSlotEntity.action` beholder `NONE/TOGGLE/RANGE/TRIGGER`.
+
+`actionShortLabel` bruges til radios + auto-linje (kort: «Udløs» ikke «Udløs automatisering/script»).

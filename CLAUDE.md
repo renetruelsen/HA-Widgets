@@ -202,6 +202,79 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - `GlanceWidgetCommon.kt`: `WidgetCompactLayout` og `WidgetWideLayout` springer nu
     status-`Text`'en helt over når `statusText` er tom, i stedet for at rendere en
     usynlig linje. Ingen ændring for entity-widgets (de sender aldrig tom statusText).
+- ✅ **v0.2.23 — MultiEntityWidget: korrekt startstørrelse + ramme + fjernet overskrift
+  (2026-07-02, efter brugerrapport "4 rækker høj, fuld bredde"):**
+  - **Root cause:** `resizeMode="none"` + fast `minWidth=280dp`/`minHeight=74dp` i
+    widget-info-XML'en. Android låser widgettens grid-footprint ved PLACERING — før
+    config-activity kører — så appen aldrig kan kende det faktiske slot-antal (2-5) i
+    det øjeblik footprint besluttes.
+  - **Løsning (2 UX-review-gates: design før kode, implementering efter):** 4 separate
+    widget-picker-entries ("2/3/4/5-Entity HA Multi"), hver med egen `minWidth` matchende
+    slot-antal (124/184/244/304dp, alle `minHeight=56dp` — matcher familiens øvrige
+    1-rækkes widgets præcist). `resizeMode="horizontal|vertical"` (var `"none"`) som
+    sikkerhedsnet. `MultiEntityWidgetReceiver`/`multi_entity_widget_info.xml` bevarer
+    oprindeligt navn (bagudkompatibilitet — Android binder til class-navn, ikke
+    XML-indhold) og bliver de facto "5-plads"; 3 nye receivers/XML-filer for 2/3/4.
+  - **Elastisk boks-sizing:** `sizeMode = SizeMode.Exact` (kontinuerlig, ikke discrete
+    buckets). Boks-bredde/-højde beregnes separat, clamped `[48dp, 56dp]` — 48dp er
+    Android tap-target-minimum (skærpet fra oprindeligt 32dp-forslag efter
+    UX-review-krav om tilgængelighed). Ved slot-antal > variantens plads: overflow
+    samles i "+N"-badge i stedet for at klemme bokse under 48dp.
+  - **Ramme:** slot-rækken wrappes i én `Box` med fast (ikke tema-baseret) grå
+    `Color(0x80808080)`-baggrund, `cornerRadius=16dp`, `padding=4dp` — literal farve
+    bevidst fastholdt over UX-reviewerens tema-farve-anbefaling (matcher brugerens
+    eksplicitte "grå"-ord, alpha-blanding af Glance-tema-farver har intet etableret
+    mønster i kodebasen).
+  - **Titel fjernet:** `MultiWidgetEntity.title` er nu ubrugt af UI (gemmes altid tomt,
+    ingen DB-migration) — fjernet fra config Skærm 1 (`OutlinedTextField`) og
+    hjemmeskærm-render.
+  - Fuld spec: `docs/widget-settings-spec.md` §6.
+  - **QA-status:** emulator (`pixel_test`) — build OK, manifest/providers verificeret
+    (4 receivers bundet korrekt), widget-picker viser korrekt differentierede
+    navne/beskrivelser + korrekt footprint ("2×1"/"3×1", matcher `HA Climate`), config-
+    flow verificeret (ingen titel-felt, entity-tilføjelse virker), EKSISTERENDE
+    placerede widgets (4-slot og 1-slot) re-renderer korrekt med ny ramme/uden titel
+    efter opdatering. Et live skærmbillede af en FRISK lille-footprint-placering blev
+    ikke fanget denne session (emulator-UI-automation for drag-and-drop var flaky —
+    logcat bekræftede widget blev bundet + config-skærm virkede korrekt ved ét forsøg,
+    tabt kun pga. forkert tryk-koordinat på "Gem"). Device-QA (rigtig enhed) afventer —
+    ingen enhed tilsluttet under denne session.
+- ✅ **v0.2.24 — MultiEntityWidget: fjernet luft mellem slot-bokse og ramme (2026-07-02,
+  efter brugerfeedback):**
+  - **Problem:** rammen (`Box`) brugte `fillMaxSize()` og fyldte hele den tildelte plads,
+    mens slot-boksene var loftet ved 56dp. Ved større launcher-celler (One UI/S23) blev
+    boksene centreret i en for stor ramme → synlig luft.
+  - **Fix (`MultiEntityWidget.kt`):** ydre `Box(fillMaxSize)` centrerer nu en indre ramme
+    UDEN bredde-modifier → rammen krymper til boksenes naturlige bredde. `computeSlotLayout`
+    strækker ikke længere boksene ud over 56dp når der er ekstra plads. Boks-HØJDEN fik
+    fjernet sit 56dp-loft (kun 48dp-gulv), så en boks må være højere end bred og fylde
+    rammens højde — bredde/højde afkoblet. `FRAME_PADDING_DP` 6→4.
+- ✅ **v0.2.25 — MultiEntityWidget slot-editor: Visning/Handling-opdeling + auto-detekteret
+  handling (2026-07-02, efter brugerrapport + 2 UX-gates):**
+  - **Rapporterede fejl:** «Kun visning» blev tilbudt i handlings-radiolisten selv efter man
+    valgte et andet mål (giver ikke mening); ingen visuel opdeling af visning vs. handling;
+    «Kort label» midt i det hele; misvisende titel «Tilpas handling»; «Annullér» skubbet ud
+    af skærmen (ingen `verticalScroll`).
+  - **Redesign (`MultiEntityWidgetConfigActivity.kt`, `SlotEditorScreen`):** titel →
+    «Tilpas entitet». To indrammede sektioner («Visning»/«Handling») via ny `SectionCard`
+    (1dp `outlineVariant`, 12dp radius, 16dp padding). «Kort label» flyttet øverst.
+    `verticalScroll` tilføjet. Knap-rækkefølge: «Annullér» over «Tilføj til widget».
+  - **«Kun visning» → «Reagér på tryk»-kontakt:** NONE er ikke længere et radio-valg —
+    det er FRA-tilstanden på en `Switch` der KUN vises når mål == visning. Ved mål ≠ visning
+    ingen kontakt (handling altid underforstået) → eliminerer rapporterede fejl strukturelt.
+  - **Auto-detekteret handling:** domæner med én mulig handling (switch/lock→toggle,
+    number→slider, scene/script→trigger) viser auto-linje «Ved tryk: X», ingen valg. Kun
+    lys/cover/climate (toggle vs slider) + automation (toggle vs udløs) viser 2 radios.
+    Read-only (sensor/binary_sensor/device_tracker) → «Denne enhed kan kun vises».
+  - **Snap ved mål-skift + legacy-normalisering:** `defaultActionFor(domain)` snapper action
+    til domænets første gyldige handling når mål/visning vælges. `draftFromSlot` normaliserer
+    ELDRE data ved indlæsning (en slot gemt med `action=NONE` + andet mål — muligt i gammel
+    UI — snappes til `opts.first()` så en radio er valgt). Ingen DB-ændring; `action`-feltet
+    beholder sine 4 værdier.
+  - **QA:** emulator (`pixel_test`) alle 5 tilstande grønne; S23 (`R3CWC00JY4M`) device-QA
+    grøn — bekræftede scroll/knapper nåbare + legacy-normaliseringen (fandt fejlen her).
+    UX-review: APPROVE WITH CHANGES (hovedpunkt FRA-caption rettet; rest er valgfri polish /
+    bevidst design). Fuld spec: `docs/widget-settings-spec.md` §7.
 
 ## Næste skridt
 
