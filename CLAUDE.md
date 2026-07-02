@@ -296,3 +296,6 @@ JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assemble
 - **`GlanceAppWidget.update()` er fire-and-forget i Glance 1.1.1** — kører `provideGlance` asynkront
   i en session-coroutine. Returnerer ikke når RemoteViews er applied. Brug reaktiv Room `Flow` i stedet
   for at kalde `update()` fra config-activity.
+- **rtr-dk `/projects/ha-widgets` bruger placeholder-billede:** websitet (`rtr-dk`-repoet) har
+  endnu ingen rigtig markedsføringsgrafik/screenshots for HA-Widgets, og genbruger derfor et
+  ubrugt Strata-skabelonbillede (`06.jpg`) på appens projektside, indtil rigtig grafik findes.
