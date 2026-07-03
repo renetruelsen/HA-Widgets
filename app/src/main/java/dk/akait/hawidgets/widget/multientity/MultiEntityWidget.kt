@@ -7,13 +7,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.LocalSize
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.ColorFilter
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -23,33 +24,41 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
+import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
+import androidx.glance.color.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.widget.common.DateTimeControlActivity
+import dk.akait.hawidgets.widget.common.defaultShowValueFor
 import dk.akait.hawidgets.widget.common.RangeControlActivity
+import dk.akait.hawidgets.widget.common.TextControlActivity
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.ToggleEntityAction
 import dk.akait.hawidgets.widget.common.TriggerEntityAction
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
-import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.domainIconResId
 import dk.akait.hawidgets.widget.common.formatEntityState
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
+import dk.akait.hawidgets.widget.common.unitFromJson
 import dk.akait.hawidgets.widget.common.isActiveState
 import dk.akait.hawidgets.widget.common.isStale
 import dk.akait.hawidgets.worker.SyncWorker
@@ -60,19 +69,24 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
-// Ramme rundt om slot-rækken: fast (ikke tema-baseret) grå, 50% alpha — bevidst literal farve
-// jf. UX-spec, ikke GlanceTheme.colors.surfaceVariant (se docs/widget-settings-spec.md §6).
-private val FRAME_BACKGROUND = ColorProvider(Color(0x80808080))
+// Ramme rundt om hele slot-listen — tema-/dag-nat-baseret (IKKE længere en hardcodet grå
+// literal, jf. v0.2.26-code-review-fund om kontrast-risiko ved at blande en fast farve med
+// tema-baserede chip-farver). Lav alpha, så tapetet stadig anes svagt igennem — "transparent
+// ramme" jf. brugerens eget ord, ikke en solid udfyldning.
+private val FRAME_BACKGROUND = ColorProvider(
+    day = Color(0x1F1C1B1F),
+    night = Color(0x1FE6E1E5),
+)
 internal const val FRAME_PADDING_DP = 4
-internal const val SLOT_GAP_DP = 4
-internal const val MAX_SLOT_SIZE_DP = 56
-internal const val MIN_SLOT_SIZE_DP = 48 // Android tap-target-minimum — se UX-review §6.
+internal const val ROW_GAP_DP = 4
+internal const val CHIP_GAP_DP = 4
 
 class MultiEntityWidget : GlanceAppWidget() {
 
-    // SizeMode.Exact (ikke Responsive med diskrete buckets som lys/climate/cover) fordi
-    // slot-boksene skal følge den faktiske tildelte bredde kontinuerligt (elastisk N-boks-række),
-    // ikke springe mellem få faste layouts. Se docs/widget-settings-spec.md §6.
+    // SizeMode.Exact: indholdet (ramme + LazyColumn af fuld-bredde rækker) bruger almindelige
+    // fillMaxSize/fillMaxWidth-modifiers uden custom pixel-matematik — den kontinuerlige
+    // størrelse Glance rapporterer bruges derfor direkte, uden diskrete buckets. Se
+    // docs/widget-settings-spec.md §9.
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -82,10 +96,10 @@ class MultiEntityWidget : GlanceAppWidget() {
         // Preload states too (not just slots) — every entity tap re-invokes provideGlance
         // via WidgetUpdater.updateForEntity()'s explicit widget.update() call, on top of the
         // reactive Flow recomposition already triggered by the Room write. Without this preload,
-        // that extra provideGlance call's first frame used an empty states map → every SlotBox
+        // that extra provideGlance call's first frame used an empty states map → every SlotRow
         // briefly rendered as "off"/"Henter status…" before the Flow's first emission caught up,
         // perceived as a visual "hop" on every click. Mirrors LightWidget's initialState preload.
-        val initialStateIds = initialSlots.flatMap { listOf(it.displayEntityId, it.actionEntityId) }.distinct()
+        val initialStateIds = initialSlots.flatMap { it.allEntityIds() }.distinct()
         val initialStates = initialStateIds.associateWith { entityId -> db.entityStateDao().get(entityId) }
 
         provideContent {
@@ -100,91 +114,79 @@ class MultiEntityWidget : GlanceAppWidget() {
                         context, appWidgetId, MultiEntityWidgetConfigActivity::class.java, R.drawable.ic_multi_entity,
                     )
                 } else {
-                    MultiEntityContent(context, appWidgetId, slots, states)
+                    MultiEntityContent(context, slots, states)
                 }
             }
         }
     }
 }
+
+/** Alle entity-id'er en slot kan referere (visning/handling for hoved-entiteten + op til 3
+ * sekundær-chips) — bruges til at afgøre hvilke entiteter der skal observeres/præloades. */
+internal fun MultiWidgetSlotEntity.allEntityIds(): List<String> = listOfNotNull(
+    displayEntityId, actionEntityId,
+    secondary1DisplayEntityId, secondary1ActionEntityId,
+    secondary2DisplayEntityId, secondary2ActionEntityId,
+    secondary3DisplayEntityId, secondary3ActionEntityId,
+)
 
 private fun statesFlow(
     db: AppDatabase,
     slots: List<MultiWidgetSlotEntity>,
 ): Flow<Map<String, EntityStateEntity?>> {
-    val ids = slots.flatMap { listOf(it.displayEntityId, it.actionEntityId) }.distinct()
+    val ids = slots.flatMap { it.allEntityIds() }.distinct()
     if (ids.isEmpty()) return flowOf(emptyMap())
     val flows = ids.map { id -> db.entityStateDao().observe(id) }
     return combine(flows) { arr -> ids.zip(arr.toList()).toMap() }
 }
 
-/** Resultat af bredde-sizing: hvor mange slots der reelt vises, ved hvilken boksbredde,
- * og om resten skal samles i en "+N"-overflow-badge (se docs/widget-settings-spec.md §6).
- * Bokse bruger deres NATURLIGE størrelse (MAX_SLOT_SIZE_DP) og strækkes ikke for at udfylde
- * ekstra tildelt bredde — rammen hugger i stedet om boksene (se MultiEntityContent), så der
- * ikke opstår luft mellem bokse og ramme. Bredden skrumpes kun ned mod 48dp-gulvet hvis der
- * IKKE er plads til alle slots ved naturlig størrelse. Boks-HØJDEN beregnes separat i
- * [MultiEntityContent] (se computeBoxHeight) — bredde og højde er bevidst afkoblede. */
-internal data class SlotLayout(val boxWidth: Dp, val visibleSlots: Int, val overflowCount: Int)
+/** En konfigureret sekundær-chip klar til rendering — null hvis den slot-plads er tom. */
+private data class SecondaryChipData(
+    val displayEntityId: String,
+    val displayDomain: String,
+    val actionEntityId: String,
+    val actionDomain: String,
+    val action: String,
+    val showValue: Boolean,
+)
 
-internal fun computeSlotLayout(availableWidth: Dp, slotCount: Int): SlotLayout {
-    if (slotCount <= 0) return SlotLayout(MAX_SLOT_SIZE_DP.dp, 0, 0)
-    val usable = availableWidth - (FRAME_PADDING_DP * 2).dp
-    val naturalWidthNeeded = (MAX_SLOT_SIZE_DP * slotCount + SLOT_GAP_DP * (slotCount - 1)).dp
-    if (usable >= naturalWidthNeeded) {
-        // Nok plads til alle ved naturlig 56dp-størrelse — ingen grund til at strække dem bredere.
-        return SlotLayout(MAX_SLOT_SIZE_DP.dp, slotCount, 0)
-    }
-    val idealBox = (usable - ((slotCount - 1) * SLOT_GAP_DP).dp) / slotCount
-    if (idealBox >= MIN_SLOT_SIZE_DP.dp) {
-        return SlotLayout(idealBox, slotCount, 0)
-    }
-    // Ikke plads til alle ved 48dp-tilgængelighedsgulvet — vis så mange som får plads ved 48dp,
-    // og saml resten i én overflow-badge (aldrig under 48dp, jf. UX-review).
-    val perSlot = MIN_SLOT_SIZE_DP.dp + SLOT_GAP_DP.dp
-    val fitAtMin = ((usable + SLOT_GAP_DP.dp) / perSlot).toInt().coerceAtLeast(1)
-    if (fitAtMin >= slotCount) return SlotLayout(MIN_SLOT_SIZE_DP.dp, slotCount, 0)
-    val visible = (fitAtMin - 1).coerceAtLeast(1)
-    return SlotLayout(MIN_SLOT_SIZE_DP.dp, visible, slotCount - visible)
+private fun secondaryChipData(
+    displayId: String?, displayDomain: String?,
+    actionId: String?, actionDomain: String?,
+    action: String?, showValue: Boolean?,
+): SecondaryChipData? {
+    if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
+    return SecondaryChipData(displayId, displayDomain, actionId, actionDomain, action, showValue ?: defaultShowValueFor(action))
 }
 
-/** Boks-højden fylder ALTID den tildelte højde (intet loft) — kun et 48dp-gulv for
- * tilgængelighed. I modsætning til bredden behøver højden ikke være kvadratisk med boksen;
- * en højere-end-bred boks er accepteret for at undgå lodret luft i rammen. */
-private fun computeBoxHeight(availableHeight: Dp): Dp =
-    (availableHeight - (FRAME_PADDING_DP * 2).dp).coerceAtLeast(MIN_SLOT_SIZE_DP.dp)
+private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> = listOfNotNull(
+    secondaryChipData(secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain, secondary1Action, secondary1ShowValue),
+    secondaryChipData(secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain, secondary2Action, secondary2ShowValue),
+    secondaryChipData(secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain, secondary3Action, secondary3ShowValue),
+)
 
 @Composable
 private fun MultiEntityContent(
     context: Context,
-    appWidgetId: Int,
     slots: List<MultiWidgetSlotEntity>,
     states: Map<String, EntityStateEntity?>,
 ) {
     val sorted = slots.sortedBy { it.slotIndex }
-    val size = LocalSize.current
-    val layout = computeSlotLayout(size.width, sorted.size)
-    val boxHeight = computeBoxHeight(size.height)
-
-    // Ydre Box centrerer den faktiske ramme inden i widgettens fulde tildelte areal — rammen
-    // selv har INGEN bredde-modifier, så den krymper til sit indhold (boksene) i stedet for at
-    // fylde hele den tildelte bredde. Det fjerner det vandrette "luft" mellem bokse og ramme,
-    // når launcheren giver mere plads end de N boksers naturlige bredde kræver.
-    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = GlanceModifier
-                .background(FRAME_BACKGROUND)
-                .cornerRadius(16.dp)
-                .padding(FRAME_PADDING_DP.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row {
-                sorted.take(layout.visibleSlots).forEachIndexed { index, slot ->
-                    if (index > 0) Spacer(modifier = GlanceModifier.width(SLOT_GAP_DP.dp))
-                    SlotBox(context, slot, states[slot.displayEntityId], states[slot.actionEntityId], layout.boxWidth, boxHeight)
-                }
-                if (layout.overflowCount > 0) {
-                    if (layout.visibleSlots > 0) Spacer(modifier = GlanceModifier.width(SLOT_GAP_DP.dp))
-                    OverflowBadge(context, appWidgetId, layout.overflowCount, layout.boxWidth, boxHeight)
+    // Rammen fylder nu HELE det tildelte areal kant-til-kant (fillMaxSize) i stedet for at
+    // krympe til indholdet — det var netop krympe-adfærden der efterlod et "hul" (tapet synligt)
+    // når launcheren tildelte mere plads end indholdet krævede. Se docs/widget-settings-spec.md §9.
+    Box(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(FRAME_BACKGROUND)
+            .cornerRadius(16.dp)
+            .padding(FRAME_PADDING_DP.dp),
+    ) {
+        LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
+            items(sorted, itemId = { it.slotIndex.toLong() }) { slot ->
+                Column {
+                    SlotRow(context, slot, states)
+                    Spacer(modifier = GlanceModifier.height(ROW_GAP_DP.dp))
                 }
             }
         }
@@ -192,36 +194,13 @@ private fun MultiEntityContent(
 }
 
 @Composable
-private fun OverflowBadge(context: Context, appWidgetId: Int, count: Int, boxWidth: Dp, boxHeight: Dp) {
-    // Badgen skal give ADGANG til de skjulte slots, ikke kun tælle dem — tryk åbner config,
-    // hvor alle slots kan ses/redigeres (code-review-fund: uklikkelig badge = uopnåelige
-    // entiteter indtil manuel resize).
-    val intent = Intent(context, MultiEntityWidgetConfigActivity::class.java).apply {
-        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    Box(
-        modifier = GlanceModifier.width(boxWidth).height(boxHeight)
-            .background(GlanceTheme.colors.surfaceVariant).cornerRadius(16.dp)
-            .clickable(actionStartActivity(intent)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "+$count",
-            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.Medium),
-        )
-    }
-}
-
-@Composable
-private fun SlotBox(
+private fun SlotRow(
     context: Context,
     slot: MultiWidgetSlotEntity,
-    displayState: EntityStateEntity?,
-    actionState: EntityStateEntity?,
-    boxWidth: Dp,
-    boxHeight: Dp,
+    states: Map<String, EntityStateEntity?>,
 ) {
+    val displayState = states[slot.displayEntityId]
+    val actionState = states[slot.actionEntityId]
     val isUnavailable = displayState?.state == "unavailable"
     val isActive = displayState != null && isActiveState(slot.displayDomain, displayState.state)
 
@@ -239,64 +218,189 @@ private fun SlotBox(
     val label = slot.label.ifEmpty {
         friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: slot.displayEntityId
     }
-    val statusBase = formatEntityState(slot.displayDomain, displayState?.state)
+    val statusBase = formatEntityState(
+        slot.displayDomain, displayState?.state,
+        displayState?.attributesJson?.let { unitFromJson(it) },
+    )
     val statusText = if (displayState != null && displayState.isStale()) "$statusBase ~" else statusBase
 
-    val baseModifier = GlanceModifier.width(boxWidth).height(boxHeight).background(bgColor).cornerRadius(16.dp)
-    val modifier = slotClickModifier(context, baseModifier, slot, actionState)
+    val rowModifier = clickModifier(
+        context = context,
+        base = GlanceModifier.fillMaxWidth().background(bgColor).cornerRadius(12.dp).padding(8.dp),
+        action = slot.action,
+        actionEntityId = slot.actionEntityId,
+        actionDomain = slot.actionDomain,
+        refreshEntityId = slot.displayEntityId,
+        rangeLabel = label,
+        actionState = actionState,
+    )
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        WidgetCompactLayout(domainIconResId(slot.displayDomain), label, statusText, contentColor)
+    Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            provider = ImageProvider(domainIconResId(slot.displayDomain)),
+            contentDescription = label,
+            modifier = GlanceModifier.size(24.dp),
+            colorFilter = ColorFilter.tint(contentColor),
+        )
+        Spacer(modifier = GlanceModifier.width(10.dp))
+        Column(modifier = GlanceModifier.defaultWeight()) {
+            Text(label, style = TextStyle(color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+            Text(statusText, style = TextStyle(color = contentColor, fontSize = 11.sp), maxLines = 1)
+        }
+        val chips = slot.secondaryChips()
+        if (chips.isNotEmpty()) {
+            Spacer(modifier = GlanceModifier.width(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                chips.forEachIndexed { index, chip ->
+                    if (index > 0) Spacer(modifier = GlanceModifier.width(CHIP_GAP_DP.dp))
+                    SecondaryChip(context, chip, states)
+                }
+            }
+        }
     }
 }
 
-private fun slotClickModifier(
+@Composable
+private fun SecondaryChip(
+    context: Context,
+    chip: SecondaryChipData,
+    states: Map<String, EntityStateEntity?>,
+) {
+    val displayState = states[chip.displayEntityId]
+    val actionState = states[chip.actionEntityId]
+    val isUnavailable = displayState?.state == "unavailable"
+    val isActive = displayState != null && isActiveState(chip.displayDomain, displayState.state)
+    val isInfo = chip.action == "NONE"
+    // Brugervalgt i config-UI'en (default via defaultShowValueFor, se secondaryChipData) —
+    // ikke hardcodet til handlingstypen, så brugeren selv kan vise/skjule værditeksten pr. chip.
+    val showsValueText = chip.showValue
+
+    val bgColor = when {
+        isUnavailable -> GlanceTheme.colors.errorContainer
+        isInfo -> GlanceTheme.colors.surfaceVariant
+        isActive -> GlanceTheme.colors.primary
+        else -> GlanceTheme.colors.surfaceVariant
+    }
+    val contentColor = when {
+        isUnavailable -> GlanceTheme.colors.onErrorContainer
+        isInfo -> GlanceTheme.colors.onSurfaceVariant
+        isActive -> GlanceTheme.colors.onPrimary
+        else -> GlanceTheme.colors.onSurfaceVariant
+    }
+    val label = friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: chip.displayEntityId
+
+    val chipModifier = clickModifier(
+        context = context,
+        base = GlanceModifier.background(bgColor).cornerRadius(10.dp).padding(horizontal = 6.dp, vertical = 4.dp),
+        action = chip.action,
+        actionEntityId = chip.actionEntityId,
+        actionDomain = chip.actionDomain,
+        refreshEntityId = chip.displayEntityId,
+        rangeLabel = label,
+        actionState = actionState,
+    )
+
+    Row(modifier = chipModifier, verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            provider = ImageProvider(domainIconResId(chip.displayDomain)),
+            contentDescription = label,
+            modifier = GlanceModifier.size(14.dp),
+            colorFilter = ColorFilter.tint(contentColor),
+        )
+        if (showsValueText) {
+            Spacer(modifier = GlanceModifier.width(4.dp))
+            Text(
+                text = formatEntityState(
+                    chip.displayDomain, displayState?.state,
+                    displayState?.attributesJson?.let { unitFromJson(it) },
+                ),
+                style = TextStyle(color = contentColor, fontSize = 11.sp),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/** Fælles klik-håndtering for både hoved-rækken og sekundær-chips: NONE → opdatér kun
+ * [refreshEntityId]; ellers TOGGLE/RANGE/TRIGGER på ([actionEntityId], [actionDomain]) — kan
+ * være en anden entitet end den der vises (se designbeslutning i docs/widget-settings-spec.md §9). */
+private fun clickModifier(
     context: Context,
     base: GlanceModifier,
-    slot: MultiWidgetSlotEntity,
+    action: String,
+    actionEntityId: String,
+    actionDomain: String,
+    refreshEntityId: String,
+    rangeLabel: String,
     actionState: EntityStateEntity?,
 ): GlanceModifier {
-    if (slot.action == "NONE") {
+    if (action == "NONE") {
         return base.clickable(
             actionRunCallback<RefreshEntityAction>(
-                actionParametersOf(RefreshEntityAction.entityIdKey to slot.displayEntityId)
+                actionParametersOf(RefreshEntityAction.entityIdKey to refreshEntityId)
             )
         )
     }
     if (actionState == null || actionState.state == "unavailable") return base
-    return when (slot.action) {
+    return when (action) {
         "TOGGLE" -> base.clickable(
             actionRunCallback<ToggleEntityAction>(
                 actionParametersOf(
-                    ToggleEntityAction.entityIdKey to slot.actionEntityId,
-                    ToggleEntityAction.domainKey to slot.actionDomain,
+                    ToggleEntityAction.entityIdKey to actionEntityId,
+                    ToggleEntityAction.domainKey to actionDomain,
                 )
             )
         )
         "RANGE" -> {
             val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
             val intent = Intent(context, RangeControlActivity::class.java).apply {
-                putExtra(RangeControlActivity.EXTRA_ENTITY_ID, slot.actionEntityId)
-                putExtra(RangeControlActivity.EXTRA_LABEL, slot.label.ifEmpty { slot.actionEntityId })
-                putExtra(RangeControlActivity.EXTRA_DOMAIN, slot.actionDomain)
-                putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE, rangeCurrentValue(slot.actionDomain, actionState, attrs))
+                putExtra(RangeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                putExtra(RangeControlActivity.EXTRA_LABEL, rangeLabel)
+                putExtra(RangeControlActivity.EXTRA_DOMAIN, actionDomain)
+                putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE, rangeCurrentValue(actionDomain, actionState, attrs))
                 putExtra(RangeControlActivity.EXTRA_IS_ON, actionState.state != "off" && actionState.state != "closed")
-                putExtra(RangeControlActivity.EXTRA_MIN_VALUE, rangeMin(slot.actionDomain, attrs))
-                putExtra(RangeControlActivity.EXTRA_MAX_VALUE, rangeMax(slot.actionDomain, attrs))
-                if (slot.actionDomain == "number") {
+                putExtra(RangeControlActivity.EXTRA_MIN_VALUE, rangeMin(actionDomain, attrs))
+                putExtra(RangeControlActivity.EXTRA_MAX_VALUE, rangeMax(actionDomain, attrs))
+                if (actionDomain == "number" || actionDomain == "input_number") {
                     putExtra(RangeControlActivity.EXTRA_UNIT_SUFFIX, attrs.optString("unit_of_measurement", ""))
                 }
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             base.clickable(actionStartActivity(intent))
         }
+        "TEXT" -> {
+            val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
+            val intent = Intent(context, TextControlActivity::class.java).apply {
+                putExtra(TextControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                putExtra(TextControlActivity.EXTRA_LABEL, rangeLabel)
+                putExtra(TextControlActivity.EXTRA_CURRENT_VALUE, actionState.state)
+                putExtra(TextControlActivity.EXTRA_MAX_LENGTH, attrs.optInt("max", 255))
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            base.clickable(actionStartActivity(intent))
+        }
+        "DATETIME" -> {
+            val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
+            val intent = Intent(context, DateTimeControlActivity::class.java).apply {
+                putExtra(DateTimeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                putExtra(DateTimeControlActivity.EXTRA_HAS_DATE, attrs.optBoolean("has_date", true))
+                putExtra(DateTimeControlActivity.EXTRA_HAS_TIME, attrs.optBoolean("has_time", true))
+                putExtra(DateTimeControlActivity.EXTRA_CURRENT_VALUE, actionState.state)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            base.clickable(actionStartActivity(intent))
+        }
         else -> { // "TRIGGER"
-            val service = if (slot.actionDomain == "automation") "trigger" else "turn_on"
+            val service = when (actionDomain) {
+                "automation" -> "trigger"
+                "input_button" -> "press"
+                else -> "turn_on" // scene, script
+            }
             base.clickable(
                 actionRunCallback<TriggerEntityAction>(
                     actionParametersOf(
-                        TriggerEntityAction.entityIdKey to slot.actionEntityId,
-                        TriggerEntityAction.domainKey to slot.actionDomain,
+                        TriggerEntityAction.entityIdKey to actionEntityId,
+                        TriggerEntityAction.domainKey to actionDomain,
                         TriggerEntityAction.serviceKey to service,
                     )
                 )
@@ -309,19 +413,19 @@ private fun rangeCurrentValue(domain: String, state: EntityStateEntity, attrs: J
     "light" -> attrs.optInt("brightness", 255).let { (it * 100 / 255).coerceIn(0, 100) }
     "cover" -> attrs.optInt("current_position", if (state.state == "open") 100 else 0)
     "climate" -> attrs.optInt("temperature", 20)
-    "number" -> state.state.toDoubleOrNull()?.toInt() ?: 0
+    "number", "input_number" -> state.state.toDoubleOrNull()?.toInt() ?: 0
     else -> 0
 }
 
 private fun rangeMin(domain: String, attrs: JSONObject): Int = when (domain) {
     "climate" -> attrs.optInt("min_temp", 16)
-    "number" -> attrs.optDouble("min", 0.0).toInt()
+    "number", "input_number" -> attrs.optDouble("min", 0.0).toInt()
     else -> 1
 }
 
 private fun rangeMax(domain: String, attrs: JSONObject): Int = when (domain) {
     "climate" -> attrs.optInt("max_temp", 30)
-    "number" -> attrs.optDouble("max", 100.0).toInt()
+    "number", "input_number" -> attrs.optDouble("max", 100.0).toInt()
     else -> 100
 }
 

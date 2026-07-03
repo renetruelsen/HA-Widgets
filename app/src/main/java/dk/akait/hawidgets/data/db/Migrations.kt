@@ -32,3 +32,25 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         )
     }
 }
+
+/** v2 → v3: tilføjer op til 3 sekundære info/handlings-chips pr. slot (v0.2.28). */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        for (n in 1..3) {
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}DisplayEntityId TEXT")
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}DisplayDomain TEXT")
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}ActionEntityId TEXT")
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}ActionDomain TEXT")
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}Action TEXT")
+        }
+    }
+}
+
+/** v3 → v4: brugervalgt "vis værdi"-indstilling pr. sekundær-chip (v0.2.32). */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        for (n in 1..3) {
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}ShowValue INTEGER")
+        }
+    }
+}

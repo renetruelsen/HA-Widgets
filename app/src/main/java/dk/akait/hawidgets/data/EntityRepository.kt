@@ -50,7 +50,8 @@ object EntityRepository {
         val ids = (
             db.entityWidgetDao().allEntityIds() +
                 multiDao.allDisplayEntityIds() +
-                multiDao.allActionEntityIds()
+                multiDao.allActionEntityIds() +
+                multiDao.allSecondaryEntityIds()
             ).distinct()
         var allOk = true
         for (id in ids) {

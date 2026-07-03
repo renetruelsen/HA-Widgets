@@ -40,7 +40,29 @@ interface MultiWidgetDao {
     @Query("SELECT DISTINCT actionEntityId FROM multi_widget_slot")
     suspend fun allActionEntityIds(): List<String>
 
-    /** Alle slots (på tværs af widgets) der viser ELLER handler på [entityId] — bruges til fan-out. */
-    @Query("SELECT * FROM multi_widget_slot WHERE displayEntityId = :entityId OR actionEntityId = :entityId")
+    /** Alle sekundær-chip-entiteter (visning + handlings-mål, op til 3 pr. slot) — bruges
+     * sammen med [allDisplayEntityIds]/[allActionEntityIds] til periodisk fuld-sync. */
+    @Query(
+        """
+        SELECT secondary1DisplayEntityId FROM multi_widget_slot WHERE secondary1DisplayEntityId IS NOT NULL
+        UNION SELECT secondary1ActionEntityId FROM multi_widget_slot WHERE secondary1ActionEntityId IS NOT NULL
+        UNION SELECT secondary2DisplayEntityId FROM multi_widget_slot WHERE secondary2DisplayEntityId IS NOT NULL
+        UNION SELECT secondary2ActionEntityId FROM multi_widget_slot WHERE secondary2ActionEntityId IS NOT NULL
+        UNION SELECT secondary3DisplayEntityId FROM multi_widget_slot WHERE secondary3DisplayEntityId IS NOT NULL
+        UNION SELECT secondary3ActionEntityId FROM multi_widget_slot WHERE secondary3ActionEntityId IS NOT NULL
+        """
+    )
+    suspend fun allSecondaryEntityIds(): List<String>
+
+    /** Alle slots (på tværs af widgets) der viser ELLER handler på [entityId] — bruges til fan-out.
+     * Tjekker også de 3 sekundær-chips' visning/handlings-mål (v0.2.28), ikke kun hoved-entiteten. */
+    @Query(
+        """
+        SELECT * FROM multi_widget_slot WHERE displayEntityId = :entityId OR actionEntityId = :entityId
+        OR secondary1DisplayEntityId = :entityId OR secondary1ActionEntityId = :entityId
+        OR secondary2DisplayEntityId = :entityId OR secondary2ActionEntityId = :entityId
+        OR secondary3DisplayEntityId = :entityId OR secondary3ActionEntityId = :entityId
+        """
+    )
     suspend fun slotsForEntity(entityId: String): List<MultiWidgetSlotEntity>
 }

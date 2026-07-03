@@ -25,6 +25,7 @@ class HaApiClient(
         val friendlyName: String,
         val state: String,
         val domain: String = entityId.substringBefore('.'),
+        val unit: String? = null,
     )
 
     private val base get() = baseUrl.trimEnd('/')
@@ -131,6 +132,7 @@ class HaApiClient(
                             friendlyName = attrs?.optString("friendly_name")?.ifEmpty { null } ?: id,
                             state = obj.getString("state"),
                             domain = entityDomain,
+                            unit = attrs?.optString("unit_of_measurement")?.ifEmpty { null },
                         ))
                     }
                 }

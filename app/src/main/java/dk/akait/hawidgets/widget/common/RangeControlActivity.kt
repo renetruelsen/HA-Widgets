@@ -90,6 +90,10 @@ class RangeControlActivity : ComponentActivity() {
                                     "number", "set_value", entityId,
                                     extraData = mapOf("value" to value)
                                 )
+                                "input_number" -> api.callService(
+                                    "input_number", "set_value", entityId,
+                                    extraData = mapOf("value" to value)
+                                )
                             }
                             EntityRepository.refresh(applicationContext, entityId)
                         }
@@ -147,7 +151,7 @@ class RangeControlActivity : ComponentActivity() {
                         val valueLabel = when (domain) {
                             "cover" -> "Position"
                             "climate" -> "Temperatur"
-                            "number" -> "Værdi"
+                            "number", "input_number" -> "Værdi"
                             else -> "Lysstyrke"
                         }
                         val unitSuffix = unitSuffixOverride ?: when (domain) {
@@ -164,7 +168,7 @@ class RangeControlActivity : ComponentActivity() {
                                 "$valueLabel: ${sliderValue.toInt()}$unitSuffix",
                                 style = MaterialTheme.typography.bodyLarge,
                             )
-                            if (domain != "number") {
+                            if (domain != "number" && domain != "input_number") {
                                 OutlinedButton(onClick = { sendToggle() }, enabled = !busy) {
                                     Text(toggleLabel)
                                 }
@@ -176,7 +180,7 @@ class RangeControlActivity : ComponentActivity() {
                             onValueChange = { sliderValue = it },
                             onValueChangeFinished = { sendRangeCommand(sliderValue.toInt()) },
                             valueRange = minValue.toFloat()..maxValue.toFloat(),
-                            enabled = domain == "number" || isOn,
+                            enabled = domain == "number" || domain == "input_number" || isOn,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

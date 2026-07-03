@@ -107,5 +107,4 @@
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entitet</string>
     <string name="multi_entity_widget_description">Flere entiteter i én widget — juster størrelse efter behov</string>
-    <string name="multi_entity_resize_banner">%1$d af %2$d entiteter vises på widgetten. Langt tryk på widgetten på hjemmeskærmen og vælg \'Tilpas størrelse\' for at se resten.</string>
 </resources>

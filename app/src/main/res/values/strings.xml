@@ -107,5 +107,4 @@
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entity</string>
     <string name="multi_entity_widget_description">Multiple entities in one widget — resize to fit</string>
-    <string name="multi_entity_resize_banner">%1$d of %2$d entities shown on the widget. Long-press the widget on the home screen and choose \'Resize\' to see the rest.</string>
 </resources>

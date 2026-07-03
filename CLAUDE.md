@@ -321,6 +321,94 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - Kendt, udskudt UX-fund (ikke del af denne ændring): footprinttet på hjemmeskærmen
     kan være markant større end den visuelle widget (boks-vs-ramme-gap) — separat opgave.
   - Fuld spec: `docs/widget-settings-spec.md` §8.
+- ✅ **v0.2.29 — MultiEntityWidget: ramme-fix + fuld-bredde rig-rækker med sekundær-chips
+  (2026-07-03, efter brugerskærmbillede + omfattende brainstorm med visuel mockup-
+  companion):**
+  - **Root cause for "hul"-bugget:** rammen krympede til boksenes naturlige størrelse
+    (v0.2.24-beslutning) i stedet for at fylde det faktisk tildelte footprint — resten
+    viste tapetet igennem. Bekræftet fixet: long-press-resize-visning hugger nu tæt om
+    indholdet uden luft.
+  - **Layoutskifte:** fra "kvadratiske fliser side om side" (`computeSlotLayout`,
+    `SlotBox`, `OverflowBadge` — alle fjernet) til fuld-bredde rækker i en Glance
+    `LazyColumn` — løser ramme-bugget strukturelt (indhold bruger nu almindelige
+    `fillMaxSize`/`fillMaxWidth`, ingen custom pixel-matematik) og gør plads til rigere
+    per-række-indhold. Ingen "+N"-badge længere — overskydende rækker nås ved scroll
+    (bekræftet virkende på S23: tynd scrollbar ses i mørk tilstand).
+  - **Rammefarve** skiftet fra hardcodet grå literal til `androidx.glance.color.
+    ColorProvider(day=.., night=..)` — auto lys/mørk-tilpasset, løser en kendt
+    kontrast-risiko fra v0.2.26-review.
+  - **Sekundære info/handlings-chips (op til 3 pr. række):** inspireret af brugerens
+    egne `custom:bubble-card`-YAML-eksempler (Spa/Haven/Udestue). Hver chip har SAMME
+    visning/handling-uafhængighed som hoved-entiteten (kan pege på en anden entitet end
+    den viste — løser bl.a. et asymmetrisk stop/start-knap-par direkte, uden
+    workaround). Chip-typen (info/toggle/trigger) udledes automatisk af domænet via
+    eksisterende `compatibleActionsFor`/`defaultActionFor` — ingen ny handlings-model.
+  - **Room-migration v2→v3:** 15 nye nullable kolonner (3× 5-felts sekundær-sæt) på
+    `multi_widget_slot`. Bekræftet ikke-destruktiv på både emulator og S23 (alle
+    eksisterende widgets — inkl. flere års testdata — overlevede uden data tab).
+  - **Config-UI redesignet:**
+    - Skærm 1 (slot-liste): kort-layout med 3 lodrette zoner — tonet klikbar zone
+      (chevron efter navnet, åbner editor) → skraldespand i egen søjle → ↑/↓ i fuld
+      kort-højde. ALLE sekundær-chips vises altid fuldt synlige i kortet (ingen skjult
+      "+N ekstra"-optælling, efter eksplicit brugerønske). Erstatter den gamle 4-knaps-
+      række (kendt overflow-fejl ved lange navne).
+    - Skærm 2 ("Tilpas entitet"): ny "Ekstra info (N/3)"-sektion under Handling, med
+      samme VISNING/HANDLING-genbrugsmønster som hoved-entiteten (inkl. "Skift" til et
+      andet handlings-mål). Handlings-mål-picoren (både hoved-entitetens og
+      sekundærernes) filtrerer nu til kun domæner med en gyldig handling — undgår at
+      brugeren kan vælge et read-only mål.
+    - Resize-banneret (v0.2.27) fjernet — urelateret til den nye scrollbare liste.
+  - **QA:** emulator (`pixel_test`, network-isoleret — kunne kun verificere rendering/
+    migration, ikke config-UI interaktivt) + Galaxy S23 (Nova, rigtig HA-forbindelse) —
+    fuld interaktiv test af tilføj/fjern/skift sekundær-chip, inkl. det asymmetriske
+    mål-tilfælde, gemt og verificeret direkte i databasen OG bekræftet renderet korrekt
+    på hjemmeskærmen (ramme + hoved-række + sekundær-chip-ikon, korrekt aktiv-farve).
+    Ingen crashes på nogen af enhederne.
+  - Fuld spec/beslutningshistorik: `docs/widget-settings-spec.md` §9.
+- ✅ **v0.2.30 — MultiEntityWidget: "diverse inputs"-domæner (2026-07-03, efter
+  brugerønske):** `MULTI_ENTITY_DOMAINS` udvidet med HA's helper-domæner —
+  `input_boolean` (mirror af switch: TOGGLE), `input_number` (mirror af number: RANGE,
+  inkl. `RangeControlActivity`-understøttelse med `input_number.set_value`),
+  `input_button` (TRIGGER via `input_button.press`), samt `input_text`/`input_datetime`/
+  `input_select` (bevidst read-only — `input_select` kræver en options-vælger-skærm for
+  en rigtig handling, ikke en simpel 1-tryks toggle/range/trigger; udskudt). Handlings-
+  mål-picoren ekskluderer fortsat automatisk de read-only input-domæner (samme filter
+  som v0.2.29). Byg grønt, ingen crashes på emulator/S23.
+- ✅ **v0.2.31–33 — MultiEntityWidget: enheder, redigerbar input_text/input_datetime,
+  bruger­valgt "vis værdi" pr. chip (2026-07-03, efter brugerfeedback fra device-QA):**
+  - **v0.2.31 — Auto-detekteret enhed:** `formatEntityState` udvidet med en valgfri
+    `unit`-parameter — matcher det eksisterende mønster fra `SensorWidget.
+    buildSensorValue`. `HaApiClient.EntityBrief` fik et nyt `unit`-felt (fra
+    `unit_of_measurement`-attributten); ny delt `unitFromJson()`-helper (i
+    `GlanceWidgetCommon.kt`) bruges i widget-renderingen. Bekræftet på S23: en
+    sensor-værdi der før viste bare "23" viser nu "23 °C".
+  - **v0.2.31 — input_text/input_datetime gjort redigerbare:** to nye handlings-typer
+    "TEXT" og "DATETIME" (`compatibleActionsFor`). Nye aktiviteter
+    `TextControlActivity` (tekstfelt + Gem, kalder `input_text.set_value`) og
+    `DateTimeControlActivity` (Androids indbyggede `DatePickerDialog`/
+    `TimePickerDialog` — valgt frem for en tekstboks efter brugerspørgsmål, tilpasser
+    sig entitetens `has_date`/`has_time`-attributter, kalder
+    `input_datetime.set_datetime`). `input_select` forbliver bevidst read-only.
+  - **v0.2.32-fund (device-QA):** en nytilføjet input_datetime-sekundær-chip viste kun
+    et ikon, intet klokkeslæt — root cause: chip-værditekst var hardcodet til kun at
+    vise for `action == "NONE"` (ren info-chip), så den nye "DATETIME"-handling faldt i
+    den tavse ikon-kun-gruppe (designet til TOGGLE/TRIGGER). Midlertidigt rettet til at
+    også vise værdi for RANGE/TEXT/DATETIME.
+  - **v0.2.33 — "Vis værdi"-indstilling gjort brugervalgt pr. chip** (efter
+    opfølgende brugerønske: "kan det ikke være en option?") i stedet for hardcodet til
+    handlings-typen. Ny Room-migration v3→v4 (3× `secondaryNShowValue`-kolonne, nullable
+    Boolean). Ny delt `defaultShowValueFor(action)` (i `MultiDomainSupport.kt`) giver et
+    fornuftigt forslag (til for NONE/RANGE/TEXT/DATETIME, fra for TOGGLE/TRIGGER) som
+    brugeren kan overstyre via en ny "Vis værdi på chippen"-switch i
+    "Ekstra info"-sektionen. Bekræftet på S23: slog "Vis værdi" til på en
+    automation-TOGGLE-chip, gemte, og widgetten viste straks "Deaktiveret"-teksten
+    ved siden af ikonet.
+  - **QA:** al test kørt direkte på Galaxy S23 mod ægte HA-data (ikke kun emulator,
+    som er netværksisoleret) — fandt v0.2.32-fejlen undervejs, ingen crashes efter fix.
+    Legacy-normalisering af `action="NONE"`-sekundærer, hvis domæne senere fik en rigtig
+    handling (fx `input_datetime` før/efter v0.2.31), blev bevidst IKKE tilføjet efter
+    brugerønske ("don't worry about legacy, appen er stadig i udvikling, jeg retter
+    selv") — kun relevant for data fra før v0.2.31 i denne udviklings-database.
 
 ## Næste skridt
 

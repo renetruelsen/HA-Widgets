@@ -40,6 +40,9 @@ internal fun EntityStateEntity.isStale() =
 internal fun friendlyNameFromJson(attributesJson: String): String? =
     try { JSONObject(attributesJson).optString("friendly_name").ifEmpty { null } } catch (_: Exception) { null }
 
+internal fun unitFromJson(attributesJson: String): String? =
+    try { JSONObject(attributesJson).optString("unit_of_measurement").ifEmpty { null } } catch (_: Exception) { null }
+
 @Composable
 fun UnconfiguredWidgetContent(
     context: Context,

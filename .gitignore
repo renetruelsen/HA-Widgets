@@ -11,3 +11,6 @@
 *.apk
 *.keystore
 !debug.keystore
+
+# Brainstorming-companion mockups/scratch (screenshots, DB dumps m.m.) — ikke del af koden
+.superpowers/
