@@ -11,19 +11,35 @@ import android.app.LocaleManager
 import android.os.Build
 import android.os.LocaleList
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -31,13 +47,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,13 +67,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
 import kotlinx.coroutines.launch
 
@@ -59,7 +85,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     OnboardingScreen()
                 }
@@ -68,6 +94,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OnboardingScreen() {
     val context = LocalContext.current
@@ -81,6 +108,7 @@ private fun OnboardingScreen() {
     var busy by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
     var showBatteryDialog by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     val pm = remember { context.getSystemService(PowerManager::class.java) }
     LaunchedEffect(connected) {
@@ -135,6 +163,15 @@ private fun OnboardingScreen() {
         )
     }
 
+    if (showSettings) {
+        SettingsSheet(
+            context = context,
+            pm = pm,
+            connected = connected,
+            onDismiss = { showSettings = false }
+        )
+    }
+
     Scaffold { innerPadding ->
         Column(
             modifier = Modifier
@@ -144,9 +181,22 @@ private fun OnboardingScreen() {
                 .padding(horizontal = 24.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
-
             if (connected) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Home, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
+                    }
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.section_settings_title))
+                    }
+                }
+
+                SectionLabel(Icons.Default.Link, stringResource(R.string.section_connection))
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -154,14 +204,39 @@ private fun OnboardingScreen() {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(stringResource(R.string.connected_to), style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                        Text(store.baseUrl ?: "", style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                stringResource(R.string.connected_to),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Text(
+                            store.baseUrl ?: "",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f)
+                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            OutlinedButton(
+                                onClick = { showDisconnectDialog = true },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                            ) { Text(stringResource(R.string.disconnect)) }
+                        }
                     }
                 }
 
-                Spacer(Modifier.height(8.dp))
+                SectionLabel(Icons.Default.RocketLaunch, stringResource(R.string.section_getting_started))
 
                 val pinSupported = remember {
                     AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported
@@ -186,8 +261,6 @@ private fun OnboardingScreen() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(8.dp))
-
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -196,51 +269,28 @@ private fun OnboardingScreen() {
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(stringResource(R.string.how_to_use_title), style = MaterialTheme.typography.labelLarge)
-                        Text(stringResource(R.string.how_to_use_step1), style = MaterialTheme.typography.bodySmall)
-                        Text(stringResource(R.string.how_to_use_step2), style = MaterialTheme.typography.bodySmall)
-                        Text(stringResource(R.string.how_to_use_step3), style = MaterialTheme.typography.bodySmall)
+                        StepRow(1, stringResource(R.string.how_to_use_step1))
+                        StepRow(2, stringResource(R.string.how_to_use_step2))
+                        StepRow(3, stringResource(R.string.how_to_use_step3))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(
+                                Icons.Default.Widgets,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                stringResource(R.string.how_to_use_tip_more_widgets),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
-
-                Spacer(Modifier.height(8.dp))
-
-                val batteryExempted = remember(connected) {
-                    pm.isIgnoringBatteryOptimizations(context.packageName)
-                }
-                OutlinedButton(
-                    onClick = {
-                        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(stringResource(R.string.battery_manage)) }
-                Text(
-                    if (batteryExempted) stringResource(R.string.battery_status_exempt)
-                    else stringResource(R.string.battery_status_restricted),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (batteryExempted) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    var currentTag by remember { mutableStateOf(currentLanguageTag(context)) }
-                    LanguageDropdown(currentTag = currentTag) { tag ->
-                        setAppLocale(context, tag)
-                        currentTag = tag
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-                }
-
-                OutlinedButton(
-                    onClick = { showDisconnectDialog = true },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(stringResource(R.string.disconnect)) }
             } else {
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+
                 Text(
                     stringResource(R.string.onboarding_intro),
                     style = MaterialTheme.typography.bodyMedium,
@@ -297,6 +347,100 @@ private fun OnboardingScreen() {
     }
 }
 
+@Composable
+private fun SectionLabel(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
+private fun StepRow(number: Int, text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                number.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+        Text(text, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsSheet(
+    context: android.content.Context,
+    pm: PowerManager,
+    connected: Boolean,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.section_settings_title), style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_close_settings))
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                var currentTag by remember { mutableStateOf(currentLanguageTag(context)) }
+                LanguageRow(currentTag = currentTag) { tag ->
+                    setAppLocale(context, tag)
+                    currentTag = tag
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            val batteryExempted = remember(connected) {
+                pm.isIgnoringBatteryOptimizations(context.packageName)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(Icons.Default.BatteryFull, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.battery_manage), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        if (batteryExempted) stringResource(R.string.battery_status_exempt)
+                        else stringResource(R.string.battery_status_restricted),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (batteryExempted) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedButton(onClick = {
+                    context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }) { Text(stringResource(R.string.settings_open)) }
+            }
+        }
+    }
+}
+
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 private fun currentLanguageTag(context: android.content.Context): String? {
     val localeManager = context.getSystemService(LocaleManager::class.java)
@@ -311,9 +455,9 @@ private fun setAppLocale(context: android.content.Context, languageTag: String?)
         if (languageTag == null) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(languageTag)
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LanguageDropdown(currentTag: String?, onSelect: (String?) -> Unit) {
+private fun LanguageRow(currentTag: String?, onSelect: (String?) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val options = listOf(
         null to stringResource(R.string.language_follow_system),
@@ -324,20 +468,28 @@ private fun LanguageDropdown(currentTag: String?, onSelect: (String?) -> Unit) {
     val selectedLabel = options.firstOrNull { it.first == currentTag }?.second
         ?: stringResource(R.string.language_follow_system)
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
-        OutlinedTextField(
-            value = selectedLabel,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(stringResource(R.string.section_language)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+    Box {
+        Row(
             modifier = Modifier
-                .menuAnchor()
                 .fillMaxWidth()
-        )
+                .clickable { expanded = true }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.section_language),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                selectedLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+        }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }

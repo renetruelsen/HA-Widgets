@@ -24,10 +24,18 @@
     <string name="pin_manual_instructions">Long-press an empty spot on the home screen → Widgets → find \'HA Widgets\' → drag the shortcut out.</string>
     <string name="pin_button_instructions">Tap the button and confirm in the dialog. Not working? Long-press the home screen → Widgets → \'HA Widgets\'.</string>
     <string name="how_to_use_title">How to use HA Widgets</string>
-    <string name="how_to_use_step1">1. Tap \'Add dashboard shortcut\' above</string>
-    <string name="how_to_use_step2">2. Choose dashboard and view in the configuration</string>
-    <string name="how_to_use_step3">3. Tap the widget icon on the home screen to open your dashboard</string>
+    <string name="how_to_use_step1">Tap \'Add dashboard shortcut\' above</string>
+    <string name="how_to_use_step2">Choose dashboard and view in the configuration</string>
+    <string name="how_to_use_step3">Tap the widget icon on the home screen to open your dashboard</string>
+    <string name="how_to_use_tip_more_widgets">There are many more widgets (lights, sensors, switches and more) — find them via your phone\'s own \'Add widget\': long-press the home screen → Widgets → HA Widgets.</string>
     <string name="onboarding_intro">Connect your Home Assistant instance below. You can also skip this and connect the first time you add a widget.</string>
+
+    <!-- Section labels & settings overlay -->
+    <string name="section_connection">Connection</string>
+    <string name="section_getting_started">Getting started</string>
+    <string name="section_settings_title">Settings</string>
+    <string name="settings_open">Open</string>
+    <string name="cd_close_settings">Close</string>
 
     <!-- Language picker -->
     <string name="section_language">Language</string>

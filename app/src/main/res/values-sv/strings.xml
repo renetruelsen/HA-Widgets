@@ -24,10 +24,18 @@
     <string name="pin_manual_instructions">Håll ner ett tomt ställe på hemskärmen → Widgetar → hitta \'HA Widgets\' → dra ut genvägen.</string>
     <string name="pin_button_instructions">Tryck på knappen och bekräfta i dialogrutan. Fungerar det inte? Håll ner hemskärmen → Widgetar → \'HA Widgets\'.</string>
     <string name="how_to_use_title">Så använder du HA Widgets</string>
-    <string name="how_to_use_step1">1. Tryck på \'Lägg till instrumentpanelsgenväg\' ovan</string>
-    <string name="how_to_use_step2">2. Välj instrumentpanel och vy i konfigurationen</string>
-    <string name="how_to_use_step3">3. Tryck på widgetikonen på hemskärmen för att öppna din instrumentpanel</string>
+    <string name="how_to_use_step1">Tryck på \'Lägg till instrumentpanelsgenväg\' ovan</string>
+    <string name="how_to_use_step2">Välj instrumentpanel och vy i konfigurationen</string>
+    <string name="how_to_use_step3">Tryck på widgetikonen på hemskärmen för att öppna din instrumentpanel</string>
+    <string name="how_to_use_tip_more_widgets">Det finns många fler widgetar (lampor, sensorer, kontakter med mera) — hitta dem via telefonens egen \'Lägg till widget\': tryck länge på hemskärmen → Widgetar → HA Widgets.</string>
     <string name="onboarding_intro">Anslut din Home Assistant-instans nedan. Du kan även hoppa över detta och ansluta första gången du lägger till en widget.</string>
+
+    <!-- Section labels & settings overlay -->
+    <string name="section_connection">Anslutning</string>
+    <string name="section_getting_started">Kom igång</string>
+    <string name="section_settings_title">Inställningar</string>
+    <string name="settings_open">Öppna</string>
+    <string name="cd_close_settings">Stäng</string>
 
     <!-- Language picker -->
     <string name="section_language">Språk</string>

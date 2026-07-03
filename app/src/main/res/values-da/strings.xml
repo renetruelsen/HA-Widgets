@@ -24,10 +24,18 @@
     <string name="pin_manual_instructions">Hold på et tomt sted på hjemskærmen → Widgets → find \'HA Widgets\' → træk genvejen ud.</string>
     <string name="pin_button_instructions">Tryk på knappen og bekræft i dialogen. Virker det ikke? Hold på hjemskærmen → Widgets → \'HA Widgets\'.</string>
     <string name="how_to_use_title">Sådan bruger du HA Widgets</string>
-    <string name="how_to_use_step1">1. Tryk \'Tilføj dashboard-genvej\' ovenfor</string>
-    <string name="how_to_use_step2">2. Vælg dashboard og visning i konfigurationen</string>
-    <string name="how_to_use_step3">3. Tryk på widget-ikonet på hjemskærmen for at åbne dit dashboard</string>
+    <string name="how_to_use_step1">Tryk \'Tilføj dashboard-genvej\' ovenfor</string>
+    <string name="how_to_use_step2">Vælg dashboard og visning i konfigurationen</string>
+    <string name="how_to_use_step3">Tryk på widget-ikonet på hjemskærmen for at åbne dit dashboard</string>
+    <string name="how_to_use_tip_more_widgets">Der findes mange flere widgets (lys, sensorer, kontakter m.m.) — find dem via telefonens egen \'Tilføj widget\': hold på hjemskærmen → Widgets → HA Widgets.</string>
     <string name="onboarding_intro">Forbind din Home Assistant-instans nedenfor. Du kan også springe dette over og forbinde første gang du tilføjer en widget.</string>
+
+    <!-- Section labels & settings overlay -->
+    <string name="section_connection">Forbindelse</string>
+    <string name="section_getting_started">Kom i gang</string>
+    <string name="section_settings_title">Indstillinger</string>
+    <string name="settings_open">Åbn</string>
+    <string name="cd_close_settings">Luk</string>
 
     <!-- Language picker -->
     <string name="section_language">Sprog</string>
