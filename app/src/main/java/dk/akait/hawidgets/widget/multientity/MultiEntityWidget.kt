@@ -63,10 +63,10 @@ import org.json.JSONObject
 // Ramme rundt om slot-rækken: fast (ikke tema-baseret) grå, 50% alpha — bevidst literal farve
 // jf. UX-spec, ikke GlanceTheme.colors.surfaceVariant (se docs/widget-settings-spec.md §6).
 private val FRAME_BACKGROUND = ColorProvider(Color(0x80808080))
-private const val FRAME_PADDING_DP = 4
-private const val SLOT_GAP_DP = 4
-private const val MAX_SLOT_SIZE_DP = 56
-private const val MIN_SLOT_SIZE_DP = 48 // Android tap-target-minimum — se UX-review §6.
+internal const val FRAME_PADDING_DP = 4
+internal const val SLOT_GAP_DP = 4
+internal const val MAX_SLOT_SIZE_DP = 56
+internal const val MIN_SLOT_SIZE_DP = 48 // Android tap-target-minimum — se UX-review §6.
 
 class MultiEntityWidget : GlanceAppWidget() {
 
@@ -124,9 +124,9 @@ private fun statesFlow(
  * ikke opstår luft mellem bokse og ramme. Bredden skrumpes kun ned mod 48dp-gulvet hvis der
  * IKKE er plads til alle slots ved naturlig størrelse. Boks-HØJDEN beregnes separat i
  * [MultiEntityContent] (se computeBoxHeight) — bredde og højde er bevidst afkoblede. */
-private data class SlotLayout(val boxWidth: Dp, val visibleSlots: Int, val overflowCount: Int)
+internal data class SlotLayout(val boxWidth: Dp, val visibleSlots: Int, val overflowCount: Int)
 
-private fun computeSlotLayout(availableWidth: Dp, slotCount: Int): SlotLayout {
+internal fun computeSlotLayout(availableWidth: Dp, slotCount: Int): SlotLayout {
     if (slotCount <= 0) return SlotLayout(MAX_SLOT_SIZE_DP.dp, 0, 0)
     val usable = availableWidth - (FRAME_PADDING_DP * 2).dp
     val naturalWidthNeeded = (MAX_SLOT_SIZE_DP * slotCount + SLOT_GAP_DP * (slotCount - 1)).dp
@@ -325,37 +325,8 @@ private fun rangeMax(domain: String, attrs: JSONObject): Int = when (domain) {
     else -> 100
 }
 
-// 4 receivers, samme MultiEntityWidget()-instans — kun manifest-registrering + XML-footprint
-// (multi_entity_2/3/4_widget_info.xml) differentierer varianterne. MultiEntityWidgetReceiver
-// bevarer sit oprindelige class-/filnavn (bliver de facto "5-plads") for bagudkompatibilitet
-// med allerede placerede widgets. Se docs/widget-settings-spec.md §6.
-class MultiEntityWidget2Receiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = MultiEntityWidget()
-
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        SyncWorker.runNow(context)
-    }
-}
-
-class MultiEntityWidget3Receiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = MultiEntityWidget()
-
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        SyncWorker.runNow(context)
-    }
-}
-
-class MultiEntityWidget4Receiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = MultiEntityWidget()
-
-    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        SyncWorker.runNow(context)
-    }
-}
-
+// Bevarer oprindeligt class-/filnavn for bagudkompatibilitet med allerede placerede widgets
+// (v0.2.27: revert fra 4 varianter til én — se docs/widget-settings-spec.md §8).
 class MultiEntityWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = MultiEntityWidget()
 

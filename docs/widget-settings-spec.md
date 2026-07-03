@@ -485,3 +485,63 @@ findes kontakten ikke, så NONE kan ikke opstå (fikser den oprindelige fejl str
 - Data-model uændret: `MultiWidgetSlotEntity.action` beholder `NONE/TOGGLE/RANGE/TRIGGER`.
 
 `actionShortLabel` bruges til radios + auto-linje (kort: «Udløs» ikke «Udløs automatisering/script»).
+
+---
+
+## 8. MultiEntityWidget: revert til én variant + resize-banner (v0.2.27)
+
+**Baggrund:** de 4 varianter fra §6 (2/3/4/5 pladser) delte 100% af config-logikken (tilføj/
+fjern/rediger op til 5 slots, samme `computeSlotLayout`-render, samme "+N"-overflow-badge) —
+variant-valget påvirkede KUN start-footprint. At vælge "3-Entity" forhindrede ikke bruger i
+efterfølgende at tilføje 5 via config-UI, hvilket gjorde valget kunstigt/vildledende. Kendt fund
+fra v0.2.26: "4 receiver-klasser er identiske kopier". Bruger besluttede (2026-07-03) at gå
+tilbage til én variant og i stedet kompensere for at appen ikke kan auto-resize footprint til
+valgt slot-antal.
+
+**Afvist alternativ:** låse slot-antal til valgt variant (fjerner eksisterende tilføj/fjern-
+frihed — værre UX end problemet det løser).
+
+### Én variant, fast 4-slot default-footprint
+
+`multi_entity_2/3/4_widget_info.xml` + `MultiEntityWidget2/3/4Receiver` fjernet.
+`MultiEntityWidgetReceiver`/`multi_entity_widget_info.xml` bevarer sit oprindelige navn
+(bagudkompatibilitet, jf. §6) men footprint ændret fra 5-slot- til 4-slot-mål:
+`minWidth="244dp"`, `targetCellWidth="4"` (var 304dp/5). `minHeight=56dp`,
+`maxResizeWidth=320dp`, `maxResizeHeight=120dp`, `resizeMode="horizontal|vertical"` uændret —
+320dp rummer alle 5 slots ved naturlig 56dp-størrelse (5×56+4×4=296dp ≤ 320dp), så bruger kan
+resize til at se alle 5 uden overflow, hvis de vælger 5. Widget-picker-strengene konsolideret til
+én generisk label/beskrivelse (ikke tals-specifik): `multi_entity_widget_label` =
+"HA Multi-entity"/"HA Multi-entitet". Preview-ikonerne for 2/3/5 slots samt de tilhørende
+strenge er fjernet (ubrugte); `ic_multi_entity_4` genbruges som previewImage.
+
+`computeSlotLayout`, `SlotLayout` og sizing-konstanterne (`MultiEntityWidget.kt`) ændret fra
+`private` til `internal` for at kunne genbruges fra config-activity (uændret render-logik).
+
+### Resize-banner (config-activity, Skærm 1)
+
+Kompenserer for at footprint ikke kan auto-resizes til valgt slot-antal: en **state-aware**
+informationsbanner (ikke en modal dialog ved widget-tilføjelse — dårlig timing, ingen kontekst
+endnu) vises i `ListScreen`, KUN når konfigureret slot-antal overstiger hvad widgettens FAKTISK
+placerede bredde kan rumme.
+
+- `MultiEntityConfigScreen`: `LaunchedEffect(slots.size)` læser
+  `AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)` →
+  `OPTION_APPWIDGET_MIN_WIDTH` (dp, reel værdi — ikke gæt). Kalder samme
+  `computeSlotLayout(minWidthDp.dp, slots.size)` som widgettens egen render bruger. Hvis
+  `overflowCount > 0`: gemmer `(visibleSlots, slots.size)` i `overflowInfo`-state, ellers `null`.
+  Ukendt/0-bredde (fx visse testforhold) → intet banner, ikke et forkert tal.
+- `ListScreen` viser banneret som `Card` (`surfaceVariant`-baggrund, 16dp padding) øverst i
+  Column'en når `overflowInfo != null` — samme visuelle mønster som `MainActivity`s
+  info-kort, ingen ny komponent-type. Tekst: lokaliseret formatstreng
+  `multi_entity_resize_banner` (%1$d synlige / %2$d total), alle 3 sprogfiler
+  (`values`/`values-da`/`values-sv`).
+- Ingen "vis ikke igen"-dismiss — banneret er 100% state-drevet og forsvinder selv når bruger
+  fjerner slots eller resizer widgetten og genåbner config.
+- Eksisterende "+N"-overflow-badge PÅ selve widgetten (§6) er uændret — den vedvarende
+  on-widget-reminder efter config lukkes.
+
+### Kendt, udskudt UX-problem (ikke del af denne ændring)
+
+Bruger observerede at footprinttet på hjemmeskærmen kan være markant større end den visuelle
+widget (boksene centreres i den fulde tildelte plads, jf. §6's `computeBoxHeight`/ramme-logik) —
+taget som separat opgave.

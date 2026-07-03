@@ -22,6 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -46,7 +48,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.db.AppDatabase
@@ -133,6 +137,21 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     var allEntities by remember { mutableStateOf<List<HaApiClient.EntityBrief>>(emptyList()) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var step by remember { mutableStateOf<Step>(Step.ListScreen) }
+    // (synlige, total) når konfigurerede slots ikke kan vises alle ved widgettens FAKTISKE
+    // placerede bredde — læst fra AppWidgetManager, ikke gættet. Null = intet banner nødvendigt.
+    var overflowInfo by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    LaunchedEffect(slots.size) {
+        val minWidthDp = AppWidgetManager.getInstance(context)
+            .getAppWidgetOptions(appWidgetId)
+            .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+        overflowInfo = if (minWidthDp > 0) {
+            val layout = computeSlotLayout(minWidthDp.dp, slots.size)
+            if (layout.overflowCount > 0) layout.visibleSlots to slots.size else null
+        } else {
+            null
+        }
+    }
 
     LaunchedEffect(Unit) {
         val store = SecureStore.get(context)
@@ -187,6 +206,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     when (val s = step) {
         Step.ListScreen -> ListScreen(
             slots = slots,
+            overflowInfo = overflowInfo,
             onAddSlot = { step = Step.EntityPicker(PickerTarget.DISPLAY, null, SlotDraft()) },
             onEditSlot = { index -> step = Step.SlotEditor(index, draftFromSlot(slots[index])) },
             onRemoveSlot = { index ->
@@ -253,6 +273,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 @Composable
 private fun ListScreen(
     slots: List<MultiWidgetSlotEntity>,
+    overflowInfo: Pair<Int, Int>?,
     onAddSlot: () -> Unit,
     onEditSlot: (Int) -> Unit,
     onRemoveSlot: (Int) -> Unit,
@@ -267,6 +288,20 @@ private fun ListScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
+            if (overflowInfo != null) {
+                val (visible, total) = overflowInfo
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(R.string.multi_entity_resize_banner, visible, total),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+                Spacer(Modifier.padding(8.dp))
+            }
             if (slots.isEmpty()) {
                 Text(
                     "Ingen slots endnu — tryk \"Tilføj slot\" for at starte.",

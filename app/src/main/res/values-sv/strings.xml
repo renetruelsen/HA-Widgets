@@ -95,14 +95,9 @@
     <string name="climate_widget_label">HA Klimat</string>
     <string name="climate_widget_description">Visa och styr temperatur (2×1)</string>
 
-    <!-- MultiEntityWidget: 4 storleksvarianter, skilda åt efter antal enheter (leder med
-         siffran så det går snabbt att skanna i Androids widget-lista) -->
-    <string name="multi_entity_2_widget_label">2-enheters HA Multi</string>
-    <string name="multi_entity_2_widget_description">2 enheter i en widget</string>
-    <string name="multi_entity_3_widget_label">3-enheters HA Multi</string>
-    <string name="multi_entity_3_widget_description">3 enheter i en widget</string>
-    <string name="multi_entity_4_widget_label">4-enheters HA Multi</string>
-    <string name="multi_entity_4_widget_description">4 enheter i en widget</string>
-    <string name="multi_entity_widget_label">5-enheters HA Multi</string>
-    <string name="multi_entity_widget_description">5 enheter i en widget</string>
+    <!-- MultiEntityWidget: en variant, fast 4-slot standardfootprint (se
+         docs/widget-settings-spec.md §8) -->
+    <string name="multi_entity_widget_label">HA Multi-entitet</string>
+    <string name="multi_entity_widget_description">Flera entiteter i en widget — justera storlek efter behov</string>
+    <string name="multi_entity_resize_banner">%1$d av %2$d entiteter visas på widgeten. Långtryck widgeten på hemskärmen och välj \'Ändra storlek\' för att se resten.</string>
 </resources>

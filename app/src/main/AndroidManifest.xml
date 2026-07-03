@@ -252,39 +252,6 @@
             </intent-filter>
         </activity>
         <receiver
-            android:name=".widget.multientity.MultiEntityWidget2Receiver"
-            android:label="@string/multi_entity_2_widget_label"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/multi_entity_2_widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.multientity.MultiEntityWidget3Receiver"
-            android:label="@string/multi_entity_3_widget_label"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/multi_entity_3_widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.multientity.MultiEntityWidget4Receiver"
-            android:label="@string/multi_entity_4_widget_label"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/multi_entity_4_widget_info" />
-        </receiver>
-        <receiver
             android:name=".widget.multientity.MultiEntityWidgetReceiver"
             android:label="@string/multi_entity_widget_label"
             android:exported="true">

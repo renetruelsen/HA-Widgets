@@ -95,14 +95,9 @@
     <string name="climate_widget_label">HA Climate</string>
     <string name="climate_widget_description">Show and control temperature (2×1)</string>
 
-    <!-- MultiEntityWidget: 4 size variants, differentiated by entity count (leads with the
-         number so it scans fast in Android's widget picker list) -->
-    <string name="multi_entity_2_widget_label">2-Entity HA Multi</string>
-    <string name="multi_entity_2_widget_description">2 entities in one widget</string>
-    <string name="multi_entity_3_widget_label">3-Entity HA Multi</string>
-    <string name="multi_entity_3_widget_description">3 entities in one widget</string>
-    <string name="multi_entity_4_widget_label">4-Entity HA Multi</string>
-    <string name="multi_entity_4_widget_description">4 entities in one widget</string>
-    <string name="multi_entity_widget_label">5-Entity HA Multi</string>
-    <string name="multi_entity_widget_description">5 entities in one widget</string>
+    <!-- MultiEntityWidget: single variant, fixed 4-slot default footprint (see
+         docs/widget-settings-spec.md §8) -->
+    <string name="multi_entity_widget_label">HA Multi-entity</string>
+    <string name="multi_entity_widget_description">Multiple entities in one widget — resize to fit</string>
+    <string name="multi_entity_resize_banner">%1$d of %2$d entities shown on the widget. Long-press the widget on the home screen and choose \'Resize\' to see the rest.</string>
 </resources>

@@ -291,6 +291,36 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     mørk-tilstands-kontrastklask; observér ved device-brug. (4) 4 receiver-klasser er
     identiske kopier — kandidat til delt base ved næste variant. (5) Handling-sektionens
     nesting → sealed HandlingState-kandidat. Verificeret på emulator; merged til main.
+- ✅ **v0.2.27 — MultiEntityWidget: revert til én variant + resize-banner (2026-07-03,
+  efter brugerfeedback):**
+  - **Baggrund:** bruger påpegede at de 4 varianter fra v0.2.23 (2/3/4/5-Entity HA Multi)
+    var kunstige — alle delte 100% config-logik (op til 5 slots, samme render/overflow-
+    badge), variant-valget påvirkede KUN start-footprint. Besluttet at gå tilbage til
+    ÉN variant og i stedet kompensere med en state-aware informationsbanner.
+  - **Én variant:** `MultiEntityWidget2/3/4Receiver` + tilhørende XML/strings/drawables
+    fjernet. `MultiEntityWidgetReceiver`/`multi_entity_widget_info.xml` bevarer
+    bagudkompatibelt navn, footprint ændret til 4-slot-mål (`minWidth=244dp`,
+    `targetCellWidth=4`, var 304dp/5). Picker-strengene konsolideret til generisk
+    "HA Multi-entity"/"HA Multi-entitet" (ikke tals-specifik).
+  - **Resize-banner:** `MultiEntityWidgetConfigActivity` Skærm 1 læser
+    `AppWidgetManager.getAppWidgetOptions(appWidgetId)` → `OPTION_APPWIDGET_MIN_WIDTH`,
+    genbruger widgettens egen `computeSlotLayout` (nu `internal`) til at afgøre om
+    konfigurerede slots overstiger hvad der reelt er plads til. Vises KUN ved reel
+    overflow (ny lokaliseret streng `multi_entity_resize_banner`, alle 3 sprogfiler) —
+    ingen modal dialog ved tilføjelse (dårlig timing/kontekst).
+  - **QA:** emulator (`pixel_test`) og S23 (Nova Launcher) — begge viser korrekt ÉT
+    "HA Multi-entity"-entry i widget-pickeren (ikke 4), korrekt footprint ("4×1" på S23),
+    placering + config-flow (tilføj/rediger/fjern slot) verificeret uden crashes.
+    Banner-visning i faktisk overflow-tilstand blev IKKE visuelt bekræftet denne
+    session — emulatorens launcher-grid gav generøs nok bredde til at alle 5 test-slots
+    fik plads uden resize (ingen overflow opstod, banner korrekt fraværende); resize-
+    håndtag var vertikale-kun i den konkrete emulator-instans. Underliggende
+    `computeSlotLayout`-matematik er verificeret manuelt korrekt for 244dp-footprint
+    (4 slots passer, 5. kræver resize). Anbefales bekræftet visuelt ved næste
+    device-session med finere launcher-grid.
+  - Kendt, udskudt UX-fund (ikke del af denne ændring): footprinttet på hjemmeskærmen
+    kan være markant større end den visuelle widget (boks-vs-ramme-gap) — separat opgave.
+  - Fuld spec: `docs/widget-settings-spec.md` §8.
 
 ## Næste skridt
 
