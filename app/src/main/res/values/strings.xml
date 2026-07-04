@@ -107,4 +107,5 @@
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entity</string>
     <string name="multi_entity_widget_description">Multiple entities in one widget — resize to fit</string>
+    <string name="multi_entity_refresh_all">Refresh all widgets</string>
 </resources>

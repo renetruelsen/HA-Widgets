@@ -167,6 +167,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     var slots by remember { mutableStateOf<List<MultiWidgetSlotEntity>>(emptyList()) }
+    var showRefreshIcon by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(true) }
     var allEntities by remember { mutableStateOf<List<HaApiClient.EntityBrief>>(emptyList()) }
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -183,6 +184,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         allEntities = client.listStatesByDomains(MULTI_ENTITY_DOMAINS.toSet()).sortedBy { it.friendlyName }
         val db = AppDatabase.get(context)
         slots = db.multiWidgetDao().getSlots(appWidgetId)
+        showRefreshIcon = db.multiWidgetDao().get(appWidgetId)?.showRefreshIcon ?: true
         isLoading = false
     }
 
@@ -277,6 +279,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     when (val s = step) {
         Step.ListScreen -> ListScreen(
             slots = slots,
+            showRefreshIcon = showRefreshIcon,
+            onShowRefreshIconChange = { showRefreshIcon = it },
             onAddSlot = { step = Step.EntityPicker(PickerTarget.Display, null, SlotDraft()) },
             onEditSlot = { index -> step = Step.SlotEditor(index, draftFromSlot(slots[index])) },
             onRemoveSlot = { index ->
@@ -296,7 +300,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onSave = {
                 scope.launch {
                     val db = AppDatabase.get(context)
-                    db.multiWidgetDao().upsert(MultiWidgetEntity(appWidgetId, ""))
+                    db.multiWidgetDao().upsert(MultiWidgetEntity(appWidgetId, "", showRefreshIcon = showRefreshIcon))
                     db.multiWidgetDao().deleteAllSlots(appWidgetId)
                     slots.forEachIndexed { i, sl -> db.multiWidgetDao().upsertSlot(sl.copy(slotIndex = i)) }
                     SyncWorker.runNow(context)
@@ -386,6 +390,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 @Composable
 private fun ListScreen(
     slots: List<MultiWidgetSlotEntity>,
+    showRefreshIcon: Boolean,
+    onShowRefreshIconChange: (Boolean) -> Unit,
     onAddSlot: () -> Unit,
     onEditSlot: (Int) -> Unit,
     onRemoveSlot: (Int) -> Unit,
@@ -420,6 +426,14 @@ private fun ListScreen(
                 }
             }
             Spacer(Modifier.padding(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Vis refresh-ikon", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Switch(checked = showRefreshIcon, onCheckedChange = onShowRefreshIconChange)
+            }
+            Spacer(Modifier.padding(4.dp))
             Button(onClick = onAddSlot, enabled = slots.size < 5, modifier = Modifier.fillMaxWidth()) {
                 Text("+ Tilføj slot")
             }

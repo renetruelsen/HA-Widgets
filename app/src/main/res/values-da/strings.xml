@@ -107,4 +107,5 @@
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entitet</string>
     <string name="multi_entity_widget_description">Flere entiteter i én widget — juster størrelse efter behov</string>
+    <string name="multi_entity_refresh_all">Opdatér alle widgets</string>
 </resources>

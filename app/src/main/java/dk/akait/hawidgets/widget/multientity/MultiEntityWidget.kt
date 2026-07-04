@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -15,6 +16,7 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.ColorFilter
+import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -46,6 +48,7 @@ import androidx.glance.color.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
+import dk.akait.hawidgets.data.db.MultiWidgetEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.widget.common.DateTimeControlActivity
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
@@ -80,6 +83,8 @@ private val FRAME_BACKGROUND = ColorProvider(
 internal const val FRAME_PADDING_DP = 4
 internal const val ROW_GAP_DP = 4
 internal const val CHIP_GAP_DP = 4
+internal const val REFRESH_STRIP_HEIGHT_DP = 32
+internal const val MIN_ROW_HEIGHT_DP = 48
 
 class MultiEntityWidget : GlanceAppWidget() {
 
@@ -92,6 +97,7 @@ class MultiEntityWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
         val db = AppDatabase.get(context)
+        val initialConfig = db.multiWidgetDao().get(appWidgetId)
         val initialSlots = db.multiWidgetDao().getSlots(appWidgetId)
         // Preload states too (not just slots) — every entity tap re-invokes provideGlance
         // via WidgetUpdater.updateForEntity()'s explicit widget.update() call, on top of the
@@ -103,10 +109,14 @@ class MultiEntityWidget : GlanceAppWidget() {
         val initialStates = initialStateIds.associateWith { entityId -> db.entityStateDao().get(entityId) }
 
         provideContent {
-            val viewState by db.multiWidgetDao().observeSlots(appWidgetId)
-                .flatMapLatest { slots -> statesFlow(db, slots).map { states -> slots to states } }
-                .collectAsState(initial = initialSlots to initialStates)
-            val (slots, states) = viewState
+            val viewState by combine(
+                db.multiWidgetDao().observe(appWidgetId),
+                db.multiWidgetDao().observeSlots(appWidgetId)
+                    .flatMapLatest { slots -> statesFlow(db, slots).map { states -> slots to states } },
+            ) { config, (slots, states) -> MultiWidgetViewState(config, slots, states) }
+                .collectAsState(initial = MultiWidgetViewState(initialConfig, initialSlots, initialStates))
+            val (config, slots, states) = viewState
+            val showRefreshIcon = config?.showRefreshIcon ?: true
 
             GlanceTheme {
                 if (slots.isEmpty()) {
@@ -114,12 +124,18 @@ class MultiEntityWidget : GlanceAppWidget() {
                         context, appWidgetId, MultiEntityWidgetConfigActivity::class.java, R.drawable.ic_multi_entity,
                     )
                 } else {
-                    MultiEntityContent(context, slots, states)
+                    MultiEntityContent(context, slots, states, showRefreshIcon)
                 }
             }
         }
     }
 }
+
+private data class MultiWidgetViewState(
+    val config: MultiWidgetEntity?,
+    val slots: List<MultiWidgetSlotEntity>,
+    val states: Map<String, EntityStateEntity?>,
+)
 
 /** Alle entity-id'er en slot kan referere (visning/handling for hoved-entiteten + op til 3
  * sekundær-chips) — bruges til at afgøre hvilke entiteter der skal observeres/præloades. */
@@ -170,8 +186,26 @@ private fun MultiEntityContent(
     context: Context,
     slots: List<MultiWidgetSlotEntity>,
     states: Map<String, EntityStateEntity?>,
+    showRefreshIcon: Boolean,
 ) {
     val sorted = slots.sortedBy { it.slotIndex }
+
+    // Rækkehøjden tilpasses den faktiske tildelte plads (LocalSize.current under SizeMode.Exact
+    // rapporterer den reelle, kontinuerlige højde launcheren har givet widgetten) — så en høj
+    // placering (stor grid-størrelse) ikke efterlader tomrum i bunden, og en lav placering ikke
+    // beskærer en række midt i. Bevidst INGEN øvre grænse — 1-2 konfigurerede entiteter i en meget
+    // høj widget skal strække rækken(rne) til at fylde pladsen, ikke stoppe ved en arbitrær
+    // maks-højde. Nedre grænse (MIN_ROW_HEIGHT_DP) er tap-target-minimum — falder tilbage til
+    // eksisterende LazyColumn-scroll når beregnet højde ville komme under den.
+    val availableHeightDp = LocalSize.current.height.value
+    val stripHeightDp = if (showRefreshIcon) REFRESH_STRIP_HEIGHT_DP else 0
+    val rowCount = sorted.size
+    val gapTotalDp = ROW_GAP_DP * rowCount
+    val framePaddingTotalDp = FRAME_PADDING_DP * 2
+    val usableForRowsDp = availableHeightDp - framePaddingTotalDp - stripHeightDp - gapTotalDp
+    val computedRowHeightDp = if (rowCount > 0) (usableForRowsDp / rowCount) else 0f
+    val rowHeight = computedRowHeightDp.coerceAtLeast(MIN_ROW_HEIGHT_DP.toFloat()).dp
+
     // Rammen fylder nu HELE det tildelte areal kant-til-kant (fillMaxSize) i stedet for at
     // krympe til indholdet — det var netop krympe-adfærden der efterlod et "hul" (tapet synligt)
     // når launcheren tildelte mere plads end indholdet krævede. Se docs/widget-settings-spec.md §9.
@@ -182,14 +216,38 @@ private fun MultiEntityContent(
             .cornerRadius(16.dp)
             .padding(FRAME_PADDING_DP.dp),
     ) {
-        LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
-            items(sorted, itemId = { it.slotIndex.toLong() }) { slot ->
-                Column {
-                    SlotRow(context, slot, states)
-                    Spacer(modifier = GlanceModifier.height(ROW_GAP_DP.dp))
+        Column(modifier = GlanceModifier.fillMaxSize()) {
+            LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+                items(sorted, itemId = { it.slotIndex.toLong() }) { slot ->
+                    Column {
+                        SlotRow(context, slot, states, rowHeight)
+                        Spacer(modifier = GlanceModifier.height(ROW_GAP_DP.dp))
+                    }
                 }
             }
+            if (showRefreshIcon) {
+                RefreshStrip(context)
+            }
         }
+    }
+}
+
+@Composable
+private fun RefreshStrip(context: Context) {
+    Row(
+        modifier = GlanceModifier.fillMaxWidth().height(REFRESH_STRIP_HEIGHT_DP.dp),
+        horizontalAlignment = Alignment.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_refresh),
+            contentDescription = context.getString(R.string.multi_entity_refresh_all),
+            modifier = GlanceModifier
+                .size(48.dp)
+                .clickable(actionRunCallback<RefreshEntityAction>(actionParametersOf()))
+                .padding(12.dp),
+            colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
+        )
     }
 }
 
@@ -198,6 +256,7 @@ private fun SlotRow(
     context: Context,
     slot: MultiWidgetSlotEntity,
     states: Map<String, EntityStateEntity?>,
+    rowHeight: Dp,
 ) {
     val displayState = states[slot.displayEntityId]
     val actionState = states[slot.actionEntityId]
@@ -226,7 +285,7 @@ private fun SlotRow(
 
     val rowModifier = clickModifier(
         context = context,
-        base = GlanceModifier.fillMaxWidth().background(bgColor).cornerRadius(12.dp).padding(8.dp),
+        base = GlanceModifier.fillMaxWidth().height(rowHeight).background(bgColor).cornerRadius(12.dp).padding(8.dp),
         action = slot.action,
         actionEntityId = slot.actionEntityId,
         actionDomain = slot.actionDomain,

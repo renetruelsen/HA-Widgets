@@ -7,4 +7,5 @@ import androidx.room.PrimaryKey
 data class MultiWidgetEntity(
     @PrimaryKey val appWidgetId: Int,
     val title: String, // tom streng = ingen titel-linje på widgetten
+    val showRefreshIcon: Boolean = true,
 )

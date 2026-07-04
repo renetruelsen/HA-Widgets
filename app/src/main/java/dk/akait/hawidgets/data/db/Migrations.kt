@@ -54,3 +54,10 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         }
     }
 }
+
+/** v4 → v5: widget-niveau "vis refresh-ikon"-indstilling, default true (v0.2.35). */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE multi_widget ADD COLUMN showRefreshIcon INTEGER NOT NULL DEFAULT 1")
+    }
+}
