@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -88,11 +89,27 @@ internal const val MIN_ROW_HEIGHT_DP = 48
 
 class MultiEntityWidget : GlanceAppWidget() {
 
-    // SizeMode.Exact: indholdet (ramme + LazyColumn af fuld-bredde rækker) bruger almindelige
-    // fillMaxSize/fillMaxWidth-modifiers uden custom pixel-matematik — den kontinuerlige
-    // størrelse Glance rapporterer bruges derfor direkte, uden diskrete buckets. Se
-    // docs/widget-settings-spec.md §9.
-    override val sizeMode = SizeMode.Exact
+    // SizeMode.Responsive (ikke Exact): Exact komponerer altid BÅDE en portræt- og en
+    // landskabs-udgave (Androids indbyggede RemoteViews(landscape, portrait)-mekanisme),
+    // og launcheren vælger selv hvilken der vises ud fra Configuration-orientering ved
+    // inflation. På Galaxy S23 + Nova Launcher blev landskabs-udgaven konsekvent vist SELV
+    // I PORTRÆT-TILSTAND (bekræftet via midlertidig logging under device-QA — se
+    // docs/superpowers/specs/2026-07-04-multi-entity-row-height-refresh-design.md §3),
+    // hvilket fik rækkerne til at bruge en langt mindre højde end den faktiske boks.
+    // Responsive bruger på API 31+ en faktisk størrelses-baseret vælger blandt de
+    // deklarerede buckets i stedet for en orienterings-baseret parring, hvilket omgår
+    // fejlvalget. Under API 31 opfører Responsive sig som Exact (samme eksponering som før
+    // — ingen regression). Kun ÉN bredde (244dp, matcher minWidth i widget-info-xml'en) —
+    // rækkehøjde-formlen bruger udelukkende LocalSize.current.height, bredden håndteres af
+    // fillMaxWidth()/defaultWeight() uanset bucket-bredde.
+    override val sizeMode = SizeMode.Responsive(
+        setOf(
+            DpSize(244.dp, 56.dp),
+            DpSize(244.dp, 130.dp),
+            DpSize(244.dp, 200.dp),
+            DpSize(244.dp, 270.dp),
+        )
+    )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
