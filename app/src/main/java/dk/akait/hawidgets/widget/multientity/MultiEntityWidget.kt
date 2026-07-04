@@ -289,9 +289,12 @@ private fun SecondaryChip(
     }
     val label = friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: chip.displayEntityId
 
+    // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum. Uden dette var
+    // chippens reelle klik-areal kun icon+padding høj (~22dp), da den (i modsætning til
+    // hoved-rækken) ikke får sin højde "gratis" fra en flerlinjet label-kolonne ved siden af.
     val chipModifier = clickModifier(
         context = context,
-        base = GlanceModifier.background(bgColor).cornerRadius(10.dp).padding(horizontal = 6.dp, vertical = 4.dp),
+        base = GlanceModifier.background(bgColor).cornerRadius(10.dp).height(48.dp).padding(horizontal = 6.dp),
         action = chip.action,
         actionEntityId = chip.actionEntityId,
         actionDomain = chip.actionDomain,
@@ -357,10 +360,12 @@ private fun clickModifier(
                 putExtra(RangeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
                 putExtra(RangeControlActivity.EXTRA_LABEL, rangeLabel)
                 putExtra(RangeControlActivity.EXTRA_DOMAIN, actionDomain)
-                putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE, rangeCurrentValue(actionDomain, actionState, attrs))
                 putExtra(RangeControlActivity.EXTRA_IS_ON, actionState.state != "off" && actionState.state != "closed")
-                putExtra(RangeControlActivity.EXTRA_MIN_VALUE, rangeMin(actionDomain, attrs))
-                putExtra(RangeControlActivity.EXTRA_MAX_VALUE, rangeMax(actionDomain, attrs))
+                // Sendes som præcise (decimal) værdier — number/input_number kan have en
+                // fraktioneret state/step (fx 21.5), som ikke må afrundes væk.
+                putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE_PRECISE, rangeCurrentValue(actionDomain, actionState, attrs))
+                putExtra(RangeControlActivity.EXTRA_MIN_VALUE_PRECISE, rangeMin(actionDomain, attrs))
+                putExtra(RangeControlActivity.EXTRA_MAX_VALUE_PRECISE, rangeMax(actionDomain, attrs))
                 if (actionDomain == "number" || actionDomain == "input_number") {
                     putExtra(RangeControlActivity.EXTRA_UNIT_SUFFIX, attrs.optString("unit_of_measurement", ""))
                 }
@@ -409,24 +414,26 @@ private fun clickModifier(
     }
 }
 
-private fun rangeCurrentValue(domain: String, state: EntityStateEntity, attrs: JSONObject): Int = when (domain) {
-    "light" -> attrs.optInt("brightness", 255).let { (it * 100 / 255).coerceIn(0, 100) }
-    "cover" -> attrs.optInt("current_position", if (state.state == "open") 100 else 0)
-    "climate" -> attrs.optInt("temperature", 20)
-    "number", "input_number" -> state.state.toDoubleOrNull()?.toInt() ?: 0
-    else -> 0
+private fun rangeCurrentValue(domain: String, state: EntityStateEntity, attrs: JSONObject): Double = when (domain) {
+    "light" -> attrs.optInt("brightness", 255).let { (it * 100 / 255).coerceIn(0, 100) }.toDouble()
+    "cover" -> attrs.optInt("current_position", if (state.state == "open") 100 else 0).toDouble()
+    "climate" -> attrs.optInt("temperature", 20).toDouble()
+    // Bevarer decimaler (fx 21.5) i stedet for at afrunde til et heltal — number/input_number
+    // kan have en fraktioneret step.
+    "number", "input_number" -> state.state.toDoubleOrNull() ?: 0.0
+    else -> 0.0
 }
 
-private fun rangeMin(domain: String, attrs: JSONObject): Int = when (domain) {
-    "climate" -> attrs.optInt("min_temp", 16)
-    "number", "input_number" -> attrs.optDouble("min", 0.0).toInt()
-    else -> 1
+private fun rangeMin(domain: String, attrs: JSONObject): Double = when (domain) {
+    "climate" -> attrs.optInt("min_temp", 16).toDouble()
+    "number", "input_number" -> attrs.optDouble("min", 0.0)
+    else -> 1.0
 }
 
-private fun rangeMax(domain: String, attrs: JSONObject): Int = when (domain) {
-    "climate" -> attrs.optInt("max_temp", 30)
-    "number", "input_number" -> attrs.optDouble("max", 100.0).toInt()
-    else -> 100
+private fun rangeMax(domain: String, attrs: JSONObject): Double = when (domain) {
+    "climate" -> attrs.optInt("max_temp", 30).toDouble()
+    "number", "input_number" -> attrs.optDouble("max", 100.0)
+    else -> 100.0
 }
 
 // Bevarer oprindeligt class-/filnavn for bagudkompatibilitet med allerede placerede widgets

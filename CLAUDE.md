@@ -409,6 +409,40 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     handling (fx `input_datetime` før/efter v0.2.31), blev bevidst IKKE tilføjet efter
     brugerønske ("don't worry about legacy, appen er stadig i udvikling, jeg retter
     selv") — kun relevant for data fra før v0.2.31 i denne udviklings-database.
+- ✅ **v0.2.34 — code-review-fixes efter v0.2.29-33-commit (2026-07-04):** 4 af 10
+  fund fra `code-review` rettet (resten bevidst udskudt — se fundlisten i sessionen):
+  - **RangeControlActivity min≥max-guard:** ugyldigt/omvendt range fra en entitets
+    attributter faldt tidligere direkte igennem til `Slider`s `valueRange` og
+    `coerceIn`, som begge kaster ved min≥max. Falder nu tilbage til et sikkert
+    0..100-interval.
+  - **MultiEntityWidget sekundær-chip 48dp tap-target:** chippens klikbare areal var
+    kun ~22dp højt (ikon+lille padding, ingen "gratis" højde fra en nabo-label-kolonne
+    som hoved-rækken har) — eksplicit `.height(48.dp)` tilføjet (Android
+    tilgængeligheds-minimum).
+  - **number/input_number decimal-præcision:** `RangeControlActivity` og
+    `MultiEntityWidget`s `rangeCurrentValue`/`rangeMin`/`rangeMax` afrundede til Int
+    før værdien nåede slideren — en entitet med fx step 0.5 mistede sin decimal. Nye
+    `EXTRA_..._PRECISE`-intent-extras (Double) bruges nu for alle RANGE-handlinger fra
+    MultiEntityWidget (light/cover/climate uændret heltals-adfærd, kun number/
+    input_number sender den reelle decimalværdi videre til HA). Fundet undervejs:
+    `String.format("%.2f", ...)` brugte enhedens locale (dansk komma) og brød
+    tekst-trimningen ("38," i stedet for "38") — rettet med `Locale.ROOT`.
+  - **SensorWidget/GlanceWidgetCommon unit-duplikering:** `SensorWidget.
+    parseSensorAttrs` parsede `unit_of_measurement`/`friendly_name` selv i stedet for
+    at genbruge de allerede eksisterende `unitFromJson`/`friendlyNameFromJson`
+    (`GlanceWidgetCommon.kt`) — nu genbrugt, kun `device_class` er tilbage som
+    sensor-specifik parsing.
+  - **QA:** build grøn, emulator (`pixel_test`, ingen netværk) bekræftede ingen
+    rendering-regression på et eksisterende multi-widget. Fuld funktionel test på
+    Galaxy S23 mod ægte HA: decimal-slider verificeret (drag → "37.68°C" vist og sendt
+    korrekt til `input_number.set_value`, ingen afrunding), min/max-guard uændret
+    adfærd for normale entiteter, ingen crashes i logcat. **Bevidst udskudt** (ingen
+    aktiv bug i dag, større indsats end gevinst lige nu): a11y-semantik for
+    `SlotCard` (#3), ikke-udtømmende `else -> TRIGGER` (#4), én bundlet
+    version-bump-commit for v0.2.29-33 (#6, proces-note — ingen retroaktiv handling),
+    duplikeret aktivitets-bootstrap i Range/Text/DateTimeControlActivity (#7),
+    hand-unrolled secondary1/2/3-felter (#9), 5 parallelle `when(domain)`-funktioner
+    (#10).
 
 ## Næste skridt
 

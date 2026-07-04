@@ -33,6 +33,7 @@ import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
+import dk.akait.hawidgets.widget.common.unitFromJson
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -112,15 +113,13 @@ private fun SensorContent(
 
 private data class SensorAttrs(val unit: String?, val friendlyName: String?, val deviceClass: String?)
 
-private fun parseSensorAttrs(attributesJson: String): SensorAttrs =
-    try {
-        val obj = JSONObject(attributesJson)
-        SensorAttrs(
-            unit = obj.optString("unit_of_measurement").ifEmpty { null },
-            friendlyName = obj.optString("friendly_name").ifEmpty { null },
-            deviceClass = obj.optString("device_class").ifEmpty { null },
-        )
-    } catch (_: Exception) { SensorAttrs(null, null, null) }
+// Genbruger unitFromJson/friendlyNameFromJson (GlanceWidgetCommon.kt) i stedet for at
+// parse unit_of_measurement/friendly_name igen her — kun device_class er sensor-specifik.
+private fun parseSensorAttrs(attributesJson: String): SensorAttrs = SensorAttrs(
+    unit = unitFromJson(attributesJson),
+    friendlyName = friendlyNameFromJson(attributesJson),
+    deviceClass = try { JSONObject(attributesJson).optString("device_class").ifEmpty { null } } catch (_: Exception) { null },
+)
 
 private fun iconForDeviceClass(deviceClass: String?): Int = when (deviceClass) {
     "temperature", "apparent_temperature" -> R.drawable.ic_thermometer

@@ -41,6 +41,12 @@ class RangeControlActivity : ComponentActivity() {
         const val EXTRA_ACTUAL_TEMP = "actual_temp"
         /** Valgfri unit-override til value-label (fx "W", "kWh") — bruges af number-domain. Tom/null = domain-default (%). */
         const val EXTRA_UNIT_SUFFIX = "unit_suffix"
+        /** Præcise (decimal) current/min/max-værdier — bruges af number/input_number, hvis
+         * entiteten har en fraktioneret state/step (fx 21.5). Når til stede, foretrækkes disse
+         * frem for de heltals-baserede EXTRA_CURRENT_VALUE/MIN/MAX-værdier ovenfor. */
+        const val EXTRA_CURRENT_VALUE_PRECISE = "current_value_precise"
+        const val EXTRA_MIN_VALUE_PRECISE = "min_value_precise"
+        const val EXTRA_MAX_VALUE_PRECISE = "max_value_precise"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,12 +55,31 @@ class RangeControlActivity : ComponentActivity() {
         val entityId = intent.getStringExtra(EXTRA_ENTITY_ID) ?: return finish()
         val label = intent.getStringExtra(EXTRA_LABEL) ?: entityId
         val domain = intent.getStringExtra(EXTRA_DOMAIN) ?: return finish()
-        val initialValue = intent.getIntExtra(EXTRA_CURRENT_VALUE, 100)
         val isOnInitial = intent.getBooleanExtra(EXTRA_IS_ON, true)
-        val minValue = intent.getIntExtra(EXTRA_MIN_VALUE, 1)
-        val maxValue = intent.getIntExtra(EXTRA_MAX_VALUE, 100)
         val actualTemp = intent.getIntExtra(EXTRA_ACTUAL_TEMP, Int.MIN_VALUE)
         val unitSuffixOverride = intent.getStringExtra(EXTRA_UNIT_SUFFIX)
+
+        val rawInitialValue = if (intent.hasExtra(EXTRA_CURRENT_VALUE_PRECISE)) {
+            intent.getDoubleExtra(EXTRA_CURRENT_VALUE_PRECISE, 100.0)
+        } else {
+            intent.getIntExtra(EXTRA_CURRENT_VALUE, 100).toDouble()
+        }
+        val rawMinValue = if (intent.hasExtra(EXTRA_MIN_VALUE_PRECISE)) {
+            intent.getDoubleExtra(EXTRA_MIN_VALUE_PRECISE, 1.0)
+        } else {
+            intent.getIntExtra(EXTRA_MIN_VALUE, 1).toDouble()
+        }
+        val rawMaxValue = if (intent.hasExtra(EXTRA_MAX_VALUE_PRECISE)) {
+            intent.getDoubleExtra(EXTRA_MAX_VALUE_PRECISE, 100.0)
+        } else {
+            intent.getIntExtra(EXTRA_MAX_VALUE, 100).toDouble()
+        }
+        // Guard mod ugyldigt/omvendt range (min >= max) fra en entitets attributter — Slider
+        // kaster IllegalArgumentException på et sådant valueRange, og coerceIn nedenfor ville
+        // ligeledes crashe. Falder tilbage til et sikkert 0..100-standardinterval.
+        val minValue = if (rawMinValue < rawMaxValue) rawMinValue else 0.0
+        val maxValue = if (rawMinValue < rawMaxValue) rawMaxValue else 100.0
+        val initialValue = rawInitialValue
 
         setContent {
             MaterialTheme {
@@ -67,7 +92,7 @@ class RangeControlActivity : ComponentActivity() {
                     var isOn by remember { mutableStateOf(isOnInitial) }
                     var busy by remember { mutableStateOf(false) }
 
-                    fun sendRangeCommand(value: Int) {
+                    fun sendRangeCommand(value: Double) {
                         scope.launch {
                             val store = SecureStore.get(applicationContext)
                             val base = store.baseUrl ?: return@launch
@@ -76,16 +101,18 @@ class RangeControlActivity : ComponentActivity() {
                             when (domain) {
                                 "light" -> api.callService(
                                     "light", "turn_on", entityId,
-                                    extraData = mapOf("brightness" to (value * 255 / 100).coerceIn(1, 255))
+                                    extraData = mapOf("brightness" to (value.toInt() * 255 / 100).coerceIn(1, 255))
                                 )
                                 "cover" -> api.callService(
                                     "cover", "set_cover_position", entityId,
-                                    extraData = mapOf("position" to value)
+                                    extraData = mapOf("position" to value.toInt())
                                 )
                                 "climate" -> api.callService(
                                     "climate", "set_temperature", entityId,
-                                    extraData = mapOf("temperature" to value)
+                                    extraData = mapOf("temperature" to value.toInt())
                                 )
+                                // number/input_number kan have en fraktioneret step (fx 0.5) — send den
+                                // fulde decimalværdi i stedet for at afrunde til et heltal.
                                 "number" -> api.callService(
                                     "number", "set_value", entityId,
                                     extraData = mapOf("value" to value)
@@ -164,8 +191,13 @@ class RangeControlActivity : ComponentActivity() {
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            val displayValue = if (domain == "number" || domain == "input_number") {
+                                formatPreciseValue(sliderValue)
+                            } else {
+                                sliderValue.toInt().toString()
+                            }
                             Text(
-                                "$valueLabel: ${sliderValue.toInt()}$unitSuffix",
+                                "$valueLabel: $displayValue$unitSuffix",
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             if (domain != "number" && domain != "input_number") {
@@ -178,7 +210,7 @@ class RangeControlActivity : ComponentActivity() {
                         Slider(
                             value = sliderValue,
                             onValueChange = { sliderValue = it },
-                            onValueChangeFinished = { sendRangeCommand(sliderValue.toInt()) },
+                            onValueChangeFinished = { sendRangeCommand(sliderValue.toDouble()) },
                             valueRange = minValue.toFloat()..maxValue.toFloat(),
                             enabled = domain == "number" || domain == "input_number" || isOn,
                             modifier = Modifier.fillMaxWidth(),
@@ -188,4 +220,14 @@ class RangeControlActivity : ComponentActivity() {
             }
         }
     }
+}
+
+/** Viser op til 2 decimaler for number/input_number, uden overflødige nuller (23 i stedet for
+ * 23.00, 21.5 i stedet for 21.50) — bevarer den præcision brugeren rent faktisk har konfigureret
+ * (fx en step på 0.5), i stedet for at afrunde til nærmeste heltal. */
+private fun formatPreciseValue(value: Float): String {
+    // Locale.ROOT tvinger '.' som decimal-separator uanset enhedens sprogindstilling (fx dansk
+    // bruger ','), så trimEnd('.') nedenfor rammer korrekt i stedet for at efterlade "38,".
+    val rounded = String.format(java.util.Locale.ROOT, "%.2f", value).trimEnd('0').trimEnd('.')
+    return rounded.ifEmpty { "0" }
 }
