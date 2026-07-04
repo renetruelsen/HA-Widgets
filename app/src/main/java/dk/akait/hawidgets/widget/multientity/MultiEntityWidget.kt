@@ -207,8 +207,8 @@ private fun MultiEntityContent(
 ) {
     val sorted = slots.sortedBy { it.slotIndex }
 
-    // Rækkehøjden tilpasses den faktiske tildelte plads (LocalSize.current under SizeMode.Exact
-    // rapporterer den reelle, kontinuerlige højde launcheren har givet widgetten) — så en høj
+    // Rækkehøjden tilpasses den faktiske tildelte plads (LocalSize.current rapporterer den
+    // valgte bucket-højde under SizeMode.Responsive, se klassekommentaren ovenfor) — så en høj
     // placering (stor grid-størrelse) ikke efterlader tomrum i bunden, og en lav placering ikke
     // beskærer en række midt i. Bevidst INGEN øvre grænse — 1-2 konfigurerede entiteter i en meget
     // høj widget skal strække rækken(rne) til at fylde pladsen, ikke stoppe ved en arbitrær
