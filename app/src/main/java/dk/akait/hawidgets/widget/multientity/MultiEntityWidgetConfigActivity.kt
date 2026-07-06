@@ -361,6 +361,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 
         is Step.SlotEditor -> SlotEditorScreen(
             draft = s.draft,
+            isEditing = s.editIndex != null,
             onChangeDisplay = { step = Step.EntityPicker(PickerTarget.Display, s.editIndex, s.draft) },
             onChangeTarget = { step = Step.EntityPicker(PickerTarget.Action, s.editIndex, s.draft) },
             onActionChange = { newAction -> step = Step.SlotEditor(s.editIndex, s.draft.copy(action = newAction)) },
@@ -596,6 +597,7 @@ private fun secondarySlotSummaries(slot: MultiWidgetSlotEntity): List<Pair<Int, 
 @Composable
 private fun SlotEditorScreen(
     draft: SlotDraft,
+    isEditing: Boolean,
     onChangeDisplay: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
@@ -771,7 +773,9 @@ private fun SlotEditorScreen(
 
             TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cancel)) }
             Spacer(Modifier.padding(2.dp))
-            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_to_widget)) }
+            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(if (isEditing) R.string.update_slot else R.string.add_to_widget))
+            }
         }
     }
 }
