@@ -155,10 +155,13 @@ Usynlig 24dp-spacer sidst i listen så fuldt nedscrollet viser alle rækker over
 3. Bekræft-dialog (B1) — tekst/knap-layout.
 4. Tema-dropdown-placering + mørkt app-skema (C1) — hurtig visning.
 
-## Åbne beslutninger (afgøres på mockup)
+## Mockup-gate-beslutninger (2026-07-06, godkendt)
 
-- A1: 1 eller 2 linjers navn; præcis placering af handlingsknapper i kortet.
-- B2: Variant A, B eller kombination.
+- A1: navn på egen række, 1 linje + ellipsis; ↑/↓/🗑 som ikon-række i kortets bund (48dp).
+- B2: **kombination A+B** — config-valg Skyder/Indtast værdi (multi, migration v6→v7
+  `rangeInputMode` + 3× secondary) OG −/+ trin-knapper på den delte skyder (alle widgets).
+- B1-dialog og C1-tema godkendt som mocket (mørk primær ~#7FC3E8, finjusteres i kode).
+- Mockup: claude.ai/code/artifact/dd3855a2-d320-4067-a4c0-49b980c594cf
 
 ## Uden for scope
 

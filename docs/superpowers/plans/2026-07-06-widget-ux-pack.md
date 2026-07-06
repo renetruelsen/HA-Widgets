@@ -618,7 +618,7 @@ NB Glance-begrænsning: `Alignment.BottomCenter` på Box-child — verificér at
 **Files:**
 - Modify: `MultiEntityWidgetConfigActivity.kt` (`SlotCard` ~:452–566)
 
-**GATE: Implementér KUN det layout mockup-gaten godkendte.** Udgangsforslag (mockes i Fase 4):
+**GATE AFGJORT (mockup 2026-07-06): layoutet nedenfor er godkendt — navn 1 linje + ellipsis.**
 
 - Række 1 (fuld bredde): entitetsnavn `bodyLarge`, `maxLines = 1`, `overflow = TextOverflow.Ellipsis`, chevron til højre. Hele rækken klikbar → editor.
 - Række 2: handling-resumé (`bodySmall`, maxLines 1 ellipsis).
@@ -636,7 +636,7 @@ NB Glance-begrænsning: `Alignment.BottomCenter` på Box-child — verificér at
 **Files:**
 - Modify: `RangeControlActivity.kt` (+ evt. `MultiEntityWidgetConfigActivity.kt`, `Migrations.kt` v6→v7, `MultiWidgetSlotEntity.kt` — kun Variant A)
 
-**GATE: Mockup-gaten vælger Variant A, B eller kombination.**
+**GATE AFGJORT (mockup 2026-07-06): KOMBINATION A+B — begge variant-blokke nedenfor implementeres.**
 
 **Variant B (−/+ trin-knapper, gælder ALLE widgets — ADR-2):**
 - [ ] Step B1: Unit-test trin-logik:
