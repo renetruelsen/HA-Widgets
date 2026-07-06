@@ -65,3 +65,29 @@ fun isDateTimeLike(domain: String, attributesJson: String?): Boolean {
         false
     }
 }
+
+/** Samlet visnings-værdi for et rå/enheds-bærende domæne (sensor/number/input_number m.fl.):
+ *  datetime-agtig → [formatDateTimeState] (has_date/has_time læst fra [attributesJson]); ellers
+ *  numerisk afrunding ([formatNumericState]) + enhed (fra [unitFromJson]). Caller skal selv
+ *  håndtere "unavailable"/domæne-specifikke tekster (fx via [formatEntityState]) FØR denne — her
+ *  returneres blot en tom streng for "unavailable" og "…" for null-state, som et sikkert fallback. */
+fun formatDisplayValue(
+    domain: String,
+    state: String?,
+    attributesJson: String?,
+    precision: Int?,
+    datetimePattern: String?,
+    locale: Locale,
+): String {
+    if (state == null) return "…"
+    if (state == "unavailable") return ""
+    if (isDateTimeLike(domain, attributesJson)) {
+        val attrs = attributesJson?.let { runCatching { JSONObject(it) }.getOrNull() }
+        val hasDate = attrs?.optBoolean("has_date", true) ?: true
+        val hasTime = attrs?.optBoolean("has_time", true) ?: true
+        return formatDateTimeState(state, datetimePattern, hasDate, hasTime, locale)
+    }
+    val numeric = formatNumericState(state, precision)
+    val unit = attributesJson?.let { unitFromJson(it) }
+    return if (unit.isNullOrEmpty()) numeric else "$numeric $unit"
+}

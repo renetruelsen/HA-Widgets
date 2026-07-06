@@ -58,8 +58,10 @@ import dk.akait.hawidgets.widget.common.ToggleEntityAction
 import dk.akait.hawidgets.widget.common.TriggerEntityAction
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
 import dk.akait.hawidgets.widget.common.domainIconResId
+import dk.akait.hawidgets.widget.common.formatDisplayValue
 import dk.akait.hawidgets.widget.common.formatEntityState
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
+import dk.akait.hawidgets.widget.common.isRawValueDomain
 import dk.akait.hawidgets.widget.common.unitFromJson
 import dk.akait.hawidgets.widget.common.isActiveState
 import dk.akait.hawidgets.widget.common.isStale
@@ -167,22 +169,56 @@ private data class SecondaryChipData(
     val action: String,
     val showValue: Boolean,
     val confirmAction: Boolean,
+    val displayPrecision: Int?,
+    val datetimeFormat: String?,
 )
 
 private fun secondaryChipData(
     displayId: String?, displayDomain: String?,
     actionId: String?, actionDomain: String?,
     action: String?, showValue: Boolean?, confirmAction: Boolean?,
+    displayPrecision: Int?, datetimeFormat: String?,
 ): SecondaryChipData? {
     if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
-    return SecondaryChipData(displayId, displayDomain, actionId, actionDomain, action, showValue ?: defaultShowValueFor(action), confirmAction ?: false)
+    return SecondaryChipData(
+        displayId, displayDomain, actionId, actionDomain, action,
+        showValue ?: defaultShowValueFor(action), confirmAction ?: false,
+        displayPrecision, datetimeFormat,
+    )
 }
 
 private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> = listOfNotNull(
-    secondaryChipData(secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain, secondary1Action, secondary1ShowValue, secondary1ConfirmAction),
-    secondaryChipData(secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain, secondary2Action, secondary2ShowValue, secondary2ConfirmAction),
-    secondaryChipData(secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain, secondary3Action, secondary3ShowValue, secondary3ConfirmAction),
+    secondaryChipData(
+        secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain,
+        secondary1Action, secondary1ShowValue, secondary1ConfirmAction, secondary1DisplayPrecision, secondary1DatetimeFormat,
+    ),
+    secondaryChipData(
+        secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain,
+        secondary2Action, secondary2ShowValue, secondary2ConfirmAction, secondary2DisplayPrecision, secondary2DatetimeFormat,
+    ),
+    secondaryChipData(
+        secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain,
+        secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision, secondary3DatetimeFormat,
+    ),
 )
+
+/** Domain-aware visningsværdi: rå/enheds-bærende domæner (sensor/number/input_* m.fl.) bruger
+ * [formatDisplayValue] (precision/datetime-format-override, v0.3.0 C2); øvrige domæner (der har
+ * en fast tekst-tabel i [formatEntityState], fx light/switch/climate) samt null/"unavailable"
+ * bruger fortsat [formatEntityState] uændret. */
+private fun displayValueFor(
+    context: Context,
+    domain: String,
+    state: EntityStateEntity?,
+    precision: Int?,
+    datetimeFormat: String?,
+): String {
+    if (state == null || state.state == "unavailable" || !isRawValueDomain(domain)) {
+        return formatEntityState(domain, state?.state, state?.attributesJson?.let { unitFromJson(it) })
+    }
+    val locale = context.resources.configuration.locales[0]
+    return formatDisplayValue(domain, state.state, state.attributesJson, precision, datetimeFormat, locale)
+}
 
 @Composable
 private fun MultiEntityContent(
@@ -265,10 +301,7 @@ private fun SlotRow(
     val label = slot.label.ifEmpty {
         friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: slot.displayEntityId
     }
-    val statusBase = formatEntityState(
-        slot.displayDomain, displayState?.state,
-        displayState?.attributesJson?.let { unitFromJson(it) },
-    )
+    val statusBase = displayValueFor(context, slot.displayDomain, displayState, slot.displayPrecision, slot.datetimeFormat)
     val statusText = if (displayState != null && displayState.isStale()) "$statusBase ~" else statusBase
 
     val rowModifier = clickModifier(
@@ -362,10 +395,7 @@ private fun SecondaryChip(
         if (showsValueText) {
             Spacer(modifier = GlanceModifier.width(4.dp))
             Text(
-                text = formatEntityState(
-                    chip.displayDomain, displayState?.state,
-                    displayState?.attributesJson?.let { unitFromJson(it) },
-                ),
+                text = displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat),
                 style = TextStyle(color = contentColor, fontSize = 11.sp),
                 maxLines = 1,
             )

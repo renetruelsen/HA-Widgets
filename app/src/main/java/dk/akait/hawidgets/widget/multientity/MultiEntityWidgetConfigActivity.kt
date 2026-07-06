@@ -34,11 +34,15 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -71,9 +75,14 @@ import dk.akait.hawidgets.widget.common.MULTI_ENTITY_DOMAINS
 import dk.akait.hawidgets.widget.common.compatibleActionsFor
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
 import dk.akait.hawidgets.widget.common.domainIconResId
+import dk.akait.hawidgets.widget.common.formatDateTimeState
 import dk.akait.hawidgets.widget.common.formatEntityState
+import dk.akait.hawidgets.widget.common.isDateTimeLike
+import dk.akait.hawidgets.widget.common.isRawValueDomain
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.util.Locale
 
 class MultiEntityWidgetConfigActivity : ComponentActivity() {
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
@@ -117,6 +126,9 @@ private data class SecondarySlotDraft(
     val showValue: Boolean = defaultShowValueFor(action),
     /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
     val confirmAction: Boolean = false,
+    /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
+    val displayPrecision: Int? = null,
+    val datetimeFormat: String? = null,
 )
 
 private data class SlotDraft(
@@ -127,6 +139,9 @@ private data class SlotDraft(
     val secondaryEntities: List<SecondarySlotDraft> = emptyList(),
     /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
     val confirmAction: Boolean = false,
+    /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
+    val displayPrecision: Int? = null,
+    val datetimeFormat: String? = null,
 )
 
 private const val MAX_SECONDARY_ENTITIES = 3
@@ -178,6 +193,11 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     var showRefreshIcon by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(true) }
     var allEntities by remember { mutableStateOf<List<HaApiClient.EntityBrief>>(emptyList()) }
+    // entityId → attributesJson (fra Room-cachen, samme kilde SyncWorker fylder widget-renderingen
+    // fra) — bruges til isDateTimeLike-detektion (has_date/has_time/device_class) og live-preview
+    // i "Ekstra info"/"Visning"-sektionerne. Genbruger eksisterende Room-infrastruktur i stedet for
+    // at føje et nyt attributesJson-felt til HaApiClient.EntityBrief (uden for denne opgaves scope).
+    var attrsByEntityId by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var step by remember { mutableStateOf<Step>(Step.ListScreen) }
     val haNotConnectedError = stringResource(R.string.ha_not_connected_error)
@@ -194,6 +214,9 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         val db = AppDatabase.get(context)
         slots = db.multiWidgetDao().getSlots(appWidgetId)
         showRefreshIcon = db.multiWidgetDao().get(appWidgetId)?.showRefreshIcon ?: true
+        attrsByEntityId = allEntities.mapNotNull { entity ->
+            db.entityStateDao().get(entity.entityId)?.attributesJson?.let { entity.entityId to it }
+        }.toMap()
         isLoading = false
     }
 
@@ -205,6 +228,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         displayId: String?, displayDomain: String?,
         actionId: String?, actionDomain: String?,
         action: String?, showValue: Boolean?, confirmAction: Boolean?,
+        displayPrecision: Int?, datetimeFormat: String?,
     ): SecondarySlotDraft? {
         if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
         return SecondarySlotDraft(
@@ -213,6 +237,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             action = action,
             showValue = showValue ?: defaultShowValueFor(action),
             confirmAction = confirmAction ?: false,
+            displayPrecision = displayPrecision,
+            datetimeFormat = datetimeFormat,
         )
     }
 
@@ -234,19 +260,25 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 slot.secondary1DisplayEntityId, slot.secondary1DisplayDomain,
                 slot.secondary1ActionEntityId, slot.secondary1ActionDomain, slot.secondary1Action,
                 slot.secondary1ShowValue, slot.secondary1ConfirmAction,
+                slot.secondary1DisplayPrecision, slot.secondary1DatetimeFormat,
             ),
             secondaryDraftFrom(
                 slot.secondary2DisplayEntityId, slot.secondary2DisplayDomain,
                 slot.secondary2ActionEntityId, slot.secondary2ActionDomain, slot.secondary2Action,
                 slot.secondary2ShowValue, slot.secondary2ConfirmAction,
+                slot.secondary2DisplayPrecision, slot.secondary2DatetimeFormat,
             ),
             secondaryDraftFrom(
                 slot.secondary3DisplayEntityId, slot.secondary3DisplayDomain,
                 slot.secondary3ActionEntityId, slot.secondary3ActionDomain, slot.secondary3Action,
                 slot.secondary3ShowValue, slot.secondary3ConfirmAction,
+                slot.secondary3DisplayPrecision, slot.secondary3DatetimeFormat,
             ),
         )
-        return SlotDraft(display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction)
+        return SlotDraft(
+            display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction,
+            slot.displayPrecision, slot.datetimeFormat,
+        )
     }
 
     fun saveSlot(editIndex: Int?, draft: SlotDraft) {
@@ -263,6 +295,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             action = draft.action,
             label = draft.label.trim(),
             confirmAction = draft.confirmAction,
+            displayPrecision = draft.displayPrecision,
+            datetimeFormat = draft.datetimeFormat,
             secondary1DisplayEntityId = sec.getOrNull(0)?.displayEntity?.entityId,
             secondary1DisplayDomain = sec.getOrNull(0)?.displayEntity?.domain,
             secondary1ActionEntityId = sec.getOrNull(0)?.actionEntity?.entityId,
@@ -270,6 +304,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondary1Action = sec.getOrNull(0)?.action,
             secondary1ShowValue = sec.getOrNull(0)?.showValue,
             secondary1ConfirmAction = sec.getOrNull(0)?.confirmAction,
+            secondary1DisplayPrecision = sec.getOrNull(0)?.displayPrecision,
+            secondary1DatetimeFormat = sec.getOrNull(0)?.datetimeFormat,
             secondary2DisplayEntityId = sec.getOrNull(1)?.displayEntity?.entityId,
             secondary2DisplayDomain = sec.getOrNull(1)?.displayEntity?.domain,
             secondary2ActionEntityId = sec.getOrNull(1)?.actionEntity?.entityId,
@@ -277,6 +313,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondary2Action = sec.getOrNull(1)?.action,
             secondary2ShowValue = sec.getOrNull(1)?.showValue,
             secondary2ConfirmAction = sec.getOrNull(1)?.confirmAction,
+            secondary2DisplayPrecision = sec.getOrNull(1)?.displayPrecision,
+            secondary2DatetimeFormat = sec.getOrNull(1)?.datetimeFormat,
             secondary3DisplayEntityId = sec.getOrNull(2)?.displayEntity?.entityId,
             secondary3DisplayDomain = sec.getOrNull(2)?.displayEntity?.domain,
             secondary3ActionEntityId = sec.getOrNull(2)?.actionEntity?.entityId,
@@ -284,6 +322,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondary3Action = sec.getOrNull(2)?.action,
             secondary3ShowValue = sec.getOrNull(2)?.showValue,
             secondary3ConfirmAction = sec.getOrNull(2)?.confirmAction,
+            secondary3DisplayPrecision = sec.getOrNull(2)?.displayPrecision,
+            secondary3DatetimeFormat = sec.getOrNull(2)?.datetimeFormat,
         )
         slots = if (editIndex == null) slots + newSlot
         else slots.toMutableList().also { it[editIndex] = newSlot }
@@ -371,11 +411,14 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         is Step.SlotEditor -> SlotEditorScreen(
             draft = s.draft,
             isEditing = s.editIndex != null,
+            attrsByEntityId = attrsByEntityId,
             onChangeDisplay = { step = Step.EntityPicker(PickerTarget.Display, s.editIndex, s.draft) },
             onChangeTarget = { step = Step.EntityPicker(PickerTarget.Action, s.editIndex, s.draft) },
             onActionChange = { newAction -> step = Step.SlotEditor(s.editIndex, s.draft.copy(action = newAction)) },
             onLabelChange = { newLabel -> step = Step.SlotEditor(s.editIndex, s.draft.copy(label = newLabel)) },
             onConfirmActionChange = { confirm -> step = Step.SlotEditor(s.editIndex, s.draft.copy(confirmAction = confirm)) },
+            onDisplayPrecisionChange = { precision -> step = Step.SlotEditor(s.editIndex, s.draft.copy(displayPrecision = precision)) },
+            onDatetimeFormatChange = { pattern -> step = Step.SlotEditor(s.editIndex, s.draft.copy(datetimeFormat = pattern)) },
             onAddSecondary = {
                 step = Step.EntityPicker(PickerTarget.SecondaryDisplay(s.draft.secondaryEntities.size), s.editIndex, s.draft)
             },
@@ -399,6 +442,16 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onSecondaryConfirmActionChange = { index, confirm ->
                 val updated = s.draft.secondaryEntities.toMutableList()
                 updated[index] = updated[index].copy(confirmAction = confirm)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryDisplayPrecisionChange = { index, precision ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(displayPrecision = precision)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryDatetimeFormatChange = { index, pattern ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(datetimeFormat = pattern)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
             onSave = { saveSlot(s.editIndex, s.draft) },
@@ -613,17 +666,22 @@ private fun secondarySlotSummaries(slot: MultiWidgetSlotEntity): List<Pair<Int, 
 private fun SlotEditorScreen(
     draft: SlotDraft,
     isEditing: Boolean,
+    attrsByEntityId: Map<String, String>,
     onChangeDisplay: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
     onLabelChange: (String) -> Unit,
     onConfirmActionChange: (Boolean) -> Unit,
+    onDisplayPrecisionChange: (Int?) -> Unit,
+    onDatetimeFormatChange: (String?) -> Unit,
     onAddSecondary: () -> Unit,
     onRemoveSecondary: (Int) -> Unit,
     onSecondaryChangeTarget: (Int) -> Unit,
     onSecondaryActionChange: (Int, String) -> Unit,
     onSecondaryShowValueChange: (Int, Boolean) -> Unit,
     onSecondaryConfirmActionChange: (Int, Boolean) -> Unit,
+    onSecondaryDisplayPrecisionChange: (Int, Int?) -> Unit,
+    onSecondaryDatetimeFormatChange: (Int, String?) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -667,6 +725,15 @@ private fun SlotEditorScreen(
                 Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
                 Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change_entity)) }
+                ValueFormattingControls(
+                    domain = display.domain,
+                    attributesJson = attrsByEntityId[display.entityId],
+                    currentState = display.state,
+                    displayPrecision = draft.displayPrecision,
+                    datetimeFormat = draft.datetimeFormat,
+                    onDisplayPrecisionChange = onDisplayPrecisionChange,
+                    onDatetimeFormatChange = onDatetimeFormatChange,
+                )
             }
             Spacer(Modifier.padding(8.dp))
 
@@ -772,11 +839,14 @@ private fun SlotEditorScreen(
                 draft.secondaryEntities.forEachIndexed { index, secondary ->
                     SecondaryEntityRow(
                         secondary = secondary,
+                        attrsByEntityId = attrsByEntityId,
                         onRemove = { onRemoveSecondary(index) },
                         onChangeTarget = { onSecondaryChangeTarget(index) },
                         onActionChange = { newAction -> onSecondaryActionChange(index, newAction) },
                         onShowValueChange = { showValue -> onSecondaryShowValueChange(index, showValue) },
                         onConfirmActionChange = { confirm -> onSecondaryConfirmActionChange(index, confirm) },
+                        onDisplayPrecisionChange = { precision -> onSecondaryDisplayPrecisionChange(index, precision) },
+                        onDatetimeFormatChange = { pattern -> onSecondaryDatetimeFormatChange(index, pattern) },
                     )
                     if (index < draft.secondaryEntities.size - 1) HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 }
@@ -815,11 +885,14 @@ private fun SlotEditorScreen(
 @Composable
 private fun SecondaryEntityRow(
     secondary: SecondarySlotDraft,
+    attrsByEntityId: Map<String, String>,
     onRemove: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
     onShowValueChange: (Boolean) -> Unit,
     onConfirmActionChange: (Boolean) -> Unit,
+    onDisplayPrecisionChange: (Int?) -> Unit,
+    onDatetimeFormatChange: (String?) -> Unit,
 ) {
     val display = secondary.displayEntity
     val action = secondary.actionEntity
@@ -843,6 +916,15 @@ private fun SecondaryEntityRow(
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
+        ValueFormattingControls(
+            domain = display.domain,
+            attributesJson = attrsByEntityId[display.entityId],
+            currentState = display.state,
+            displayPrecision = secondary.displayPrecision,
+            datetimeFormat = secondary.datetimeFormat,
+            onDisplayPrecisionChange = onDisplayPrecisionChange,
+            onDatetimeFormatChange = onDatetimeFormatChange,
+        )
         Spacer(Modifier.padding(top = 6.dp))
         Text(stringResource(R.string.section_action), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
@@ -901,6 +983,89 @@ private fun SecondaryEntityRow(
                     modifier = Modifier.weight(1f),
                 )
                 Switch(checked = secondary.confirmAction, onCheckedChange = onConfirmActionChange)
+            }
+        }
+    }
+}
+
+/** Precision-dropdown (Auto/0/1/2) for rå numeriske domæner + frit datoformat-felt (m. live
+ * preview) for datetime-agtige domæner (v0.3.0, C2) — vises for hoved-entitetens VISNING-sektion
+ * OG hver sekundær-chips visnings-entitet. Ingen kontrol vises for domæner med en fast tekst-tabel
+ * i formatEntityState (fx light/switch) — de har intet tal/dato at formattere. [attributesJson]
+ * kommer fra Room-cachen (samme kilde widget-renderingen selv bruger); kan være null hvis
+ * entiteten endnu ikke er synket — kontrollerne skjules da for datetime-agtige domæner (kan ikke
+ * afgøre has_date/has_time), men precision-dropdown for almindelige sensor/number-domæner vises
+ * stadig (afhænger ikke af attrs). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ValueFormattingControls(
+    domain: String,
+    attributesJson: String?,
+    currentState: String,
+    displayPrecision: Int?,
+    datetimeFormat: String?,
+    onDisplayPrecisionChange: (Int?) -> Unit,
+    onDatetimeFormatChange: (String?) -> Unit,
+) {
+    if (!isRawValueDomain(domain)) return
+    val dateTimeLike = isDateTimeLike(domain, attributesJson)
+
+    if (dateTimeLike) {
+        var pattern by remember(datetimeFormat) { mutableStateOf(datetimeFormat ?: "") }
+        val locale = Locale.getDefault()
+        val attrs = attributesJson?.let { runCatching { JSONObject(it) }.getOrNull() }
+        val hasDate = attrs?.optBoolean("has_date", true) ?: true
+        val hasTime = attrs?.optBoolean("has_time", true) ?: true
+        Spacer(Modifier.padding(top = 8.dp))
+        OutlinedTextField(
+            value = pattern,
+            onValueChange = { newValue ->
+                pattern = newValue
+                onDatetimeFormatChange(newValue.ifBlank { null })
+            },
+            label = { Text(stringResource(R.string.datetime_format_label)) },
+            supportingText = { Text(stringResource(R.string.datetime_format_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        // Live preview — bruger den faktiske aktuelle state, så brugeren straks ser resultatet af
+        // et frit mønster (og at et ugyldigt mønster falder trygt tilbage til auto, jf. Task 2).
+        val preview = formatDateTimeState(currentState, pattern.ifBlank { null }, hasDate, hasTime, locale)
+        Text(
+            preview,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    } else {
+        var expanded by remember { mutableStateOf(false) }
+        val options: List<Int?> = listOf(null, 0, 1, 2)
+        val autoLabel = stringResource(R.string.precision_auto)
+        fun optionLabel(value: Int?) = value?.toString() ?: autoLabel
+
+        Spacer(Modifier.padding(top = 8.dp))
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = optionLabel(displayPrecision),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.display_precision_label)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { value ->
+                    DropdownMenuItem(
+                        text = { Text(optionLabel(value)) },
+                        onClick = {
+                            onDisplayPrecisionChange(value)
+                            expanded = false
+                        },
+                    )
+                }
             }
         }
     }
