@@ -72,6 +72,10 @@ To varianter mockes i Fase 4; **beslutningen træffes dér**:
   halve/hele. Ingen ny config-option/DB-kolonne.
 - Vælges A, kan B stadig tilføjes senere (ikke gensidigt udelukkende); mockup kan også vise
   kombinationen.
+- Forbedringer af den delte `RangeControlActivity` gælder OGSÅ single-entity widgets
+  (Light/Climate/Cover) — bevidst, jf. ADR-2.
+
+**Bekræft-dialogens navn:** altid handlings-målets friendly name, jf. ADR-1.
 
 ## Blok C — Visning
 
@@ -84,9 +88,10 @@ To varianter mockes i Fase 4; **beslutningen træffes dér**:
 - **Widgets:** ny delt `WidgetColors`-helper. pref=system → nuværende adfærd
   (`GlanceTheme.colors` / day-night `ColorProvider`); tvunget lys/mørk → faste farvesæt.
   Alle widget-renderers (multi + single-entity + shortcut) skifter til helperen.
-- **WebView:** eksisterende ColorScheme/darkMode-beregning i `WebViewActivity` +
-  `ExternalAuthBridge.replyExternalConfig` kobles på samme pref — ét valg styrer app,
-  widgets og dashboard.
+- **WebView: UDGÅR** (grill-beslutning, ADR-4) — dashboardet følger HA-serverens eget tema.
+  Bemærk: CLAUDE.md's v0.2.6-påstand om `themes:{darkMode}` matcher ikke koden;
+  `replyExternalConfig` sender kun capabilities.
+- **Re-render ved skift:** MainActivity kalder `updateAll` for alle providers (ADR-5).
 
 ### C2. Værdi-formatering
 
@@ -115,6 +120,7 @@ overflow-rækker skimtes/scroller bag den ("glas-look" — brugerens eksplicitte
 `LazyColumn` til **Box-overlay bund-justeret** — listen fylder hele rammen, strippen ovenpå
 med halvtransparent baggrund (day/night `ColorProvider`, ~60–70 % alpha, afstemmes visuelt).
 Højde 24dp, fuld-bredde-klik og `RefreshEntityAction` uændret.
+Usynlig 24dp-spacer sidst i listen så fuldt nedscrollet viser alle rækker over baren (ADR-3).
 
 ## Data-migration (samlet)
 
