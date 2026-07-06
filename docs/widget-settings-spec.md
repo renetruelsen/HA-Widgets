@@ -545,3 +545,59 @@ placerede bredde kan rumme.
 Bruger observerede at footprinttet på hjemmeskærmen kan være markant større end den visuelle
 widget (boksene centreres i den fulde tildelte plads, jf. §6's `computeBoxHeight`/ramme-logik) —
 taget som separat opgave.
+
+## 9. Widget UX Pack: slot-kort, bekræftelse, RANGE-input, tema, formatering (v0.2.39)
+
+Fuld design/beslutningshistorik: `docs/superpowers/specs/2026-07-06-widget-ux-pack-design.md`,
+plan: `docs/superpowers/plans/2026-07-06-widget-ux-pack.md`, ADR'er:
+`docs/adr/2026-07-06-widget-ux-pack-adrs.md`. Dette afsnit opsummerer de config-flader
+ændringen tilføjede.
+
+### Slot-kort (Skærm 1, `SlotCard`)
+
+4-rækkers layout erstatter det tidligere 3-zone side-om-side layout: (1) entitetsnavn på fuld
+bredde, `maxLines=1` + ellipsis, chevron; (2) handlings-resumé; (3) sekundær-chips (uændret);
+(4) ↑/↓/🗑 samlet i én ikon-række i bunden (48dp targets). Navn og knapper konkurrerer ikke
+længere om bredden.
+
+### Handling-sektionen: "Bekræft ved tryk"
+
+Ny switch, vist KUN for TOGGLE/TRIGGER (hoved-entitet og hver sekundær-chip uafhængigt). Til:
+tryk på hjemmeskærmen åbner `ConfirmActionActivity` (translucent dialog) i stedet for at udføre
+handlingen direkte. Dialogteksten navngiver altid **handlings-målets** friendly name, ikke den
+viste entitet (relevant ved asymmetrisk visning/handling, jf. §7). Fra (default, alle
+eksisterende slots): uændret direkte adfærd. Room: `confirmAction`/`secondary{1,2,3}ConfirmAction`
+(v6-migration).
+
+### Handling-sektionen: RANGE — Skyder/Indtast værdi
+
+For RANGE-handlinger tilbyder config et valg mellem "Skyder" (default, uændret) og "Indtast
+værdi" (åbner `NumberInputActivity` med et talfelt i stedet for `RangeControlActivity`s skyder).
+Room: `rangeInputMode`/`secondary{1,2,3}RangeInputMode` (v7-migration, `null`="Skyder"). Uanset
+valg gælder samme min/max-validering og samme underliggende HA-service.
+
+Selve skyderen (`RangeControlActivity`, delt af ALLE widgets med RANGE — ikke kun multi-entity)
+fik desuden −/+ trinknapper: trin 0,5 hvis `(max-min) ≤ 20`, ellers 1. Første tryk snapper til
+nærmeste trin i tryk-retningen.
+
+### Visning-sektionen: værdi-formatering
+
+For rå-værdi-domæner (sensor/number/input_number/input_text/input_datetime/input_select):
+- **Decimaler**-dropdown (Auto/0/1/2) — Auto runder til maks 1 decimal.
+- **Datoformat**-felt (kun for datetime-agtige entiteter, dvs. `input_datetime` eller sensor med
+  `device_class=timestamp`) — frit `DateTimeFormatter`-mønster med live preview af den aktuelle
+  værdi under feltet. Tomt/ugyldigt mønster falder tilbage til automatisk lokalt kort format.
+
+Room: `displayPrecision`/`datetimeFormat` + sekundær-varianter (v6-migration).
+
+### Globalt tema-valg (uden for multi-entity-config)
+
+Dropdown "Tema" (Lys/Mørk/Følg system) i `MainActivity` ved sprog-vælgeren — `SecureStore.
+themeMode`. Gælder app-UI og ALLE widgets (ikke kun multi-entity), ikke WebView-dashboardet
+(ADR-4).
+
+### Refresh-strip som overlay
+
+Den klikbare refresh-bjælke i bunden af multi-entity-listen er nu en halvtransparent overlay
+ovenpå rækkerne (ikke en fast bjælke under listen) — overflow-rækker skimtes bag den under
+scroll.
