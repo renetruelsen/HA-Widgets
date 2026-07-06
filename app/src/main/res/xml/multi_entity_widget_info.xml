@@ -11,6 +11,6 @@
     android:widgetFeatures="reconfigurable"
     android:configure="dk.akait.hawidgets.widget.multientity.MultiEntityWidgetConfigActivity"
     android:description="@string/multi_entity_widget_description"
-    android:previewImage="@drawable/ic_multi_entity_4"
+    android:previewImage="@drawable/preview_multi_entity"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/glance_default_loading_layout" />
