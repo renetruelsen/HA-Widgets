@@ -229,23 +229,40 @@ private fun MultiEntityContent(
     // Rammen fylder hele det tildelte areal (fillMaxSize) — ved oversize efterlades tomrum
     // under listen/stripen i stedet for at strække indholdet (bevidst accepteret, se
     // brainstorm-konklusionen). LazyColumn scroller allerede ved undersize/overflow.
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(WidgetColors.frameBackground(context))
-            .cornerRadius(16.dp)
-            .padding(FRAME_PADDING_DP.dp),
-    ) {
-        Column(modifier = GlanceModifier.fillMaxSize()) {
-            LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+    //
+    // ADR-3: refresh-stripen er et halvtransparent overlay der flyder OVEN PÅ listen (ikke en
+    // fast bjælke under den) — brugerønske, "ser fedt ud". Strukturelt: en ydre Box lægger
+    // LazyColumn'en (barn 0) og stripens Box (barn 1, bund-justeret) oven på hinanden. Glance
+    // kompilerer Box til en rigtig FrameLayout hvor senere børn tegnes OVEN PÅ tidligere børn og
+    // modtager touch FØRST (standard Android ViewGroup-opførsel) — stripen ligger derfor korrekt
+    // øverst og forbliver klikbar, uanset listens indhold bagved. LazyColumn'en får en usynlig
+    // spacer som SIDSTE element (kun når stripen vises) så et fuldt scroll ned viser den sidste
+    // række helt fri af stripen, ikke delvist skjult bag den.
+    Box(modifier = GlanceModifier.fillMaxSize()) {
+        Box(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(WidgetColors.frameBackground(context))
+                .cornerRadius(16.dp)
+                .padding(FRAME_PADDING_DP.dp),
+        ) {
+            LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
                 items(sorted, itemId = { it.slotIndex.toLong() }) { slot ->
                     Column {
                         SlotRow(context, slot, states)
                         Spacer(modifier = GlanceModifier.height(ROW_GAP_DP.dp))
                     }
                 }
+                if (showRefreshIcon) {
+                    item { Spacer(modifier = GlanceModifier.height(REFRESH_STRIP_HEIGHT_DP.dp)) }
+                }
             }
-            if (showRefreshIcon) {
+        }
+        if (showRefreshIcon) {
+            Box(
+                modifier = GlanceModifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
                 RefreshStrip(context)
             }
         }
@@ -255,11 +272,16 @@ private fun MultiEntityContent(
 @Composable
 private fun RefreshStrip(context: Context) {
     // Hele rækken (ikke kun ikonet) er klikbar — et 16dp-bredt hit-areal alene ville være for
-    // lille at ramme pålideligt i en kun 24dp høj bjælke.
+    // lille at ramme pålideligt i en kun 24dp høj bjælke. Halvtransparent baggrund (ADR-3) —
+    // "glas"-strip oven på listen i stedet for en uigennemsigtig bjælke under den. cornerRadius
+    // matcher rammens 16dp forneden, så stripen ikke stikker firkantet ud over rammens runde
+    // silhuet (stripen ligger nu UDENFOR den clippede rammens Box, jf. overlay-omstruktureringen).
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
             .height(REFRESH_STRIP_HEIGHT_DP.dp)
+            .background(WidgetColors.refreshOverlay(context))
+            .cornerRadius(16.dp)
             .clickable(actionRunCallback<RefreshEntityAction>(actionParametersOf())),
         horizontalAlignment = Alignment.End,
         verticalAlignment = Alignment.CenterVertically,

@@ -65,6 +65,23 @@ object WidgetColors {
             else -> androidx.glance.color.ColorProvider(day = day, night = night)
         }
     }
+
+    /**
+     * Tema-bevidst udgave af MultiEntityWidget's refresh-strips halvtransparente
+     * overlay-baggrund (ADR-3: stripen flyder OVEN PÅ listen, ikke som en fast bjælke
+     * under den, så indhold skimtes bag den under scroll). ~65% alpha hvid/mørkegrå —
+     * "glas"-effekt, hverken uigennemsigtig eller usynlig. Samme mønster som
+     * [frameBackground]: fast side ved tvunget lys/mørk, dynamisk day/night ellers.
+     */
+    fun refreshOverlay(context: Context): ColorProvider {
+        val day = Color(0xA6FFFFFF)
+        val night = Color(0xA6202124)
+        return when (SecureStore.get(context).themeMode) {
+            SecureStore.THEME_LIGHT -> ColorProvider(day)
+            SecureStore.THEME_DARK -> ColorProvider(night)
+            else -> androidx.glance.color.ColorProvider(day = day, night = night)
+        }
+    }
 }
 
 /**
