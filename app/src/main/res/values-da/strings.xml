@@ -170,6 +170,14 @@
     <string name="action_datetime">Rediger dato/tid</string>
     <string name="action_view_only">Kun visning</string>
     <string name="action_view_only_short">Vis kun status</string>
+    <!-- Task 13: RANGE −/+ trin-knapper (alle widgets) -->
+    <string name="range_step_down">Formindsk</string>
+    <string name="range_step_up">Forøg</string>
+    <!-- Task 13: RANGE input-tilstand (kun multi-entity) -->
+    <string name="range_input_mode_label">Ved tryk</string>
+    <string name="range_input_mode_slider">Skyder</string>
+    <string name="range_input_mode_field">Indtast værdi</string>
+    <string name="number_input_out_of_range">Værdien skal være mellem %1$s og %2$s</string>
     <string name="label_with_target">%1$s → %2$s</string>
     <string name="label_dash">%1$s — %2$s</string>
     <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>

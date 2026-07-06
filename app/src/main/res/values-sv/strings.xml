@@ -170,6 +170,14 @@
     <string name="action_datetime">Redigera datum/tid</string>
     <string name="action_view_only">Endast visning</string>
     <string name="action_view_only_short">Visa endast status</string>
+    <!-- Task 13: RANGE −/+ steg-knappar (alla widgetar) -->
+    <string name="range_step_down">Minska</string>
+    <string name="range_step_up">Öka</string>
+    <!-- Task 13: RANGE inmatningsläge (endast multi-entity) -->
+    <string name="range_input_mode_label">Vid tryck</string>
+    <string name="range_input_mode_slider">Skjutreglage</string>
+    <string name="range_input_mode_field">Ange värde</string>
+    <string name="number_input_out_of_range">Värdet måste vara mellan %1$s och %2$s</string>
     <string name="label_with_target">%1$s → %2$s</string>
     <string name="label_dash">%1$s — %2$s</string>
     <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>

@@ -170,6 +170,14 @@
     <string name="action_datetime">Edit date/time</string>
     <string name="action_view_only">View only</string>
     <string name="action_view_only_short">Show status only</string>
+    <!-- Task 13: RANGE −/+ step buttons (all widgets) -->
+    <string name="range_step_down">Decrease</string>
+    <string name="range_step_up">Increase</string>
+    <!-- Task 13: RANGE input mode choice (multi-entity only) -->
+    <string name="range_input_mode_label">On tap</string>
+    <string name="range_input_mode_slider">Slider</string>
+    <string name="range_input_mode_field">Enter value</string>
+    <string name="number_input_out_of_range">Value must be between %1$s and %2$s</string>
     <string name="label_with_target">%1$s → %2$s</string>
     <string name="label_dash">%1$s — %2$s</string>
     <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>
