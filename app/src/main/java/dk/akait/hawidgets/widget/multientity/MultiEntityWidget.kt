@@ -48,6 +48,7 @@ import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.MultiWidgetEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.widget.common.ConfirmActionActivity
 import dk.akait.hawidgets.widget.common.DateTimeControlActivity
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
 import dk.akait.hawidgets.widget.common.RangeControlActivity
@@ -165,21 +166,22 @@ private data class SecondaryChipData(
     val actionDomain: String,
     val action: String,
     val showValue: Boolean,
+    val confirmAction: Boolean,
 )
 
 private fun secondaryChipData(
     displayId: String?, displayDomain: String?,
     actionId: String?, actionDomain: String?,
-    action: String?, showValue: Boolean?,
+    action: String?, showValue: Boolean?, confirmAction: Boolean?,
 ): SecondaryChipData? {
     if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
-    return SecondaryChipData(displayId, displayDomain, actionId, actionDomain, action, showValue ?: defaultShowValueFor(action))
+    return SecondaryChipData(displayId, displayDomain, actionId, actionDomain, action, showValue ?: defaultShowValueFor(action), confirmAction ?: false)
 }
 
 private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> = listOfNotNull(
-    secondaryChipData(secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain, secondary1Action, secondary1ShowValue),
-    secondaryChipData(secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain, secondary2Action, secondary2ShowValue),
-    secondaryChipData(secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain, secondary3Action, secondary3ShowValue),
+    secondaryChipData(secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain, secondary1Action, secondary1ShowValue, secondary1ConfirmAction),
+    secondaryChipData(secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain, secondary2Action, secondary2ShowValue, secondary2ConfirmAction),
+    secondaryChipData(secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain, secondary3Action, secondary3ShowValue, secondary3ConfirmAction),
 )
 
 @Composable
@@ -278,6 +280,7 @@ private fun SlotRow(
         refreshEntityId = slot.displayEntityId,
         rangeLabel = label,
         actionState = actionState,
+        confirmAction = slot.confirmAction,
     )
 
     Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -346,6 +349,7 @@ private fun SecondaryChip(
         refreshEntityId = chip.displayEntityId,
         rangeLabel = label,
         actionState = actionState,
+        confirmAction = chip.confirmAction,
     )
 
     Row(modifier = chipModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -381,6 +385,7 @@ private fun clickModifier(
     refreshEntityId: String,
     rangeLabel: String,
     actionState: EntityStateEntity?,
+    confirmAction: Boolean,
 ): GlanceModifier {
     if (action == "NONE") {
         return base.clickable(
@@ -390,6 +395,23 @@ private fun clickModifier(
         )
     }
     if (actionState == null || actionState.state == "unavailable") return base
+    // "Bekræft ved tryk" (B1): kun meningsfuldt for TOGGLE/TRIGGER (RANGE/TEXT/DATETIME åbner
+    // allerede en dialog med Gem-knap, så en ekstra bekræftelse ville være redundant). Grenen er
+    // rent ADDITIV: når confirmAction er false falder vi igennem til de UÆNDREDE original-grene
+    // nedenfor. Dialogen navngiver ALTID handlings-målet (ADR-1) — actionState ER action-målets
+    // state-entitet (states[actionEntityId]), så dens friendly_name er målets navn, ikke visningens.
+    if (confirmAction && (action == "TOGGLE" || action == "TRIGGER")) {
+        val targetName = friendlyNameFromJson(actionState.attributesJson) ?: actionEntityId
+        val intent = Intent(context, ConfirmActionActivity::class.java).apply {
+            putExtra(ConfirmActionActivity.EXTRA_ENTITY_ID, actionEntityId)
+            putExtra(ConfirmActionActivity.EXTRA_DOMAIN, actionDomain)
+            putExtra(ConfirmActionActivity.EXTRA_LABEL, targetName)
+            putExtra(ConfirmActionActivity.EXTRA_ACTION, action)
+            putExtra(ConfirmActionActivity.EXTRA_IS_ON, actionState.state == "on")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return base.clickable(actionStartActivity(intent))
+    }
     return when (action) {
         "TOGGLE" -> base.clickable(
             actionRunCallback<ToggleEntityAction>(

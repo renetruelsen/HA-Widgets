@@ -284,6 +284,13 @@
             android:taskAffinity=""
             android:excludeFromRecents="true" />
 
+        <activity
+            android:name=".widget.common.ConfirmActionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HaWidgets.Dialog"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
+
         <!-- Climate -->
         <activity
             android:name=".widget.climate.ClimateWidgetConfigActivity"
