@@ -69,8 +69,14 @@ class ConfirmActionActivity : ComponentActivity() {
                     val scope = rememberCoroutineScope()
                     var busy by remember { mutableStateOf(false) }
 
+                    // isOn er domæne-bevidst (isActiveState) fra afsenderen — for lock/cover
+                    // betyder det hhv. "låst"/"åben", ikke det bogstavelige "on"-state.
                     val question = when {
                         action == "TRIGGER" -> stringResource(R.string.confirm_trigger, label)
+                        domain == "lock" && isOn -> stringResource(R.string.confirm_unlock, label)
+                        domain == "lock" -> stringResource(R.string.confirm_lock, label)
+                        domain == "cover" && isOn -> stringResource(R.string.confirm_close_cover, label)
+                        domain == "cover" -> stringResource(R.string.confirm_open_cover, label)
                         isOn -> stringResource(R.string.confirm_toggle_off, label)
                         else -> stringResource(R.string.confirm_toggle_on, label)
                     }

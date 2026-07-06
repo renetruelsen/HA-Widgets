@@ -118,6 +118,10 @@
     <string name="confirm_dialog_confirm">Bekräfta</string>
     <string name="confirm_toggle_on">Slå på %1$s?</string>
     <string name="confirm_toggle_off">Stäng av %1$s?</string>
+    <string name="confirm_lock">Lås %1$s?</string>
+    <string name="confirm_unlock">Lås upp %1$s?</string>
+    <string name="confirm_open_cover">Öppna %1$s?</string>
+    <string name="confirm_close_cover">Stäng %1$s?</string>
     <string name="confirm_trigger">Kör %1$s?</string>
     <string name="display_precision_label">Decimaler</string>
     <string name="precision_auto">Auto</string>

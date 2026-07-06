@@ -118,6 +118,10 @@
     <string name="confirm_dialog_confirm">Bekræft</string>
     <string name="confirm_toggle_on">Tænd %1$s?</string>
     <string name="confirm_toggle_off">Sluk %1$s?</string>
+    <string name="confirm_lock">Lås %1$s?</string>
+    <string name="confirm_unlock">Lås %1$s op?</string>
+    <string name="confirm_open_cover">Åbn %1$s?</string>
+    <string name="confirm_close_cover">Luk %1$s?</string>
     <string name="confirm_trigger">Kør %1$s?</string>
     <string name="display_precision_label">Decimaler</string>
     <string name="precision_auto">Auto</string>

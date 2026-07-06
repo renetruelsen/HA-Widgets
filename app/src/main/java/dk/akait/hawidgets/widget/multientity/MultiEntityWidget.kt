@@ -464,7 +464,7 @@ private fun clickModifier(
             putExtra(ConfirmActionActivity.EXTRA_DOMAIN, actionDomain)
             putExtra(ConfirmActionActivity.EXTRA_LABEL, targetName)
             putExtra(ConfirmActionActivity.EXTRA_ACTION, action)
-            putExtra(ConfirmActionActivity.EXTRA_IS_ON, actionState.state == "on")
+            putExtra(ConfirmActionActivity.EXTRA_IS_ON, isActiveState(actionDomain, actionState.state))
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return base.clickable(actionStartActivity(intent))

@@ -118,6 +118,10 @@
     <string name="confirm_dialog_confirm">Confirm</string>
     <string name="confirm_toggle_on">Turn on %1$s?</string>
     <string name="confirm_toggle_off">Turn off %1$s?</string>
+    <string name="confirm_lock">Lock %1$s?</string>
+    <string name="confirm_unlock">Unlock %1$s?</string>
+    <string name="confirm_open_cover">Open %1$s?</string>
+    <string name="confirm_close_cover">Close %1$s?</string>
     <string name="confirm_trigger">Run %1$s?</string>
     <string name="display_precision_label">Decimals</string>
     <string name="precision_auto">Auto</string>
