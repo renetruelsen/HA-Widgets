@@ -59,7 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.db.AppDatabase
@@ -131,23 +133,25 @@ private sealed interface Step {
     data class EntityPicker(val forTarget: PickerTarget, val editIndex: Int?, val draft: SlotDraft) : Step
 }
 
+@Composable
 private fun actionLabel(action: String): String = when (action) {
-    "TOGGLE" -> "Slå til/fra"
-    "RANGE" -> "Åbn skyder"
-    "TRIGGER" -> "Udløs automatisering/script"
-    "TEXT" -> "Rediger tekst"
-    "DATETIME" -> "Rediger dato/tid"
-    else -> "Kun visning"
+    "TOGGLE" -> stringResource(R.string.action_toggle)
+    "RANGE" -> stringResource(R.string.action_range)
+    "TRIGGER" -> stringResource(R.string.action_trigger_long)
+    "TEXT" -> stringResource(R.string.action_text)
+    "DATETIME" -> stringResource(R.string.action_datetime)
+    else -> stringResource(R.string.action_view_only)
 }
 
 /** Kort variant til radios + auto-linjen i SlotEditorScreen (undgår den lange TRIGGER-tekst). */
+@Composable
 private fun actionShortLabel(action: String): String = when (action) {
-    "TOGGLE" -> "Slå til/fra"
-    "RANGE" -> "Åbn skyder"
-    "TRIGGER" -> "Udløs"
-    "TEXT" -> "Rediger tekst"
-    "DATETIME" -> "Rediger dato/tid"
-    else -> "Vis kun status"
+    "TOGGLE" -> stringResource(R.string.action_toggle)
+    "RANGE" -> stringResource(R.string.action_range)
+    "TRIGGER" -> stringResource(R.string.action_trigger_short)
+    "TEXT" -> stringResource(R.string.action_text)
+    "DATETIME" -> stringResource(R.string.action_datetime)
+    else -> stringResource(R.string.action_view_only_short)
 }
 
 /** Handlings-typer (ex. NONE) et domæne understøtter som action-mål. Tom = read-only. */
@@ -172,11 +176,12 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     var allEntities by remember { mutableStateOf<List<HaApiClient.EntityBrief>>(emptyList()) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var step by remember { mutableStateOf<Step>(Step.ListScreen) }
+    val haNotConnectedError = stringResource(R.string.ha_not_connected_error)
 
     LaunchedEffect(Unit) {
         val store = SecureStore.get(context)
         if (!store.isConfigured) {
-            loadError = "HA ikke forbundet. Åbn HA Widgets og forbind først."
+            loadError = haNotConnectedError
             isLoading = false
             return@LaunchedEffect
         }
@@ -312,8 +317,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 
         is Step.EntityPicker -> EntityPickerSubScreen(
             title = when (s.forTarget) {
-                PickerTarget.Display, is PickerTarget.SecondaryDisplay -> "Vælg entitet der skal vises"
-                PickerTarget.Action, is PickerTarget.SecondaryAction -> "Vælg handlingens mål"
+                PickerTarget.Display, is PickerTarget.SecondaryDisplay -> stringResource(R.string.picker_target_display_title)
+                PickerTarget.Action, is PickerTarget.SecondaryAction -> stringResource(R.string.picker_target_action_title)
             },
             entities = when (s.forTarget) {
                 // Handlings-mål-valg filtreres til domæner der understøtter mindst én handling —
@@ -398,7 +403,7 @@ private fun ListScreen(
     onMoveSlot: (Int, Int) -> Unit,
     onSave: () -> Unit,
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text("Kombineret widget") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.multi_entity_config_title)) }) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -408,7 +413,7 @@ private fun ListScreen(
         ) {
             if (slots.isEmpty()) {
                 Text(
-                    "Ingen slots endnu — tryk \"Tilføj slot\" for at starte.",
+                    stringResource(R.string.multi_entity_empty_hint),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
@@ -430,16 +435,16 @@ private fun ListScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Vis refresh-ikon", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.multi_entity_show_refresh_icon), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Switch(checked = showRefreshIcon, onCheckedChange = onShowRefreshIconChange)
             }
             Spacer(Modifier.padding(4.dp))
             Button(onClick = onAddSlot, enabled = slots.size < 5, modifier = Modifier.fillMaxWidth()) {
-                Text("+ Tilføj slot")
+                Text(stringResource(R.string.add_slot))
             }
             Spacer(Modifier.padding(4.dp))
             Button(onClick = onSave, enabled = slots.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                Text("Gem widget")
+                Text(stringResource(R.string.save_widget))
             }
         }
     }
@@ -485,7 +490,7 @@ private fun SlotCard(
                         Text(slot.label.ifEmpty { slot.displayEntityId }, style = MaterialTheme.typography.bodyLarge)
                         Icon(
                             Icons.Filled.ChevronRight,
-                            contentDescription = "Rediger",
+                            contentDescription = stringResource(R.string.cd_edit),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp),
                         )
@@ -493,7 +498,7 @@ private fun SlotCard(
                     val actionSummary = if (slot.actionEntityId == slot.displayEntityId) {
                         actionLabel(slot.action)
                     } else {
-                        "${actionLabel(slot.action)} → ${slot.actionEntityId}"
+                        stringResource(R.string.label_with_target, actionLabel(slot.action), slot.actionEntityId)
                     }
                     Text(actionSummary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -528,7 +533,7 @@ private fun SlotCard(
                 .clickable(onClick = onRemove),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Delete, contentDescription = "Fjern", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
         }
         Column(modifier = Modifier.width(36.dp).fillMaxHeight()) {
             Box(
@@ -542,7 +547,7 @@ private fun SlotCard(
             ) {
                 Icon(
                     Icons.Filled.KeyboardArrowUp,
-                    contentDescription = "Flyt op",
+                    contentDescription = stringResource(R.string.cd_move_up),
                     tint = if (canMoveUp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
             }
@@ -557,7 +562,7 @@ private fun SlotCard(
             ) {
                 Icon(
                     Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "Flyt ned",
+                    contentDescription = stringResource(R.string.cd_move_down),
                     tint = if (canMoveDown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
             }
@@ -566,15 +571,17 @@ private fun SlotCard(
 }
 
 /** (ikon, "navn — handlingslabel") for hver konfigureret sekundær-chip på sloten. */
+@Composable
 private fun secondarySlotSummaries(slot: MultiWidgetSlotEntity): List<Pair<Int, String>> {
+    @Composable
     fun summaryFor(
         displayId: String?, displayDomain: String?, actionId: String?, action: String?,
     ): Pair<Int, String>? {
         if (displayId == null || displayDomain == null || action == null) return null
         val label = if (actionId != null && actionId != displayId) {
-            "$displayId — ${actionShortLabel(action)} → $actionId"
+            stringResource(R.string.label_dash_with_target, displayId, actionShortLabel(action), actionId)
         } else {
-            "$displayId — ${actionShortLabel(action)}"
+            stringResource(R.string.label_dash, displayId, actionShortLabel(action))
         }
         return domainIconResId(displayDomain) to label
     }
@@ -617,7 +624,7 @@ private fun SlotEditorScreen(
         mutableStateOf(draft.action.takeIf { it != "NONE" })
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Tilpas entitet") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.slot_editor_title)) }) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -628,35 +635,35 @@ private fun SlotEditorScreen(
             OutlinedTextField(
                 value = draft.label,
                 onValueChange = { if (it.length <= 12) onLabelChange(it) },
-                label = { Text("Kort label (valgfrit)") },
-                placeholder = { Text("f.eks. Bad 1") },
-                supportingText = { Text("Vises på widget i stedet for enhedsnavn. Maks 12 tegn.") },
+                label = { Text(stringResource(R.string.short_label_field)) },
+                placeholder = { Text(stringResource(R.string.short_label_placeholder)) },
+                supportingText = { Text(stringResource(R.string.short_label_supporting)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
             Spacer(Modifier.padding(8.dp))
 
             // ── VISNING ──
-            SectionCard(title = "Visning") {
+            SectionCard(title = stringResource(R.string.section_view)) {
                 Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
                 Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text("Skift entitet") }
+                TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change_entity)) }
             }
             Spacer(Modifier.padding(8.dp))
 
             // ── HANDLING ──
-            SectionCard(title = "Handling") {
+            SectionCard(title = stringResource(R.string.section_action)) {
                 when {
                     invalidTarget -> {
                         Text(
-                            "Denne enhed kan ikke handles på — vælg et andet mål.",
+                            stringResource(R.string.action_invalid_target),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
                     readOnly -> {
                         Text(
-                            "Denne enhed kan kun vises — intet sker ved tryk.",
+                            stringResource(R.string.action_read_only),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -669,7 +676,7 @@ private fun SlotEditorScreen(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("Reagér på tryk", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                                 Switch(
                                     checked = reactsToTap,
                                     onCheckedChange = { on ->
@@ -685,7 +692,7 @@ private fun SlotEditorScreen(
                         if (showActionChoice) {
                             if (opts.size == 1) {
                                 Text(
-                                    "Ved tryk: ${actionShortLabel(opts[0])}",
+                                    stringResource(R.string.on_tap_label, actionShortLabel(opts[0])),
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.padding(vertical = 4.dp),
                                 )
@@ -711,7 +718,7 @@ private fun SlotEditorScreen(
                         } else {
                             // Kontakt FRA (mål == visning): slotten viser kun status.
                             Text(
-                                "Slotten viser kun status — tryk gør ingenting.",
+                                stringResource(R.string.slot_view_only_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(vertical = 2.dp),
@@ -721,19 +728,19 @@ private fun SlotEditorScreen(
                 }
                 if (targetDiffers) {
                     Text(
-                        "Mål: ${action.friendlyName}",
+                        stringResource(R.string.target_label, action.friendlyName),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
                 TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) {
-                    Text(if (targetDiffers) "Vælg andet mål" else "Handl på en anden enhed")
+                    Text(if (targetDiffers) stringResource(R.string.choose_other_target) else stringResource(R.string.act_on_other_entity))
                 }
             }
             Spacer(Modifier.padding(8.dp))
 
             // ── EKSTRA INFO ──
-            SectionCard(title = "Ekstra info (${draft.secondaryEntities.size}/$MAX_SECONDARY_ENTITIES)") {
+            SectionCard(title = stringResource(R.string.extra_info_section, draft.secondaryEntities.size, MAX_SECONDARY_ENTITIES)) {
                 draft.secondaryEntities.forEachIndexed { index, secondary ->
                     SecondaryEntityRow(
                         secondary = secondary,
@@ -746,7 +753,7 @@ private fun SlotEditorScreen(
                 }
                 if (draft.secondaryEntities.size in 1 until MAX_SECONDARY_ENTITIES) {
                     Text(
-                        "Plads til ${MAX_SECONDARY_ENTITIES - draft.secondaryEntities.size} mere",
+                        stringResource(R.string.extra_info_room_for_more, MAX_SECONDARY_ENTITIES - draft.secondaryEntities.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
@@ -758,13 +765,13 @@ private fun SlotEditorScreen(
                     onClick = onAddSecondary,
                     enabled = draft.secondaryEntities.size < MAX_SECONDARY_ENTITIES,
                     contentPadding = PaddingValues(0.dp),
-                ) { Text("+ Tilføj ekstra entitet") }
+                ) { Text(stringResource(R.string.add_extra_entity)) }
             }
             Spacer(Modifier.padding(12.dp))
 
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Annullér") }
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cancel)) }
             Spacer(Modifier.padding(2.dp))
-            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) { Text("Tilføj til widget") }
+            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_to_widget)) }
         }
     }
 }
@@ -797,33 +804,33 @@ private fun SecondaryEntityRow(
             )
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Visning", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.section_view), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Text(display.friendlyName, style = MaterialTheme.typography.bodyMedium)
             }
             IconButton(onClick = onRemove) {
-                Icon(Icons.Filled.Close, contentDescription = "Fjern", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
         Spacer(Modifier.padding(top = 6.dp))
-        Text("Handling", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.section_action), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
             Column(modifier = Modifier.weight(1f)) {
                 if (readOnly) {
                     Text(
-                        "Denne enhed kan kun vises — intet sker ved tryk.",
+                        stringResource(R.string.action_read_only),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     if (targetDiffers) {
-                        Text("Mål: ${action.friendlyName}", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.target_label, action.friendlyName), style = MaterialTheme.typography.bodySmall)
                     }
                     if (opts.size == 1) {
-                        Text("Ved tryk: ${actionShortLabel(opts[0])}", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.on_tap_label, actionShortLabel(opts[0])), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
-            TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text("Skift") }
+            TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change)) }
         }
         if (!readOnly && opts.size > 1) {
             opts.forEach { actionType ->
@@ -843,7 +850,7 @@ private fun SecondaryEntityRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Vis værdi på chippen",
+                stringResource(R.string.show_value_on_chip),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -886,14 +893,14 @@ private fun EntityPickerSubScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(title) },
-            navigationIcon = { TextButton(onClick = onBack) { Text("Tilbage") } },
+            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } },
         )
     }) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Søg…") },
+                placeholder = { Text(stringResource(R.string.search_hint)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),

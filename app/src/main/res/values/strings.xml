@@ -108,4 +108,69 @@
     <string name="multi_entity_widget_label">HA Multi-entity</string>
     <string name="multi_entity_widget_description">Multiple entities in one widget — resize to fit</string>
     <string name="multi_entity_refresh_all">Refresh all widgets</string>
+
+    <!-- Widget UX pack: multi-entity config additions -->
+    <string name="add_to_widget">Add to widget</string>
+    <string name="update_slot">Update</string>
+    <string name="confirm_action_switch">Confirm on tap</string>
+    <string name="confirm_dialog_cancel">Cancel</string>
+    <string name="confirm_dialog_confirm">Confirm</string>
+    <string name="confirm_toggle_on">Turn on %1$s?</string>
+    <string name="confirm_toggle_off">Turn off %1$s?</string>
+    <string name="confirm_trigger">Run %1$s?</string>
+    <string name="display_precision_label">Decimals</string>
+    <string name="precision_auto">Auto</string>
+    <string name="datetime_format_label">Date format</string>
+    <string name="datetime_format_hint">e.g. dd/MM HH:mm — empty = automatic</string>
+    <string name="theme_label">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">Follow system</string>
+
+    <!-- Widget UX pack: i18n regression fix — moved from hardcoded UI text -->
+    <string name="ha_not_connected_error">HA not connected. Open HA Widgets and connect first.</string>
+    <string name="customize_widget_title">Customize widget</string>
+    <string name="short_label_field">Short label (optional)</string>
+    <string name="short_label_placeholder">e.g. Bathroom 1</string>
+    <string name="short_label_supporting">Shown on the widget instead of the entity name. Max 12 characters.</string>
+    <string name="back">Back</string>
+    <string name="search_hint">Search…</string>
+    <string name="multi_entity_config_title">Combined widget</string>
+    <string name="multi_entity_empty_hint">No slots yet — tap \"Add slot\" to start.</string>
+    <string name="multi_entity_show_refresh_icon">Show refresh icon</string>
+    <string name="add_slot">+ Add slot</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_remove">Remove</string>
+    <string name="cd_move_up">Move up</string>
+    <string name="cd_move_down">Move down</string>
+    <string name="slot_editor_title">Customize entity</string>
+    <string name="section_view">View</string>
+    <string name="section_action">Action</string>
+    <string name="change_entity">Change entity</string>
+    <string name="change">Change</string>
+    <string name="action_invalid_target">This entity cannot be acted on — choose another target.</string>
+    <string name="action_read_only">This entity can only be displayed — nothing happens on tap.</string>
+    <string name="reacts_on_tap">React on tap</string>
+    <string name="on_tap_label">On tap: %1$s</string>
+    <string name="slot_view_only_hint">The slot only shows status — tapping does nothing.</string>
+    <string name="target_label">Target: %1$s</string>
+    <string name="choose_other_target">Choose another target</string>
+    <string name="act_on_other_entity">Act on another entity</string>
+    <string name="extra_info_section">Extra info (%1$d/%2$d)</string>
+    <string name="extra_info_room_for_more">Room for %1$d more</string>
+    <string name="add_extra_entity">+ Add extra entity</string>
+    <string name="show_value_on_chip">Show value on chip</string>
+    <string name="picker_target_display_title">Choose entity to display</string>
+    <string name="picker_target_action_title">Choose the action\'s target</string>
+    <string name="action_toggle">Toggle on/off</string>
+    <string name="action_range">Open slider</string>
+    <string name="action_trigger_long">Trigger automation/script</string>
+    <string name="action_trigger_short">Trigger</string>
+    <string name="action_text">Edit text</string>
+    <string name="action_datetime">Edit date/time</string>
+    <string name="action_view_only">View only</string>
+    <string name="action_view_only_short">Show status only</string>
+    <string name="label_with_target">%1$s → %2$s</string>
+    <string name="label_dash">%1$s — %2$s</string>
+    <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>
 </resources>
