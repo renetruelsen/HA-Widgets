@@ -7,8 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -17,7 +15,6 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.ColorFilter
-import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -84,32 +81,19 @@ private val FRAME_BACKGROUND = ColorProvider(
 internal const val FRAME_PADDING_DP = 4
 internal const val ROW_GAP_DP = 4
 internal const val CHIP_GAP_DP = 4
-internal const val REFRESH_STRIP_HEIGHT_DP = 32
-internal const val MIN_ROW_HEIGHT_DP = 48
+internal const val REFRESH_STRIP_HEIGHT_DP = 24
 
 class MultiEntityWidget : GlanceAppWidget() {
 
-    // SizeMode.Responsive (ikke Exact): Exact komponerer altid BÅDE en portræt- og en
-    // landskabs-udgave (Androids indbyggede RemoteViews(landscape, portrait)-mekanisme),
-    // og launcheren vælger selv hvilken der vises ud fra Configuration-orientering ved
-    // inflation. På Galaxy S23 + Nova Launcher blev landskabs-udgaven konsekvent vist SELV
-    // I PORTRÆT-TILSTAND (bekræftet via midlertidig logging under device-QA — se
-    // docs/superpowers/specs/2026-07-04-multi-entity-row-height-refresh-design.md §3),
-    // hvilket fik rækkerne til at bruge en langt mindre højde end den faktiske boks.
-    // Responsive bruger på API 31+ en faktisk størrelses-baseret vælger blandt de
-    // deklarerede buckets i stedet for en orienterings-baseret parring, hvilket omgår
-    // fejlvalget. Under API 31 opfører Responsive sig som Exact (samme eksponering som før
-    // — ingen regression). Kun ÉN bredde (244dp, matcher minWidth i widget-info-xml'en) —
-    // rækkehøjde-formlen bruger udelukkende LocalSize.current.height, bredden håndteres af
-    // fillMaxWidth()/defaultWeight() uanset bucket-bredde.
-    override val sizeMode = SizeMode.Responsive(
-        setOf(
-            DpSize(244.dp, 56.dp),
-            DpSize(244.dp, 130.dp),
-            DpSize(244.dp, 200.dp),
-            DpSize(244.dp, 270.dp),
-        )
-    )
+    // SizeMode.Exact: sikkert her fordi INGEN komponeret indhold læser LocalSize.current —
+    // ramme, LazyColumn og rækker bruger alle almindelige fillMaxSize/fillMaxWidth-modifiers med
+    // naturlig (wrap-content) rækkehøjde. Android komponerer under Exact altid BÅDE en portræt- og
+    // en landskabs-udgave (RemoteViews(landscape, portrait)) og lader launcheren vælge ud fra
+    // Configuration-orientering — på Galaxy S23 + Nova Launcher blev landskabs-udgaven konsekvent
+    // vist SELV I PORTRÆT, men det er kun synligt/skadeligt når de to udgaver rent faktisk kan
+    // afvige (dvs. når indhold afhænger af LocalSize). Genindfør IKKE en LocalSize-baseret
+    // rækkehøjde uden at gen-teste dette scenarie på en Nova-enhed.
+    override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
@@ -207,25 +191,9 @@ private fun MultiEntityContent(
 ) {
     val sorted = slots.sortedBy { it.slotIndex }
 
-    // Rækkehøjden tilpasses den faktiske tildelte plads (LocalSize.current rapporterer den
-    // valgte bucket-højde under SizeMode.Responsive, se klassekommentaren ovenfor) — så en høj
-    // placering (stor grid-størrelse) ikke efterlader tomrum i bunden, og en lav placering ikke
-    // beskærer en række midt i. Bevidst INGEN øvre grænse — 1-2 konfigurerede entiteter i en meget
-    // høj widget skal strække rækken(rne) til at fylde pladsen, ikke stoppe ved en arbitrær
-    // maks-højde. Nedre grænse (MIN_ROW_HEIGHT_DP) er tap-target-minimum — falder tilbage til
-    // eksisterende LazyColumn-scroll når beregnet højde ville komme under den.
-    val availableHeightDp = LocalSize.current.height.value
-    val stripHeightDp = if (showRefreshIcon) REFRESH_STRIP_HEIGHT_DP else 0
-    val rowCount = sorted.size
-    val gapTotalDp = ROW_GAP_DP * rowCount
-    val framePaddingTotalDp = FRAME_PADDING_DP * 2
-    val usableForRowsDp = availableHeightDp - framePaddingTotalDp - stripHeightDp - gapTotalDp
-    val computedRowHeightDp = if (rowCount > 0) (usableForRowsDp / rowCount) else 0f
-    val rowHeight = computedRowHeightDp.coerceAtLeast(MIN_ROW_HEIGHT_DP.toFloat()).dp
-
-    // Rammen fylder nu HELE det tildelte areal kant-til-kant (fillMaxSize) i stedet for at
-    // krympe til indholdet — det var netop krympe-adfærden der efterlod et "hul" (tapet synligt)
-    // når launcheren tildelte mere plads end indholdet krævede. Se docs/widget-settings-spec.md §9.
+    // Rammen fylder hele det tildelte areal (fillMaxSize) — ved oversize efterlades tomrum
+    // under listen/stripen i stedet for at strække indholdet (bevidst accepteret, se
+    // brainstorm-konklusionen). LazyColumn scroller allerede ved undersize/overflow.
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -237,7 +205,7 @@ private fun MultiEntityContent(
             LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                 items(sorted, itemId = { it.slotIndex.toLong() }) { slot ->
                     Column {
-                        SlotRow(context, slot, states, rowHeight)
+                        SlotRow(context, slot, states)
                         Spacer(modifier = GlanceModifier.height(ROW_GAP_DP.dp))
                     }
                 }
@@ -251,18 +219,20 @@ private fun MultiEntityContent(
 
 @Composable
 private fun RefreshStrip(context: Context) {
+    // Hele rækken (ikke kun ikonet) er klikbar — et 16dp-bredt hit-areal alene ville være for
+    // lille at ramme pålideligt i en kun 24dp høj bjælke.
     Row(
-        modifier = GlanceModifier.fillMaxWidth().height(REFRESH_STRIP_HEIGHT_DP.dp),
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(REFRESH_STRIP_HEIGHT_DP.dp)
+            .clickable(actionRunCallback<RefreshEntityAction>(actionParametersOf())),
         horizontalAlignment = Alignment.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Image(
             provider = ImageProvider(R.drawable.ic_refresh),
             contentDescription = context.getString(R.string.multi_entity_refresh_all),
-            modifier = GlanceModifier
-                .size(48.dp)
-                .clickable(actionRunCallback<RefreshEntityAction>(actionParametersOf()))
-                .padding(12.dp),
+            modifier = GlanceModifier.size(16.dp).padding(end = 4.dp),
             colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
         )
     }
@@ -273,7 +243,6 @@ private fun SlotRow(
     context: Context,
     slot: MultiWidgetSlotEntity,
     states: Map<String, EntityStateEntity?>,
-    rowHeight: Dp,
 ) {
     val displayState = states[slot.displayEntityId]
     val actionState = states[slot.actionEntityId]
@@ -302,7 +271,7 @@ private fun SlotRow(
 
     val rowModifier = clickModifier(
         context = context,
-        base = GlanceModifier.fillMaxWidth().height(rowHeight).background(bgColor).cornerRadius(12.dp).padding(8.dp),
+        base = GlanceModifier.fillMaxWidth().background(bgColor).cornerRadius(12.dp).padding(8.dp),
         action = slot.action,
         actionEntityId = slot.actionEntityId,
         actionDomain = slot.actionDomain,
