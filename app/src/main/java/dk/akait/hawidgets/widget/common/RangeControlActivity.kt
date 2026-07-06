@@ -100,38 +100,10 @@ class RangeControlActivity : ComponentActivity() {
                     var isOn by remember { mutableStateOf(isOnInitial) }
                     var busy by remember { mutableStateOf(false) }
 
+                    // Delt domain→service-mapping i sendRangeValue (RangeService.kt) — samme kald som
+                    // NumberInputActivity bruger, så der ikke findes to divergerende RANGE-mappinger.
                     fun sendRangeCommand(value: Double) {
-                        scope.launch {
-                            val store = SecureStore.get(applicationContext)
-                            val base = store.baseUrl ?: return@launch
-                            val token = store.token ?: return@launch
-                            val api = HaApiClient(base, token)
-                            when (domain) {
-                                "light" -> api.callService(
-                                    "light", "turn_on", entityId,
-                                    extraData = mapOf("brightness" to (value.toInt() * 255 / 100).coerceIn(1, 255))
-                                )
-                                "cover" -> api.callService(
-                                    "cover", "set_cover_position", entityId,
-                                    extraData = mapOf("position" to value.toInt())
-                                )
-                                "climate" -> api.callService(
-                                    "climate", "set_temperature", entityId,
-                                    extraData = mapOf("temperature" to value.toInt())
-                                )
-                                // number/input_number kan have en fraktioneret step (fx 0.5) — send den
-                                // fulde decimalværdi i stedet for at afrunde til et heltal.
-                                "number" -> api.callService(
-                                    "number", "set_value", entityId,
-                                    extraData = mapOf("value" to value)
-                                )
-                                "input_number" -> api.callService(
-                                    "input_number", "set_value", entityId,
-                                    extraData = mapOf("value" to value)
-                                )
-                            }
-                            EntityRepository.refresh(applicationContext, entityId)
-                        }
+                        scope.launch { sendRangeValue(applicationContext, domain, entityId, value) }
                     }
 
                     fun sendToggle() {

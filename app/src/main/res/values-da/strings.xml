@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Annuller</string>
+    <string name="save">Gem</string>
     <string name="disconnect">Frakobl</string>
     <string name="connect">Forbind</string>
     <string name="connecting">Forbinder…</string>

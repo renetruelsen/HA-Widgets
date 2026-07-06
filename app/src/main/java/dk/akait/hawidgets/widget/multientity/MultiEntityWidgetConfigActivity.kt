@@ -130,6 +130,8 @@ private data class SecondarySlotDraft(
     /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
     val displayPrecision: Int? = null,
     val datetimeFormat: String? = null,
+    /** RANGE input-tilstand (Task 13) — "SLIDER"/"FIELD". null = "SLIDER". Kun relevant for RANGE. */
+    val rangeInputMode: String? = null,
 )
 
 private data class SlotDraft(
@@ -143,6 +145,8 @@ private data class SlotDraft(
     /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
     val displayPrecision: Int? = null,
     val datetimeFormat: String? = null,
+    /** RANGE input-tilstand (Task 13) — "SLIDER"/"FIELD". null = "SLIDER". Kun relevant for RANGE. */
+    val rangeInputMode: String? = null,
 )
 
 private const val MAX_SECONDARY_ENTITIES = 3
@@ -229,7 +233,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         displayId: String?, displayDomain: String?,
         actionId: String?, actionDomain: String?,
         action: String?, showValue: Boolean?, confirmAction: Boolean?,
-        displayPrecision: Int?, datetimeFormat: String?,
+        displayPrecision: Int?, datetimeFormat: String?, rangeInputMode: String?,
     ): SecondarySlotDraft? {
         if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
         return SecondarySlotDraft(
@@ -240,6 +244,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             confirmAction = confirmAction ?: false,
             displayPrecision = displayPrecision,
             datetimeFormat = datetimeFormat,
+            rangeInputMode = rangeInputMode,
         )
     }
 
@@ -261,24 +266,24 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 slot.secondary1DisplayEntityId, slot.secondary1DisplayDomain,
                 slot.secondary1ActionEntityId, slot.secondary1ActionDomain, slot.secondary1Action,
                 slot.secondary1ShowValue, slot.secondary1ConfirmAction,
-                slot.secondary1DisplayPrecision, slot.secondary1DatetimeFormat,
+                slot.secondary1DisplayPrecision, slot.secondary1DatetimeFormat, slot.secondary1RangeInputMode,
             ),
             secondaryDraftFrom(
                 slot.secondary2DisplayEntityId, slot.secondary2DisplayDomain,
                 slot.secondary2ActionEntityId, slot.secondary2ActionDomain, slot.secondary2Action,
                 slot.secondary2ShowValue, slot.secondary2ConfirmAction,
-                slot.secondary2DisplayPrecision, slot.secondary2DatetimeFormat,
+                slot.secondary2DisplayPrecision, slot.secondary2DatetimeFormat, slot.secondary2RangeInputMode,
             ),
             secondaryDraftFrom(
                 slot.secondary3DisplayEntityId, slot.secondary3DisplayDomain,
                 slot.secondary3ActionEntityId, slot.secondary3ActionDomain, slot.secondary3Action,
                 slot.secondary3ShowValue, slot.secondary3ConfirmAction,
-                slot.secondary3DisplayPrecision, slot.secondary3DatetimeFormat,
+                slot.secondary3DisplayPrecision, slot.secondary3DatetimeFormat, slot.secondary3RangeInputMode,
             ),
         )
         return SlotDraft(
             display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction,
-            slot.displayPrecision, slot.datetimeFormat,
+            slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode,
         )
     }
 
@@ -298,6 +303,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             confirmAction = draft.confirmAction,
             displayPrecision = draft.displayPrecision,
             datetimeFormat = draft.datetimeFormat,
+            rangeInputMode = draft.rangeInputMode,
             secondary1DisplayEntityId = sec.getOrNull(0)?.displayEntity?.entityId,
             secondary1DisplayDomain = sec.getOrNull(0)?.displayEntity?.domain,
             secondary1ActionEntityId = sec.getOrNull(0)?.actionEntity?.entityId,
@@ -307,6 +313,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondary1ConfirmAction = sec.getOrNull(0)?.confirmAction,
             secondary1DisplayPrecision = sec.getOrNull(0)?.displayPrecision,
             secondary1DatetimeFormat = sec.getOrNull(0)?.datetimeFormat,
+            secondary1RangeInputMode = sec.getOrNull(0)?.rangeInputMode,
             secondary2DisplayEntityId = sec.getOrNull(1)?.displayEntity?.entityId,
             secondary2DisplayDomain = sec.getOrNull(1)?.displayEntity?.domain,
             secondary2ActionEntityId = sec.getOrNull(1)?.actionEntity?.entityId,
@@ -316,6 +323,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondary2ConfirmAction = sec.getOrNull(1)?.confirmAction,
             secondary2DisplayPrecision = sec.getOrNull(1)?.displayPrecision,
             secondary2DatetimeFormat = sec.getOrNull(1)?.datetimeFormat,
+            secondary2RangeInputMode = sec.getOrNull(1)?.rangeInputMode,
             secondary3DisplayEntityId = sec.getOrNull(2)?.displayEntity?.entityId,
             secondary3DisplayDomain = sec.getOrNull(2)?.displayEntity?.domain,
             secondary3ActionEntityId = sec.getOrNull(2)?.actionEntity?.entityId,
@@ -325,6 +333,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondary3ConfirmAction = sec.getOrNull(2)?.confirmAction,
             secondary3DisplayPrecision = sec.getOrNull(2)?.displayPrecision,
             secondary3DatetimeFormat = sec.getOrNull(2)?.datetimeFormat,
+            secondary3RangeInputMode = sec.getOrNull(2)?.rangeInputMode,
         )
         slots = if (editIndex == null) slots + newSlot
         else slots.toMutableList().also { it[editIndex] = newSlot }
@@ -416,6 +425,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onChangeDisplay = { step = Step.EntityPicker(PickerTarget.Display, s.editIndex, s.draft) },
             onChangeTarget = { step = Step.EntityPicker(PickerTarget.Action, s.editIndex, s.draft) },
             onActionChange = { newAction -> step = Step.SlotEditor(s.editIndex, s.draft.copy(action = newAction)) },
+            onRangeInputModeChange = { mode -> step = Step.SlotEditor(s.editIndex, s.draft.copy(rangeInputMode = mode)) },
             onLabelChange = { newLabel -> step = Step.SlotEditor(s.editIndex, s.draft.copy(label = newLabel)) },
             onConfirmActionChange = { confirm -> step = Step.SlotEditor(s.editIndex, s.draft.copy(confirmAction = confirm)) },
             onDisplayPrecisionChange = { precision -> step = Step.SlotEditor(s.editIndex, s.draft.copy(displayPrecision = precision)) },
@@ -433,6 +443,11 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onSecondaryActionChange = { index, newAction ->
                 val updated = s.draft.secondaryEntities.toMutableList()
                 updated[index] = updated[index].copy(action = newAction)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryRangeInputModeChange = { index, mode ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(rangeInputMode = mode)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
             onSecondaryShowValueChange = { index, showValue ->
@@ -662,6 +677,7 @@ private fun SlotEditorScreen(
     onChangeDisplay: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
+    onRangeInputModeChange: (String?) -> Unit,
     onLabelChange: (String) -> Unit,
     onConfirmActionChange: (Boolean) -> Unit,
     onDisplayPrecisionChange: (Int?) -> Unit,
@@ -670,6 +686,7 @@ private fun SlotEditorScreen(
     onRemoveSecondary: (Int) -> Unit,
     onSecondaryChangeTarget: (Int) -> Unit,
     onSecondaryActionChange: (Int, String) -> Unit,
+    onSecondaryRangeInputModeChange: (Int, String?) -> Unit,
     onSecondaryShowValueChange: (Int, Boolean) -> Unit,
     onSecondaryConfirmActionChange: (Int, Boolean) -> Unit,
     onSecondaryDisplayPrecisionChange: (Int, Int?) -> Unit,
@@ -813,6 +830,12 @@ private fun SlotEditorScreen(
                         Switch(checked = draft.confirmAction, onCheckedChange = onConfirmActionChange)
                     }
                 }
+                if (draft.action == "RANGE") {
+                    RangeInputModeControl(
+                        selected = draft.rangeInputMode,
+                        onSelected = onRangeInputModeChange,
+                    )
+                }
                 if (targetDiffers) {
                     Text(
                         stringResource(R.string.target_label, action.friendlyName),
@@ -835,6 +858,7 @@ private fun SlotEditorScreen(
                         onRemove = { onRemoveSecondary(index) },
                         onChangeTarget = { onSecondaryChangeTarget(index) },
                         onActionChange = { newAction -> onSecondaryActionChange(index, newAction) },
+                        onRangeInputModeChange = { mode -> onSecondaryRangeInputModeChange(index, mode) },
                         onShowValueChange = { showValue -> onSecondaryShowValueChange(index, showValue) },
                         onConfirmActionChange = { confirm -> onSecondaryConfirmActionChange(index, confirm) },
                         onDisplayPrecisionChange = { precision -> onSecondaryDisplayPrecisionChange(index, precision) },
@@ -881,6 +905,7 @@ private fun SecondaryEntityRow(
     onRemove: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
+    onRangeInputModeChange: (String?) -> Unit,
     onShowValueChange: (Boolean) -> Unit,
     onConfirmActionChange: (Boolean) -> Unit,
     onDisplayPrecisionChange: (Int?) -> Unit,
@@ -950,6 +975,12 @@ private fun SecondaryEntityRow(
                     Text(actionShortLabel(actionType), style = MaterialTheme.typography.bodySmall)
                 }
             }
+        }
+        if (!readOnly && secondary.action == "RANGE") {
+            RangeInputModeControl(
+                selected = secondary.rangeInputMode,
+                onSelected = onRangeInputModeChange,
+            )
         }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -1058,6 +1089,35 @@ private fun ValueFormattingControls(
                         },
                     )
                 }
+            }
+        }
+    }
+}
+
+/** RANGE input-tilstand: «Skyder» (skyder-dialog) eller «Indtast værdi» (talfelt-dialog) — Task 13,
+ * del A. Vises kun når handlingen er RANGE, både for hoved-slotten og hver sekundær-chip. Sentinel:
+ * null = "SLIDER" (uændret default); "FIELD" = talfelt. «Skyder» gemmer null, så en slot der aldrig
+ * har rørt kontrollen forbliver present som "ingen override" i DB'en. */
+@Composable
+private fun RangeInputModeControl(selected: String?, onSelected: (String?) -> Unit) {
+    // null/"SLIDER" behandles ens (skyder). Kun "FIELD" er felt-tilstand.
+    val isField = selected == "FIELD"
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Text(
+            stringResource(R.string.range_input_mode_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        val options = listOf(false to R.string.range_input_mode_slider, true to R.string.range_input_mode_field)
+        options.forEach { (fieldValue, labelRes) ->
+            val pick = { onSelected(if (fieldValue) "FIELD" else null) }
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = pick).padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = isField == fieldValue, onClick = pick)
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(labelRes), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

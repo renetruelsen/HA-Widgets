@@ -278,6 +278,13 @@
             android:excludeFromRecents="true" />
 
         <activity
+            android:name=".widget.common.NumberInputActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HaWidgets.Dialog"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
+
+        <activity
             android:name=".widget.common.DateTimeControlActivity"
             android:exported="false"
             android:theme="@style/Theme.HaWidgets.Dialog"

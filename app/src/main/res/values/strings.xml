@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
     <string name="disconnect">Disconnect</string>
     <string name="connect">Connect</string>
     <string name="connecting">Connecting…</string>

@@ -75,3 +75,14 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         }
     }
 }
+
+/** v6 → v7: RANGE input-tilstand (skyder/felt) pr. slot + chips (Task 13, del A).
+ * null = "SLIDER" = uændret nuværende adfærd for alle eksisterende rækker. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN rangeInputMode TEXT")
+        for (n in 1..3) {
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}RangeInputMode TEXT")
+        }
+    }
+}

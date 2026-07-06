@@ -49,6 +49,7 @@ import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.widget.common.ConfirmActionActivity
 import dk.akait.hawidgets.widget.common.DateTimeControlActivity
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
+import dk.akait.hawidgets.widget.common.NumberInputActivity
 import dk.akait.hawidgets.widget.common.RangeControlActivity
 import dk.akait.hawidgets.widget.common.TextControlActivity
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
@@ -168,19 +169,20 @@ private data class SecondaryChipData(
     val confirmAction: Boolean,
     val displayPrecision: Int?,
     val datetimeFormat: String?,
+    val rangeInputMode: String?,
 )
 
 private fun secondaryChipData(
     displayId: String?, displayDomain: String?,
     actionId: String?, actionDomain: String?,
     action: String?, showValue: Boolean?, confirmAction: Boolean?,
-    displayPrecision: Int?, datetimeFormat: String?,
+    displayPrecision: Int?, datetimeFormat: String?, rangeInputMode: String?,
 ): SecondaryChipData? {
     if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
     return SecondaryChipData(
         displayId, displayDomain, actionId, actionDomain, action,
         showValue ?: defaultShowValueFor(action), confirmAction ?: false,
-        displayPrecision, datetimeFormat,
+        displayPrecision, datetimeFormat, rangeInputMode,
     )
 }
 
@@ -188,14 +190,17 @@ private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> = li
     secondaryChipData(
         secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain,
         secondary1Action, secondary1ShowValue, secondary1ConfirmAction, secondary1DisplayPrecision, secondary1DatetimeFormat,
+        secondary1RangeInputMode,
     ),
     secondaryChipData(
         secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain,
         secondary2Action, secondary2ShowValue, secondary2ConfirmAction, secondary2DisplayPrecision, secondary2DatetimeFormat,
+        secondary2RangeInputMode,
     ),
     secondaryChipData(
         secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain,
         secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision, secondary3DatetimeFormat,
+        secondary3RangeInputMode,
     ),
 )
 
@@ -333,6 +338,7 @@ private fun SlotRow(
         rangeLabel = label,
         actionState = actionState,
         confirmAction = slot.confirmAction,
+        rangeInputMode = slot.rangeInputMode,
     )
 
     Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -402,6 +408,7 @@ private fun SecondaryChip(
         rangeLabel = label,
         actionState = actionState,
         confirmAction = chip.confirmAction,
+        rangeInputMode = chip.rangeInputMode,
     )
 
     Row(modifier = chipModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -435,6 +442,7 @@ private fun clickModifier(
     rangeLabel: String,
     actionState: EntityStateEntity?,
     confirmAction: Boolean,
+    rangeInputMode: String?,
 ): GlanceModifier {
     if (action == "NONE") {
         return base.clickable(
@@ -472,20 +480,42 @@ private fun clickModifier(
         )
         "RANGE" -> {
             val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
-            val intent = Intent(context, RangeControlActivity::class.java).apply {
-                putExtra(RangeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
-                putExtra(RangeControlActivity.EXTRA_LABEL, rangeLabel)
-                putExtra(RangeControlActivity.EXTRA_DOMAIN, actionDomain)
-                putExtra(RangeControlActivity.EXTRA_IS_ON, actionState.state != "off" && actionState.state != "closed")
-                // Sendes som præcise (decimal) værdier — number/input_number kan have en
-                // fraktioneret state/step (fx 21.5), som ikke må afrundes væk.
-                putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE_PRECISE, rangeCurrentValue(actionDomain, actionState, attrs))
-                putExtra(RangeControlActivity.EXTRA_MIN_VALUE_PRECISE, rangeMin(actionDomain, attrs))
-                putExtra(RangeControlActivity.EXTRA_MAX_VALUE_PRECISE, rangeMax(actionDomain, attrs))
-                if (actionDomain == "number" || actionDomain == "input_number") {
-                    putExtra(RangeControlActivity.EXTRA_UNIT_SUFFIX, attrs.optString("unit_of_measurement", ""))
+            val current = rangeCurrentValue(actionDomain, actionState, attrs)
+            val min = rangeMin(actionDomain, attrs)
+            val max = rangeMax(actionDomain, attrs)
+            val unit = if (actionDomain == "number" || actionDomain == "input_number") {
+                attrs.optString("unit_of_measurement", "")
+            } else ""
+            // Task 13 (del A): "FIELD" → indtast-værdi-dialog (NumberInputActivity); ellers
+            // (null/"SLIDER") den uændrede skyder-dialog (RangeControlActivity). Begge afsender
+            // samme service via den delte sendRangeValue.
+            val intent = if (rangeInputMode == "FIELD") {
+                Intent(context, NumberInputActivity::class.java).apply {
+                    putExtra(NumberInputActivity.EXTRA_ENTITY_ID, actionEntityId)
+                    putExtra(NumberInputActivity.EXTRA_LABEL, rangeLabel)
+                    putExtra(NumberInputActivity.EXTRA_DOMAIN, actionDomain)
+                    putExtra(NumberInputActivity.EXTRA_CURRENT_VALUE, current)
+                    putExtra(NumberInputActivity.EXTRA_MIN_VALUE, min)
+                    putExtra(NumberInputActivity.EXTRA_MAX_VALUE, max)
+                    putExtra(NumberInputActivity.EXTRA_UNIT_SUFFIX, unit)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            } else {
+                Intent(context, RangeControlActivity::class.java).apply {
+                    putExtra(RangeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                    putExtra(RangeControlActivity.EXTRA_LABEL, rangeLabel)
+                    putExtra(RangeControlActivity.EXTRA_DOMAIN, actionDomain)
+                    putExtra(RangeControlActivity.EXTRA_IS_ON, actionState.state != "off" && actionState.state != "closed")
+                    // Sendes som præcise (decimal) værdier — number/input_number kan have en
+                    // fraktioneret state/step (fx 21.5), som ikke må afrundes væk.
+                    putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE_PRECISE, current)
+                    putExtra(RangeControlActivity.EXTRA_MIN_VALUE_PRECISE, min)
+                    putExtra(RangeControlActivity.EXTRA_MAX_VALUE_PRECISE, max)
+                    if (actionDomain == "number" || actionDomain == "input_number") {
+                        putExtra(RangeControlActivity.EXTRA_UNIT_SUFFIX, unit)
+                    }
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
             }
             base.clickable(actionStartActivity(intent))
         }

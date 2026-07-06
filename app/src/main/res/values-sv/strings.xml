@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Avbryt</string>
+    <string name="save">Spara</string>
     <string name="disconnect">Koppla från</string>
     <string name="connect">Anslut</string>
     <string name="connecting">Ansluter…</string>
