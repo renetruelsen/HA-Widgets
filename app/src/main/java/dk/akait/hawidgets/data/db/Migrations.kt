@@ -61,3 +61,17 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         db.execSQL("ALTER TABLE multi_widget ADD COLUMN showRefreshIcon INTEGER NOT NULL DEFAULT 1")
     }
 }
+
+/** v5 → v6: bekræft-ved-tryk + værdi-formatering (præcision/datetime-format) pr. slot+chips (v0.3.0). */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN confirmAction INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN displayPrecision INTEGER")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN datetimeFormat TEXT")
+        for (n in 1..3) {
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}ConfirmAction INTEGER")
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}DisplayPrecision INTEGER")
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}DatetimeFormat TEXT")
+        }
+    }
+}
