@@ -6,7 +6,6 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -42,7 +41,6 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.color.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
@@ -57,6 +55,8 @@ import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.ToggleEntityAction
 import dk.akait.hawidgets.widget.common.TriggerEntityAction
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetColors
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.domainIconResId
 import dk.akait.hawidgets.widget.common.formatDisplayValue
 import dk.akait.hawidgets.widget.common.formatEntityState
@@ -73,14 +73,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
-// Ramme rundt om hele slot-listen — tema-/dag-nat-baseret (IKKE længere en hardcodet grå
-// literal, jf. v0.2.26-code-review-fund om kontrast-risiko ved at blande en fast farve med
-// tema-baserede chip-farver). Lav alpha, så tapetet stadig anes svagt igennem — "transparent
-// ramme" jf. brugerens eget ord, ikke en solid udfyldning.
-private val FRAME_BACKGROUND = ColorProvider(
-    day = Color(0x1F1C1B1F),
-    night = Color(0x1FE6E1E5),
-)
+// Ramme rundt om hele slot-listen — tema-bevidst (IKKE længere en hardcodet grå literal,
+// jf. v0.2.26-code-review-fund om kontrast-risiko). Farven resolves nu via
+// WidgetColors.frameBackground(context), så det globale tema-valg (lys/mørk/system) styrer
+// hvilken side der bruges — for "system" er day/night-værdierne uændrede (ingen regression).
+// Lav alpha, så tapetet stadig anes svagt igennem — "transparent ramme" jf. brugerens ord.
 internal const val FRAME_PADDING_DP = 4
 internal const val ROW_GAP_DP = 4
 internal const val CHIP_GAP_DP = 4
@@ -122,7 +119,7 @@ class MultiEntityWidget : GlanceAppWidget() {
             val (config, slots, states) = viewState
             val showRefreshIcon = config?.showRefreshIcon ?: true
 
-            GlanceTheme {
+            WidgetGlanceTheme(context) {
                 if (slots.isEmpty()) {
                     UnconfiguredWidgetContent(
                         context, appWidgetId, MultiEntityWidgetConfigActivity::class.java, R.drawable.ic_multi_entity,
@@ -235,7 +232,7 @@ private fun MultiEntityContent(
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(FRAME_BACKGROUND)
+            .background(WidgetColors.frameBackground(context))
             .cornerRadius(16.dp)
             .padding(FRAME_PADDING_DP.dp),
     ) {

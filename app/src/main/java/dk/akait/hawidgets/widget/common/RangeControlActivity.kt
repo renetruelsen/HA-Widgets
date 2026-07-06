@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
@@ -82,7 +83,7 @@ class RangeControlActivity : ComponentActivity() {
         val initialValue = rawInitialValue
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     tonalElevation = 6.dp,

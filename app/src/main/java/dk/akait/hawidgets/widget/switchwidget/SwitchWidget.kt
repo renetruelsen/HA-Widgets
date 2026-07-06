@@ -30,6 +30,7 @@ import dk.akait.hawidgets.data.db.EntityWidgetEntity
 import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
 import dk.akait.hawidgets.widget.common.ToggleEntityAction
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
@@ -58,7 +59,7 @@ class SwitchWidget : GlanceAppWidget() {
                 }
                 .collectAsState(initial = initialCfg to initialState)
             val (cfg, state) = viewState
-            GlanceTheme {
+            WidgetGlanceTheme(context) {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (cfg == null) {
                     UnconfiguredWidgetContent(context, appWidgetId, SwitchWidgetConfigActivity::class.java, R.drawable.ic_switch)

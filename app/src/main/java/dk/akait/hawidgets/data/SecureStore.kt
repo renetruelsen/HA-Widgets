@@ -23,6 +23,16 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_TOKEN, null)
         set(value) = prefs.edit().putString(KEY_TOKEN, value).apply()
 
+    /**
+     * Global tema-valg der overstyrer systemets lys/mørk-indstilling i HELE app-UI'et og i
+     * ALLE Glance-widgets (IKKE WebView-dashboardet — det styres af HA-serveren). Gyldige
+     * værdier: "light" | "dark" | "system". Default "system" → identisk med den historiske
+     * adfærd (følg systemets nattilstand).
+     */
+    var themeMode: String
+        get() = prefs.getString(KEY_THEME_MODE, THEME_SYSTEM) ?: THEME_SYSTEM
+        set(value) = prefs.edit().putString(KEY_THEME_MODE, value).apply()
+
     val isConfigured: Boolean
         get() = !baseUrl.isNullOrBlank() && !token.isNullOrBlank()
 
@@ -45,7 +55,12 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         private const val FILE_NAME = "ha_secure_store"
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_TOKEN = "token"
+        private const val KEY_THEME_MODE = "theme_mode"
         private fun keyDashboard(id: Int) = "dashboard_path_$id"
+
+        const val THEME_LIGHT = "light"
+        const val THEME_DARK = "dark"
+        const val THEME_SYSTEM = "system"
 
         @Volatile
         private var instance: SecureStore? = null

@@ -65,6 +65,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
@@ -94,7 +95,7 @@ class MultiEntityWidgetConfigActivity : ComponentActivity() {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 MultiEntityConfigScreen(
                     appWidgetId = appWidgetId,
                     onSaved = {

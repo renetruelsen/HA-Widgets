@@ -42,6 +42,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
@@ -73,7 +74,7 @@ abstract class BaseEntityPickerActivity : ComponentActivity() {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 EntityPickerScreen(
                     appWidgetId = appWidgetId,
                     domain = domain,

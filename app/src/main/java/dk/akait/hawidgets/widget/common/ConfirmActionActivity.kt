@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.db.AppDatabase
@@ -63,7 +64,7 @@ class ConfirmActionActivity : ComponentActivity() {
         val isOn = intent.getBooleanExtra(EXTRA_IS_ON, false)
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp) {
                     val scope = rememberCoroutineScope()
                     var busy by remember { mutableStateOf(false) }

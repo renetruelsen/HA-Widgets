@@ -30,6 +30,7 @@ import androidx.glance.action.actionParametersOf
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
 import dk.akait.hawidgets.widget.common.autoDateTime
@@ -64,7 +65,7 @@ class SensorWidget : GlanceAppWidget() {
                 }
                 .collectAsState(initial = initialCfg to initialState)
             val (cfg, state) = viewState
-            GlanceTheme {
+            WidgetGlanceTheme(context) {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (cfg == null) {
                     UnconfiguredWidgetContent(context, appWidgetId, SensorWidgetConfigActivity::class.java, R.drawable.ic_sensor)

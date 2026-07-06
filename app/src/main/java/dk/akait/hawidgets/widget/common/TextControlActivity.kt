@@ -22,6 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
@@ -46,7 +47,7 @@ class TextControlActivity : ComponentActivity() {
         val maxLength = intent.getIntExtra(EXTRA_MAX_LENGTH, 255).takeIf { it > 0 } ?: 255
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp) {
                     val scope = rememberCoroutineScope()
                     var text by remember { mutableStateOf(initialValue) }

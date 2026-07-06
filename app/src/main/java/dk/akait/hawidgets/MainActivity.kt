@@ -11,6 +11,7 @@ import android.app.LocaleManager
 import android.os.Build
 import android.os.LocaleList
 import androidx.annotation.RequiresApi
+import androidx.glance.appwidget.updateAll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Widgets
@@ -78,7 +80,18 @@ import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
+import dk.akait.hawidgets.widget.ShortcutWidget
 import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
+import dk.akait.hawidgets.widget.automation.AutomationWidget
+import dk.akait.hawidgets.widget.binarysensor.BinarySensorWidget
+import dk.akait.hawidgets.widget.climate.ClimateWidget
+import dk.akait.hawidgets.widget.cover.CoverWidget
+import dk.akait.hawidgets.widget.light.LightWidget
+import dk.akait.hawidgets.widget.multientity.MultiEntityWidget
+import dk.akait.hawidgets.widget.scene.SceneWidget
+import dk.akait.hawidgets.widget.script.ScriptWidget
+import dk.akait.hawidgets.widget.sensor.SensorWidget
+import dk.akait.hawidgets.widget.switchwidget.SwitchWidget
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -405,6 +418,23 @@ private fun SettingsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+            val store = remember { SecureStore.get(context) }
+            val scope = rememberCoroutineScope()
+            var themeMode by remember { mutableStateOf(store.themeMode) }
+            ThemeRow(currentMode = themeMode) { mode ->
+                store.themeMode = mode
+                themeMode = mode
+                // Widgets læser IKKE Room for tema-valget (det bor i SecureStore), så en
+                // reaktiv Flow kan ikke drive gen-render. Tving derfor hver placeret widget
+                // til at gen-tegne via updateAll() (ADR-5).
+                scope.launch { updateAllWidgets(context) }
+                // App-UI'et gen-læser themeMode i HaWidgetsTheme ved recomposition —
+                // recreate() sikrer at HELE activity-træet (inkl. denne sheet) skifter tema.
+                (context as? android.app.Activity)?.recreate()
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 var currentTag by remember { mutableStateOf(currentLanguageTag(context)) }
                 LanguageRow(currentTag = currentTag) { tag ->
@@ -505,4 +535,72 @@ private fun LanguageRow(currentTag: String?, onSelect: (String?) -> Unit) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeRow(currentMode: String, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        SecureStore.THEME_SYSTEM to stringResource(R.string.theme_system),
+        SecureStore.THEME_LIGHT to stringResource(R.string.theme_light),
+        SecureStore.THEME_DARK to stringResource(R.string.theme_dark),
+    )
+    val selectedLabel = options.firstOrNull { it.first == currentMode }?.second
+        ?: stringResource(R.string.theme_system)
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.theme_label),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                selectedLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (mode, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSelect(mode)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+/** Tving alle placerede Glance-widgets til at gen-tegne efter et tema-skift. Én linje pr.
+ * GlanceAppWidget-klasse (jf. AndroidManifest's <receiver>-liste). */
+private suspend fun updateAllWidgets(context: android.content.Context) {
+    val app = context.applicationContext
+    LightWidget().updateAll(app)
+    SwitchWidget().updateAll(app)
+    SceneWidget().updateAll(app)
+    ScriptWidget().updateAll(app)
+    AutomationWidget().updateAll(app)
+    SensorWidget().updateAll(app)
+    BinarySensorWidget().updateAll(app)
+    CoverWidget().updateAll(app)
+    ClimateWidget().updateAll(app)
+    MultiEntityWidget().updateAll(app)
+    ShortcutWidget().updateAll(app)
 }
