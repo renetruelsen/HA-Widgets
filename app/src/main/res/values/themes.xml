@@ -12,4 +12,15 @@
         <item name="android:windowDisablePreview">true</item>
         <item name="android:windowAnimationStyle">@null</item>
     </style>
+
+    <!-- Overstyrer glance-appwidget-bibliotekets tomme style-hook af samme navn (app-resurser
+         vinder over bibliotekets ved merge). Glance's LazyColumn renderes som en klassisk
+         ListView (glance_list.xml i biblioteket), hvis brede system-scrollbar skæmmede
+         multi-entity widgetten — her gøres den slank, afrundet og hurtigt-fadende. -->
+    <style name="Glance.AppWidget.List" parent="">
+        <item name="android:scrollbarSize">3dp</item>
+        <item name="android:scrollbarThumbVertical">@drawable/glance_scrollbar_thumb</item>
+        <item name="android:scrollbarDefaultDelayBeforeFade">400</item>
+        <item name="android:scrollbarFadeDuration">400</item>
+    </style>
 </resources>

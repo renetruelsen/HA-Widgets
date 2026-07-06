@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Slank, afrundet scrollbar-thumb til Glance-lister (se Glance.AppWidget.List i themes.xml). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/glance_scrollbar_thumb" />
+    <corners android:radius="2dp" />
+</shape>

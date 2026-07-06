@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#03A9F4</color>
+    <!-- Scrollbar-thumb i Glance-lister (multi-entity widget). Halvtransparent mørk i lys
+         tilstand; values-night overstyrer med halvtransparent lys. -->
+    <color name="glance_scrollbar_thumb">#66444444</color>
 </resources>

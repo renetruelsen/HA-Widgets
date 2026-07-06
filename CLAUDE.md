@@ -443,6 +443,47 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     duplikeret aktivitets-bootstrap i Range/Text/DateTimeControlActivity (#7),
     hand-unrolled secondary1/2/3-felter (#9), 5 parallelle `when(domain)`-funktioner
     (#10).
+- ✅ **v0.2.35-36 (2026-07-04/05, superseret af v0.2.37):** dynamisk rækkehøjde-formel
+  (`LocalSize.current.height` strakte rækkerne til footprintet) + refresh-alle-ikon
+  (Room v4→v5 `showRefreshIcon`, config-toggle). Stretch-formlen udløste to bugs:
+  (1) Nova viste landskabs-RemoteViews i portræt under `SizeMode.Exact` (omgået i
+  v0.2.36 med `SizeMode.Responsive` + 4 buckets), (2) chips mistede runde hjørner +
+  kort beskåret i bunden med refresh-ikon. Kun refresh-ikon-featuren overlevede til
+  v0.2.37.
+- ✅ **v0.2.37 — MultiEntityWidget: revert til naturlig rækkehøjde + lille refresh-strip
+  (2026-07-06):**
+  - **Nøgleindsigt (brainstorm 2 udviklere + UX'er, brugergodkendt):** begge
+    v0.2.35-36-bugs kræver at komponeret indhold LÆSER `LocalSize` — Android
+    komponerer under `SizeMode.Exact` altid både portræt- og landskabs-udgave, og
+    fejlvalget er kun synligt når de to kan afvige. `c152b6d` (v0.2.34) havde allerede
+    naturlig wrap-content rækkehøjde + `LazyColumn`-scroll — dvs. præcis den godkendte
+    kravspec (fast højde, aldrig stræk, scroll ved overflow, tomrum ved oversize).
+  - **Revert:** `SizeMode.Exact` genindført (advarsels-kommentar mod fremtidig
+    `LocalSize`-brug), hele rækkehøjde-formlen + `MIN_ROW_HEIGHT_DP` +
+    `rowHeight`-parameter fjernet, `maxResizeHeight` 270→400dp. Refresh-featuren
+    (Room v5, toggle, `MultiWidgetViewState`) bevaret uændret.
+  - **Refresh-strip skrumpet:** 24dp høj (var 32) med 16dp ikon (var 48); HELE
+    bjælken klikbar (16dp ikon alene for lille tap-target).
+  - **QA:** emulator (ny widget m. 3 slots + chip mod ægte HA — emulatoren HAR
+    netværk igen): naturlig højde, tomrum ved oversize, scroll ved undersize,
+    strip-tryk → `SyncWorker` SUCCESS i logcat, række-toggle verificeret begge veje
+    (HA-state bekræftet via MCP). S23/Nova: brugerverificeret OK.
+  - Spec: `docs/superpowers/specs/2026-07-05-multi-entity-fixed-height-revert-design.md`,
+    plan: `docs/superpowers/plans/2026-07-05-multi-entity-fixed-height-revert.md`.
+- ✅ **v0.2.38 — slank scrollbar i Glance-lister (2026-07-06, efter brugerfeedback på
+  S23-scrollbarens udseende):**
+  - Glance's `LazyColumn` renderes som klassisk `ListView` (`glance_list.xml` i
+    glance-appwidget), som peger på den BEVIDST TOMME style-hook
+    `Glance.AppWidget.List` — appens `values/themes.xml` definerer samme style-navn
+    og vinder ved resource-merge. Ingen layout-kopi/hack.
+  - Style: `scrollbarSize=3dp`, afrundet halvtransparent thumb
+    (`drawable/glance_scrollbar_thumb.xml`, farve `@color/glance_scrollbar_thumb` m.
+    `values-night`-variant), fade efter 400ms. Valgt frem for `scrollbars=none` —
+    overflow-rækker nås KUN via scroll, så affordance bevares.
+  - Gælder globalt for alle Glance-lister i appen (kun multi-widget bruger LazyColumn
+    i dag). Verificeret på emulator + S23.
+  - **OBS:** code-review for v0.2.37-38 bevidst udskudt (flere rettelser på vej i
+    samme serie).
 
 ## Næste skridt
 
