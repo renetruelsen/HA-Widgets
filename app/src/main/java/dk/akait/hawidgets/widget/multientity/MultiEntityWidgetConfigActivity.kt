@@ -115,6 +115,8 @@ private data class SecondarySlotDraft(
     val action: String,
     /** Vis værditekst (ikke kun ikon) på chippen — brugervalgt, default via [defaultShowValueFor]. */
     val showValue: Boolean = defaultShowValueFor(action),
+    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
+    val confirmAction: Boolean = false,
 )
 
 private data class SlotDraft(
@@ -123,6 +125,8 @@ private data class SlotDraft(
     val action: String = "NONE",
     val label: String = "",
     val secondaryEntities: List<SecondarySlotDraft> = emptyList(),
+    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
+    val confirmAction: Boolean = false,
 )
 
 private const val MAX_SECONDARY_ENTITIES = 3
@@ -200,7 +204,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     fun secondaryDraftFrom(
         displayId: String?, displayDomain: String?,
         actionId: String?, actionDomain: String?,
-        action: String?, showValue: Boolean?,
+        action: String?, showValue: Boolean?, confirmAction: Boolean?,
     ): SecondarySlotDraft? {
         if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
         return SecondarySlotDraft(
@@ -208,6 +212,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             actionEntity = entityOrPlaceholder(actionId, actionDomain),
             action = action,
             showValue = showValue ?: defaultShowValueFor(action),
+            confirmAction = confirmAction ?: false,
         )
     }
 
@@ -228,20 +233,20 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondaryDraftFrom(
                 slot.secondary1DisplayEntityId, slot.secondary1DisplayDomain,
                 slot.secondary1ActionEntityId, slot.secondary1ActionDomain, slot.secondary1Action,
-                slot.secondary1ShowValue,
+                slot.secondary1ShowValue, slot.secondary1ConfirmAction,
             ),
             secondaryDraftFrom(
                 slot.secondary2DisplayEntityId, slot.secondary2DisplayDomain,
                 slot.secondary2ActionEntityId, slot.secondary2ActionDomain, slot.secondary2Action,
-                slot.secondary2ShowValue,
+                slot.secondary2ShowValue, slot.secondary2ConfirmAction,
             ),
             secondaryDraftFrom(
                 slot.secondary3DisplayEntityId, slot.secondary3DisplayDomain,
                 slot.secondary3ActionEntityId, slot.secondary3ActionDomain, slot.secondary3Action,
-                slot.secondary3ShowValue,
+                slot.secondary3ShowValue, slot.secondary3ConfirmAction,
             ),
         )
-        return SlotDraft(display, actionEntity, normalizedAction, slot.label, secondaries)
+        return SlotDraft(display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction)
     }
 
     fun saveSlot(editIndex: Int?, draft: SlotDraft) {
@@ -257,24 +262,28 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             actionDomain = action.domain,
             action = draft.action,
             label = draft.label.trim(),
+            confirmAction = draft.confirmAction,
             secondary1DisplayEntityId = sec.getOrNull(0)?.displayEntity?.entityId,
             secondary1DisplayDomain = sec.getOrNull(0)?.displayEntity?.domain,
             secondary1ActionEntityId = sec.getOrNull(0)?.actionEntity?.entityId,
             secondary1ActionDomain = sec.getOrNull(0)?.actionEntity?.domain,
             secondary1Action = sec.getOrNull(0)?.action,
             secondary1ShowValue = sec.getOrNull(0)?.showValue,
+            secondary1ConfirmAction = sec.getOrNull(0)?.confirmAction,
             secondary2DisplayEntityId = sec.getOrNull(1)?.displayEntity?.entityId,
             secondary2DisplayDomain = sec.getOrNull(1)?.displayEntity?.domain,
             secondary2ActionEntityId = sec.getOrNull(1)?.actionEntity?.entityId,
             secondary2ActionDomain = sec.getOrNull(1)?.actionEntity?.domain,
             secondary2Action = sec.getOrNull(1)?.action,
             secondary2ShowValue = sec.getOrNull(1)?.showValue,
+            secondary2ConfirmAction = sec.getOrNull(1)?.confirmAction,
             secondary3DisplayEntityId = sec.getOrNull(2)?.displayEntity?.entityId,
             secondary3DisplayDomain = sec.getOrNull(2)?.displayEntity?.domain,
             secondary3ActionEntityId = sec.getOrNull(2)?.actionEntity?.entityId,
             secondary3ActionDomain = sec.getOrNull(2)?.actionEntity?.domain,
             secondary3Action = sec.getOrNull(2)?.action,
             secondary3ShowValue = sec.getOrNull(2)?.showValue,
+            secondary3ConfirmAction = sec.getOrNull(2)?.confirmAction,
         )
         slots = if (editIndex == null) slots + newSlot
         else slots.toMutableList().also { it[editIndex] = newSlot }
@@ -366,6 +375,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onChangeTarget = { step = Step.EntityPicker(PickerTarget.Action, s.editIndex, s.draft) },
             onActionChange = { newAction -> step = Step.SlotEditor(s.editIndex, s.draft.copy(action = newAction)) },
             onLabelChange = { newLabel -> step = Step.SlotEditor(s.editIndex, s.draft.copy(label = newLabel)) },
+            onConfirmActionChange = { confirm -> step = Step.SlotEditor(s.editIndex, s.draft.copy(confirmAction = confirm)) },
             onAddSecondary = {
                 step = Step.EntityPicker(PickerTarget.SecondaryDisplay(s.draft.secondaryEntities.size), s.editIndex, s.draft)
             },
@@ -384,6 +394,11 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onSecondaryShowValueChange = { index, showValue ->
                 val updated = s.draft.secondaryEntities.toMutableList()
                 updated[index] = updated[index].copy(showValue = showValue)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryConfirmActionChange = { index, confirm ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(confirmAction = confirm)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
             onSave = { saveSlot(s.editIndex, s.draft) },
@@ -602,11 +617,13 @@ private fun SlotEditorScreen(
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
     onLabelChange: (String) -> Unit,
+    onConfirmActionChange: (Boolean) -> Unit,
     onAddSecondary: () -> Unit,
     onRemoveSecondary: (Int) -> Unit,
     onSecondaryChangeTarget: (Int) -> Unit,
     onSecondaryActionChange: (Int, String) -> Unit,
     onSecondaryShowValueChange: (Int, Boolean) -> Unit,
+    onSecondaryConfirmActionChange: (Int, Boolean) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -728,6 +745,15 @@ private fun SlotEditorScreen(
                         }
                     }
                 }
+                if (draft.action == "TOGGLE" || draft.action == "TRIGGER") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.confirm_action_switch), modifier = Modifier.weight(1f))
+                        Switch(checked = draft.confirmAction, onCheckedChange = onConfirmActionChange)
+                    }
+                }
                 if (targetDiffers) {
                     Text(
                         stringResource(R.string.target_label, action.friendlyName),
@@ -750,6 +776,7 @@ private fun SlotEditorScreen(
                         onChangeTarget = { onSecondaryChangeTarget(index) },
                         onActionChange = { newAction -> onSecondaryActionChange(index, newAction) },
                         onShowValueChange = { showValue -> onSecondaryShowValueChange(index, showValue) },
+                        onConfirmActionChange = { confirm -> onSecondaryConfirmActionChange(index, confirm) },
                     )
                     if (index < draft.secondaryEntities.size - 1) HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 }
@@ -792,6 +819,7 @@ private fun SecondaryEntityRow(
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
     onShowValueChange: (Boolean) -> Unit,
+    onConfirmActionChange: (Boolean) -> Unit,
 ) {
     val display = secondary.displayEntity
     val action = secondary.actionEntity
@@ -860,6 +888,20 @@ private fun SecondaryEntityRow(
                 modifier = Modifier.weight(1f),
             )
             Switch(checked = secondary.showValue, onCheckedChange = onShowValueChange)
+        }
+        if (!readOnly && (secondary.action == "TOGGLE" || secondary.action == "TRIGGER")) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.confirm_action_switch),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = secondary.confirmAction, onCheckedChange = onConfirmActionChange)
+            }
         }
     }
 }
