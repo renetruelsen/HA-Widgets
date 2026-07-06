@@ -8,13 +8,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -64,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
@@ -520,9 +520,10 @@ private fun ListScreen(
     }
 }
 
-/** Kort pr. slot: klikbart (svagt tonet) hovedindhold m/chevron → åbner editor, smal
- * fjern-søjle, og en ↑/↓-sorteringssøjle der fylder kortets fulde højde. Alle sekundær-
- * entiteter listes altid fuldt synligt — ingen skjult "+N"-optælling. */
+/** Kort pr. slot: klikbart (svagt tonet) hovedindhold m/navn på egen fuld-bredde række
+ * (1 linje + ellipsis) og chevron → åbner editor, efterfulgt af en bund-række med
+ * ↑/↓/slet som separate 48dp-ikonknapper. Alle sekundær-entiteter listes altid fuldt
+ * synligt — ingen skjult "+N"-optælling. */
 @Composable
 private fun SlotCard(
     slot: MultiWidgetSlotEntity,
@@ -533,17 +534,15 @@ private fun SlotCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Max)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp)),
     ) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f))
                 .clickable(onClick = onClick)
                 .padding(10.dp),
@@ -555,24 +554,33 @@ private fun SlotCard(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(slot.label.ifEmpty { slot.displayEntityId }, style = MaterialTheme.typography.bodyLarge)
-                        Icon(
-                            Icons.Filled.ChevronRight,
-                            contentDescription = stringResource(R.string.cd_edit),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    val actionSummary = if (slot.actionEntityId == slot.displayEntityId) {
-                        actionLabel(slot.action)
-                    } else {
-                        stringResource(R.string.label_with_target, actionLabel(slot.action), slot.actionEntityId)
-                    }
-                    Text(actionSummary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(
+                    slot.label.ifEmpty { slot.displayEntityId },
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.Filled.ChevronRight,
+                    contentDescription = stringResource(R.string.cd_edit),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
             }
+            val actionSummary = if (slot.actionEntityId == slot.displayEntityId) {
+                actionLabel(slot.action)
+            } else {
+                stringResource(R.string.label_with_target, actionLabel(slot.action), slot.actionEntityId)
+            }
+            Text(
+                actionSummary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 30.dp, top = 2.dp),
+            )
             val secondarySummaries = secondarySlotSummaries(slot)
             if (secondarySummaries.isNotEmpty()) {
                 Column(modifier = Modifier.padding(start = 30.dp, top = 6.dp)) {
@@ -594,47 +602,30 @@ private fun SlotCard(
                 }
             }
         }
-        Box(
+        Row(
             modifier = Modifier
-                .width(32.dp)
-                .fillMaxHeight()
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                .clickable(onClick = onRemove),
-            contentAlignment = Alignment.Center,
+                .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-        }
-        Column(modifier = Modifier.width(36.dp).fillMaxHeight()) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                    .then(if (canMoveUp) Modifier.clickable(onClick = onMoveUp) else Modifier),
-                contentAlignment = Alignment.Center,
-            ) {
+            IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Filled.KeyboardArrowUp,
                     contentDescription = stringResource(R.string.cd_move_up),
                     tint = if (canMoveUp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
             }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                    .then(if (canMoveDown) Modifier.clickable(onClick = onMoveDown) else Modifier),
-                contentAlignment = Alignment.Center,
-            ) {
+            IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Filled.KeyboardArrowDown,
                     contentDescription = stringResource(R.string.cd_move_down),
                     tint = if (canMoveDown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
+            }
+            IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
     }
