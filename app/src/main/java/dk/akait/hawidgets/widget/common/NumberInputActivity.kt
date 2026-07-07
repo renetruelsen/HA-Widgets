@@ -80,9 +80,9 @@ class NumberInputActivity : ComponentActivity() {
                         val value = parsed ?: return
                         scope.launch {
                             busy = true
-                            sendRangeValue(applicationContext, domain, entityId, value)
+                            val ok = sendRangeValue(applicationContext, domain, entityId, value)
                             busy = false
-                            finish()
+                            if (ok) finish() else showActionError(applicationContext)
                         }
                     }
 
