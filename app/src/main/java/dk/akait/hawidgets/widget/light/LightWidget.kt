@@ -36,6 +36,7 @@ import dk.akait.hawidgets.data.db.EntityWidgetEntity
 import dk.akait.hawidgets.widget.common.RangeControlActivity
 import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
 import dk.akait.hawidgets.worker.SyncWorker
@@ -74,7 +75,7 @@ class LightWidget : GlanceAppWidget() {
             val (widgetCfg, entityState) = viewState
             Log.d("HA_WIDGET", "recompose: appWidgetId=$appWidgetId cfg=${widgetCfg?.entityId} state=${entityState?.state}")
 
-            GlanceTheme {
+            WidgetGlanceTheme(context) {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (widgetCfg == null) {
                     UnconfiguredWidgetContent(context, appWidgetId, LightWidgetConfigActivity::class.java, R.drawable.ic_lightbulb)

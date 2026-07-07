@@ -11,6 +11,6 @@
     android:widgetFeatures="reconfigurable"
     android:configure="dk.akait.hawidgets.widget.sensor.SensorWidgetConfigActivity"
     android:description="@string/sensor_widget_description"
-    android:previewImage="@drawable/ic_sensor"
+    android:previewImage="@drawable/preview_sensor"
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/glance_default_loading_layout" />

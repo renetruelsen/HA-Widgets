@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.BuildConfig
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.DashboardInfo
@@ -79,7 +80,7 @@ class ShortcutWidgetConfigActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     ConfigScreen(
                         appWidgetId = appWidgetId,

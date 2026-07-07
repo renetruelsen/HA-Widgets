@@ -94,3 +94,11 @@ fun compatibleActionsFor(domain: String): List<String> = when (domain) {
  * har valgt — værdi-bærende handlinger (info/range/tekst/dato-tid) foreslår værdi-tekst,
  * rene til/fra- og udløs-handlinger foreslår ikon-kun (tilstanden ses i baggrundsfarven). */
 fun defaultShowValueFor(action: String): Boolean = action != "TOGGLE" && action != "TRIGGER"
+
+/** Domæner uden en fast tekst-tabel i [formatEntityState] — rå værdi (+ evt. enhed) eller
+ * datetime, og dermed kandidater til [dk.akait.hawidgets.widget.common.formatDisplayValue]'s
+ * precision/datetime-format-overrides (v0.3.0, C2). Matcher formatEntityState's "øvrige
+ * rå værdi-domæner"-fallback-gren 1:1. */
+fun isRawValueDomain(domain: String): Boolean = domain in setOf(
+    "sensor", "number", "input_number", "input_text", "input_datetime", "input_select",
+)

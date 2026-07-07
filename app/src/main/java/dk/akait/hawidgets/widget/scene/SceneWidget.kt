@@ -29,6 +29,7 @@ import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.EntityWidgetEntity
 import dk.akait.hawidgets.widget.common.TriggerEntityAction
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
@@ -57,7 +58,7 @@ class SceneWidget : GlanceAppWidget() {
                 }
                 .collectAsState(initial = initialCfg to initialState)
             val (cfg, state) = viewState
-            GlanceTheme {
+            WidgetGlanceTheme(context) {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (cfg == null) {
                     UnconfiguredWidgetContent(context, appWidgetId, SceneWidgetConfigActivity::class.java, R.drawable.ic_scene)

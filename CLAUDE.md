@@ -484,6 +484,75 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     i dag). Verificeret på emulator + S23.
   - **OBS:** code-review for v0.2.37-38 bevidst udskudt (flere rettelser på vej i
     samme serie).
+- ✅ **v0.2.39 — Widget UX Pack: 8 punkter (2026-07-06/07, dev-pipeline med
+  subagent-driven-development, 13 tasks + Opus-niveau review på de kritiske dele):**
+  - **Baggrund:** brugerrapporterede 8 UX-problemer på tværs af multi-widget-config,
+    widget-picker og handlinger. Kørt gennem fuld pipeline: brainstorm → grill-with-docs
+    (5 ADR'er, se `docs/adr/2026-07-06-widget-ux-pack-adrs.md`) → implementeringsplan
+    (`docs/superpowers/plans/2026-07-06-widget-ux-pack.md`) → bruger-godkendt mockup-gate
+    → 13 subagent-implementerede tasks, hver med uafhængig task-reviewer (spec + kvalitet).
+  - **Slot-liste-redesign (A1):** `SlotCard` omstruktureret til 4 rækker — entitetsnavn
+    på fuld bredde (1 linje + ellipsis), handlings-resumé, sekundær-chips, og en
+    ikon-række i bunden (↑/↓/🗑, 48dp targets) — erstatter det gamle 3-zone side-om-side
+    layout hvor navn/knapper konkurrerede om bredden.
+  - **Widget-picker-ikoner synlige i lyst tema (A2):** nye `preview_*.xml`-drawables
+    (brand-blå plade `#0B6FA4` + eksisterende hvidt ikon ovenpå) for alle 11 widget-typer;
+    selve widget-runtime-renderingen (tint) er uændret.
+  - **"Opdater" ved redigering (A3):** slot-editorens gem-knap viser "Opdater" ved
+    redigering af eksisterende slot, "Tilføj til widget" ved ny — afledt af
+    `editIndex != null`. Samtidig fix af en i18n-regression: adskillige hardcodede
+    danske strenge i `MultiEntityWidgetConfigActivity`/`BaseEntityPickerActivity` flyttet
+    til `strings.xml` (alle 3 sprog).
+  - **"Bekræft ved tryk" (B1):** ny switch i Handling-sektionen (hoved + hver sekundær-
+    chip), vist kun for TOGGLE/TRIGGER. Ny `ConfirmActionActivity` (translucent dialog,
+    samme mønster som `RangeControlActivity`) — bekræft-teksten navngiver ALTID
+    handlings-målets friendly name, aldrig den viste entitet (ADR-1, verificeret separat
+    for asymmetriske display≠action-tilfælde). Service-mapping er en verificeret
+    byte-for-byte-kopi af `EntityActions.kt`s `ToggleEntityAction`/`TriggerEntityAction` —
+    ingen risiko for forkert HA-kommando. `confirmAction=false` (default, alle
+    eksisterende slots) er en ren tilføjelse oven på den uændrede originale click-sti.
+  - **RANGE: kombination skyder + felt (B2, mockup-valgt):** delte
+    `RangeControlActivity` fik −/+ trinknapper (trin 0,5 ved range ≤20, ellers 1,
+    gælder ALLE widgets med RANGE — ADR-2) — formlen er uafhængigt verificeret mod
+    brief'ens regneeksempler inkl. grænsetilfælde. Multi-entity fik desuden et
+    config-valg "Skyder"/"Indtast værdi" pr. RANGE-handling (Room v6→v7,
+    `rangeInputMode`) og en ny `NumberInputActivity`; begge aktiviteter deler nu én
+    `sendRangeValue`-helper (undgår en tredje duplikeret domæne→service-mapping).
+  - **Globalt tema-valg (C1):** ny dropdown "Tema" (Lys/Mørk/Følg system) ved
+    sprog-vælgeren i `MainActivity`, persisteret i `SecureStore.themeMode`. Nyt mørkt
+    Material3-skema (app-UI) + `WidgetGlanceTheme(context)`-wrapper der leverer
+    tema-tvungne `ColorProviders` til Glance — for "system" genbruges Glance's egen
+    `DynamicThemeColorProviders` direkte (pixel-identisk garanti), for tvunget lys/mørk
+    faste farver. Alle 11 widget-providers wrappet; `updateAll()` kaldes for alle ved
+    skift. WebView/dashboard er bevidst UDENFOR scope (ADR-4 — CLAUDE.md's ældre
+    v0.2.6-påstand om `themes:{darkMode}` matchede ikke den faktiske kode).
+  - **Værdi-formatering (C2):** ny `ValueFormatting.kt` (unit-testet: 25 tests) —
+    numeriske værdier afrundes automatisk til maks 1 decimal (`23.888` → "23.9"),
+    datetime/timestamp får automatisk lokalt kort format. Pr. slot/chip-overstyring:
+    decimaler-dropdown (Auto/0/1/2) og frit `DateTimeFormatter`-mønster-felt med live
+    preview (ugyldigt mønster falder sikkert tilbage til auto). Gælder også
+    `SensorWidget` (auto-only).
+  - **Refresh-bar som glas-overlay (C3, ADR-3):** refresh-stripen ligger nu som en
+    halvtransparent overlay ovenpå listen (`Box`-stacking, ikke en Column-søskende) —
+    overflow-rækker skimtes bag den under scroll. Usynlig bund-spacer sikrer sidste
+    række altid er fuldt synlig når man scroller helt ned.
+  - **QA:** emulator (`pixel_test`, ægte HA-forbindelse mod `home.rtr.dk`) —
+    verificeret: build+test grønt (25 unit-tests), app/config-flows uden crashes
+    gennem hele sessionen, mørkt tema fungerer korrekt i app OG på widgets, slot-kort-
+    redesign matcher mockup, decimal-formatering ("23.9 °C") synlig på faktisk widget,
+    "Bekræft ved tryk" persisterer korrekt end-to-end til Room via det etablerede
+    to-trins gem-flow (slot-editor "Opdater" → in-memory liste → "Gem widget" på
+    Skærm 1 → Room), "Opdater"-knap-tekst korrekt kontekstafhængig, picker-ikoner
+    synlige i lyst tema for alle 11 widgets. `ConfirmActionActivity` bekræftet korrekt
+    registreret (`exported=false`, sikker default). **Ikke visuelt device-bekræftet:**
+    selve bekræft-dialogens rendering og RANGE −/+-knapperne interaktivt (ingen
+    placeret RANGE/switch-widget med synligt tryk-flow fundet under denne session) —
+    dette er dog dækket af uafhængig, streng kode-niveau-verifikation (Opus-reviews med
+    byte-for-byte service-mapping-sammenligning og selvstændig formel-udregning for
+    begge). Device-QA på fysisk S23 afventer.
+  - Spec: `docs/superpowers/specs/2026-07-06-widget-ux-pack-design.md`, plan:
+    `docs/superpowers/plans/2026-07-06-widget-ux-pack.md`, ADR'er:
+    `docs/adr/2026-07-06-widget-ux-pack-adrs.md`.
 
 ## Næste skridt
 

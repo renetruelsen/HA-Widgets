@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Annuller</string>
+    <string name="save">Gem</string>
     <string name="disconnect">Frakobl</string>
     <string name="connect">Forbind</string>
     <string name="connecting">Forbinder…</string>
@@ -108,4 +109,81 @@
     <string name="multi_entity_widget_label">HA Multi-entitet</string>
     <string name="multi_entity_widget_description">Flere entiteter i én widget — juster størrelse efter behov</string>
     <string name="multi_entity_refresh_all">Opdatér alle widgets</string>
+
+    <!-- Widget UX pack: multi-entity config additions -->
+    <string name="add_to_widget">Tilføj til widget</string>
+    <string name="update_slot">Opdater</string>
+    <string name="confirm_action_switch">Bekræft ved tryk</string>
+    <string name="confirm_dialog_cancel">Annullér</string>
+    <string name="confirm_dialog_confirm">Bekræft</string>
+    <string name="confirm_toggle_on">Tænd %1$s?</string>
+    <string name="confirm_toggle_off">Sluk %1$s?</string>
+    <string name="confirm_lock">Lås %1$s?</string>
+    <string name="confirm_unlock">Lås %1$s op?</string>
+    <string name="confirm_open_cover">Åbn %1$s?</string>
+    <string name="confirm_close_cover">Luk %1$s?</string>
+    <string name="confirm_trigger">Kør %1$s?</string>
+    <string name="display_precision_label">Decimaler</string>
+    <string name="precision_auto">Auto</string>
+    <string name="datetime_format_label">Datoformat</string>
+    <string name="datetime_format_hint">fx dd/MM HH:mm — tomt = automatisk</string>
+    <string name="theme_label">Tema</string>
+    <string name="theme_light">Lys</string>
+    <string name="theme_dark">Mørk</string>
+    <string name="theme_system">Følg system</string>
+
+    <!-- Widget UX pack: i18n-regressionsfix — flyttet fra hardcodet UI-tekst -->
+    <string name="ha_not_connected_error">HA ikke forbundet. Åbn HA Widgets og forbind først.</string>
+    <string name="customize_widget_title">Tilpas widget</string>
+    <string name="short_label_field">Kort label (valgfrit)</string>
+    <string name="short_label_placeholder">f.eks. Bad 1</string>
+    <string name="short_label_supporting">Vises på widget i stedet for enhedsnavn. Maks 12 tegn.</string>
+    <string name="back">Tilbage</string>
+    <string name="search_hint">Søg…</string>
+    <string name="multi_entity_config_title">Kombineret widget</string>
+    <string name="multi_entity_empty_hint">Ingen slots endnu — tryk \"Tilføj slot\" for at starte.</string>
+    <string name="multi_entity_show_refresh_icon">Vis refresh-ikon</string>
+    <string name="add_slot">+ Tilføj slot</string>
+    <string name="cd_edit">Rediger</string>
+    <string name="cd_remove">Fjern</string>
+    <string name="cd_move_up">Flyt op</string>
+    <string name="cd_move_down">Flyt ned</string>
+    <string name="slot_editor_title">Tilpas entitet</string>
+    <string name="section_view">Visning</string>
+    <string name="section_action">Handling</string>
+    <string name="change_entity">Skift entitet</string>
+    <string name="change">Skift</string>
+    <string name="action_invalid_target">Denne enhed kan ikke handles på — vælg et andet mål.</string>
+    <string name="action_read_only">Denne enhed kan kun vises — intet sker ved tryk.</string>
+    <string name="reacts_on_tap">Reagér på tryk</string>
+    <string name="on_tap_label">Ved tryk: %1$s</string>
+    <string name="slot_view_only_hint">Slotten viser kun status — tryk gør ingenting.</string>
+    <string name="target_label">Mål: %1$s</string>
+    <string name="choose_other_target">Vælg andet mål</string>
+    <string name="act_on_other_entity">Handl på en anden enhed</string>
+    <string name="extra_info_section">Ekstra info (%1$d/%2$d)</string>
+    <string name="extra_info_room_for_more">Plads til %1$d mere</string>
+    <string name="add_extra_entity">+ Tilføj ekstra entitet</string>
+    <string name="show_value_on_chip">Vis værdi på chippen</string>
+    <string name="picker_target_display_title">Vælg entitet der skal vises</string>
+    <string name="picker_target_action_title">Vælg handlingens mål</string>
+    <string name="action_toggle">Slå til/fra</string>
+    <string name="action_range">Åbn skyder</string>
+    <string name="action_trigger_long">Udløs automatisering/script</string>
+    <string name="action_trigger_short">Udløs</string>
+    <string name="action_text">Rediger tekst</string>
+    <string name="action_datetime">Rediger dato/tid</string>
+    <string name="action_view_only">Kun visning</string>
+    <string name="action_view_only_short">Vis kun status</string>
+    <!-- Task 13: RANGE −/+ trin-knapper (alle widgets) -->
+    <string name="range_step_down">Formindsk</string>
+    <string name="range_step_up">Forøg</string>
+    <!-- Task 13: RANGE input-tilstand (kun multi-entity) -->
+    <string name="range_input_mode_label">Ved tryk</string>
+    <string name="range_input_mode_slider">Skyder</string>
+    <string name="range_input_mode_field">Indtast værdi</string>
+    <string name="number_input_out_of_range">Værdien skal være mellem %1$s og %2$s</string>
+    <string name="label_with_target">%1$s → %2$s</string>
+    <string name="label_dash">%1$s — %2$s</string>
+    <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>
 </resources>

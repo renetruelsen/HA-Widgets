@@ -8,11 +8,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
+import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
@@ -82,7 +90,7 @@ class RangeControlActivity : ComponentActivity() {
         val initialValue = rawInitialValue
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     tonalElevation = 6.dp,
@@ -92,38 +100,10 @@ class RangeControlActivity : ComponentActivity() {
                     var isOn by remember { mutableStateOf(isOnInitial) }
                     var busy by remember { mutableStateOf(false) }
 
+                    // Delt domain→service-mapping i sendRangeValue (RangeService.kt) — samme kald som
+                    // NumberInputActivity bruger, så der ikke findes to divergerende RANGE-mappinger.
                     fun sendRangeCommand(value: Double) {
-                        scope.launch {
-                            val store = SecureStore.get(applicationContext)
-                            val base = store.baseUrl ?: return@launch
-                            val token = store.token ?: return@launch
-                            val api = HaApiClient(base, token)
-                            when (domain) {
-                                "light" -> api.callService(
-                                    "light", "turn_on", entityId,
-                                    extraData = mapOf("brightness" to (value.toInt() * 255 / 100).coerceIn(1, 255))
-                                )
-                                "cover" -> api.callService(
-                                    "cover", "set_cover_position", entityId,
-                                    extraData = mapOf("position" to value.toInt())
-                                )
-                                "climate" -> api.callService(
-                                    "climate", "set_temperature", entityId,
-                                    extraData = mapOf("temperature" to value.toInt())
-                                )
-                                // number/input_number kan have en fraktioneret step (fx 0.5) — send den
-                                // fulde decimalværdi i stedet for at afrunde til et heltal.
-                                "number" -> api.callService(
-                                    "number", "set_value", entityId,
-                                    extraData = mapOf("value" to value)
-                                )
-                                "input_number" -> api.callService(
-                                    "input_number", "set_value", entityId,
-                                    extraData = mapOf("value" to value)
-                                )
-                            }
-                            EntityRepository.refresh(applicationContext, entityId)
-                        }
+                        scope.launch { sendRangeValue(applicationContext, domain, entityId, value) }
                     }
 
                     fun sendToggle() {
@@ -207,14 +187,37 @@ class RangeControlActivity : ComponentActivity() {
                             }
                         }
 
-                        Slider(
-                            value = sliderValue,
-                            onValueChange = { sliderValue = it },
-                            onValueChangeFinished = { sendRangeCommand(sliderValue.toDouble()) },
-                            valueRange = minValue.toFloat()..maxValue.toFloat(),
-                            enabled = domain == "number" || domain == "input_number" || isOn,
+                        // −/+ trin-knapper flankerer slideren (Task 13, variant B). Trin-størrelsen
+                        // afledes af range-bredden (stepFor); et tryk snapper til nærmeste trin og
+                        // flytter ét trin (stepValue). Både knap og direkte slider-træk går gennem
+                        // SAMME præcise Double-værdi til sendRangeCommand — number/input_number
+                        // bevarer dermed decimaler (v0.2.34) uændret.
+                        val step = stepFor(minValue, maxValue)
+                        val controlsEnabled = domain == "number" || domain == "input_number" || isOn
+                        fun applyStep(direction: Int) {
+                            val next = stepValue(sliderValue.toDouble(), direction, step, minValue, maxValue)
+                            sliderValue = next.toFloat()
+                            sendRangeCommand(next)
+                        }
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                        )
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = { applyStep(-1) }, enabled = controlsEnabled) {
+                                Icon(Icons.Filled.Remove, contentDescription = stringResource(R.string.range_step_down))
+                            }
+                            Slider(
+                                value = sliderValue,
+                                onValueChange = { sliderValue = it },
+                                onValueChangeFinished = { sendRangeCommand(sliderValue.toDouble()) },
+                                valueRange = minValue.toFloat()..maxValue.toFloat(),
+                                enabled = controlsEnabled,
+                                modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = { applyStep(+1) }, enabled = controlsEnabled) {
+                                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.range_step_up))
+                            }
+                        }
                     }
                 }
             }

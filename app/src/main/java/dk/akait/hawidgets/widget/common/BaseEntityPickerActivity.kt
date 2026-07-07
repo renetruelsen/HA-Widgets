@@ -39,8 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
+import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.db.AppDatabase
@@ -71,7 +74,7 @@ abstract class BaseEntityPickerActivity : ComponentActivity() {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 EntityPickerScreen(
                     appWidgetId = appWidgetId,
                     domain = domain,
@@ -117,11 +120,12 @@ private fun EntityPickerScreen(
     var labelInput by remember { mutableStateOf("") }
 
     val context = LocalContext.current
+    val haNotConnectedError = stringResource(R.string.ha_not_connected_error)
 
     LaunchedEffect(Unit) {
         val store = SecureStore.get(context)
         if (!store.isConfigured) {
-            error = "HA ikke forbundet. Åbn HA Widgets og forbind først."
+            error = haNotConnectedError
             isLoading = false
             return@LaunchedEffect
         }
@@ -136,7 +140,7 @@ private fun EntityPickerScreen(
     }
 
     if (selectedEntity != null) {
-        Scaffold(topBar = { TopAppBar(title = { Text("Tilpas widget") }) }) { padding ->
+        Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.customize_widget_title)) }) }) { padding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -156,9 +160,9 @@ private fun EntityPickerScreen(
                 OutlinedTextField(
                     value = labelInput,
                     onValueChange = { if (it.length <= 12) labelInput = it },
-                    label = { Text("Kort label (valgfrit)") },
-                    placeholder = { Text("f.eks. Bad 1") },
-                    supportingText = { Text("Vises på widget i stedet for enhedsnavn. Maks 12 tegn.") },
+                    label = { Text(stringResource(R.string.short_label_field)) },
+                    placeholder = { Text(stringResource(R.string.short_label_placeholder)) },
+                    supportingText = { Text(stringResource(R.string.short_label_supporting)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -166,11 +170,11 @@ private fun EntityPickerScreen(
                 Button(
                     onClick = { onEntitySelected(selectedEntity!!, labelInput) },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Gem widget") }
+                ) { Text(stringResource(R.string.save_widget)) }
                 TextButton(
                     onClick = { selectedEntity = null; labelInput = "" },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Tilbage") }
+                ) { Text(stringResource(R.string.back)) }
             }
         }
         return
@@ -185,7 +189,7 @@ private fun EntityPickerScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Søg…") },
+                placeholder = { Text(stringResource(R.string.search_hint)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),

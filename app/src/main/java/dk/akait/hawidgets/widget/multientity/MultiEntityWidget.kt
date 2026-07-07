@@ -6,7 +6,6 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -42,23 +41,28 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.color.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.MultiWidgetEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.widget.common.ConfirmActionActivity
 import dk.akait.hawidgets.widget.common.DateTimeControlActivity
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
+import dk.akait.hawidgets.widget.common.NumberInputActivity
 import dk.akait.hawidgets.widget.common.RangeControlActivity
 import dk.akait.hawidgets.widget.common.TextControlActivity
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.ToggleEntityAction
 import dk.akait.hawidgets.widget.common.TriggerEntityAction
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetColors
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.domainIconResId
+import dk.akait.hawidgets.widget.common.formatDisplayValue
 import dk.akait.hawidgets.widget.common.formatEntityState
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
+import dk.akait.hawidgets.widget.common.isRawValueDomain
 import dk.akait.hawidgets.widget.common.unitFromJson
 import dk.akait.hawidgets.widget.common.isActiveState
 import dk.akait.hawidgets.widget.common.isStale
@@ -70,14 +74,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
-// Ramme rundt om hele slot-listen — tema-/dag-nat-baseret (IKKE længere en hardcodet grå
-// literal, jf. v0.2.26-code-review-fund om kontrast-risiko ved at blande en fast farve med
-// tema-baserede chip-farver). Lav alpha, så tapetet stadig anes svagt igennem — "transparent
-// ramme" jf. brugerens eget ord, ikke en solid udfyldning.
-private val FRAME_BACKGROUND = ColorProvider(
-    day = Color(0x1F1C1B1F),
-    night = Color(0x1FE6E1E5),
-)
+// Ramme rundt om hele slot-listen — tema-bevidst (IKKE længere en hardcodet grå literal,
+// jf. v0.2.26-code-review-fund om kontrast-risiko). Farven resolves nu via
+// WidgetColors.frameBackground(context), så det globale tema-valg (lys/mørk/system) styrer
+// hvilken side der bruges — for "system" er day/night-værdierne uændrede (ingen regression).
+// Lav alpha, så tapetet stadig anes svagt igennem — "transparent ramme" jf. brugerens ord.
 internal const val FRAME_PADDING_DP = 4
 internal const val ROW_GAP_DP = 4
 internal const val CHIP_GAP_DP = 4
@@ -119,7 +120,7 @@ class MultiEntityWidget : GlanceAppWidget() {
             val (config, slots, states) = viewState
             val showRefreshIcon = config?.showRefreshIcon ?: true
 
-            GlanceTheme {
+            WidgetGlanceTheme(context) {
                 if (slots.isEmpty()) {
                     UnconfiguredWidgetContent(
                         context, appWidgetId, MultiEntityWidgetConfigActivity::class.java, R.drawable.ic_multi_entity,
@@ -165,22 +166,61 @@ private data class SecondaryChipData(
     val actionDomain: String,
     val action: String,
     val showValue: Boolean,
+    val confirmAction: Boolean,
+    val displayPrecision: Int?,
+    val datetimeFormat: String?,
+    val rangeInputMode: String?,
 )
 
 private fun secondaryChipData(
     displayId: String?, displayDomain: String?,
     actionId: String?, actionDomain: String?,
-    action: String?, showValue: Boolean?,
+    action: String?, showValue: Boolean?, confirmAction: Boolean?,
+    displayPrecision: Int?, datetimeFormat: String?, rangeInputMode: String?,
 ): SecondaryChipData? {
     if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
-    return SecondaryChipData(displayId, displayDomain, actionId, actionDomain, action, showValue ?: defaultShowValueFor(action))
+    return SecondaryChipData(
+        displayId, displayDomain, actionId, actionDomain, action,
+        showValue ?: defaultShowValueFor(action), confirmAction ?: false,
+        displayPrecision, datetimeFormat, rangeInputMode,
+    )
 }
 
 private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> = listOfNotNull(
-    secondaryChipData(secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain, secondary1Action, secondary1ShowValue),
-    secondaryChipData(secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain, secondary2Action, secondary2ShowValue),
-    secondaryChipData(secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain, secondary3Action, secondary3ShowValue),
+    secondaryChipData(
+        secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain,
+        secondary1Action, secondary1ShowValue, secondary1ConfirmAction, secondary1DisplayPrecision, secondary1DatetimeFormat,
+        secondary1RangeInputMode,
+    ),
+    secondaryChipData(
+        secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain,
+        secondary2Action, secondary2ShowValue, secondary2ConfirmAction, secondary2DisplayPrecision, secondary2DatetimeFormat,
+        secondary2RangeInputMode,
+    ),
+    secondaryChipData(
+        secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain,
+        secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision, secondary3DatetimeFormat,
+        secondary3RangeInputMode,
+    ),
 )
+
+/** Domain-aware visningsværdi: rå/enheds-bærende domæner (sensor/number/input_* m.fl.) bruger
+ * [formatDisplayValue] (precision/datetime-format-override, v0.3.0 C2); øvrige domæner (der har
+ * en fast tekst-tabel i [formatEntityState], fx light/switch/climate) samt null/"unavailable"
+ * bruger fortsat [formatEntityState] uændret. */
+private fun displayValueFor(
+    context: Context,
+    domain: String,
+    state: EntityStateEntity?,
+    precision: Int?,
+    datetimeFormat: String?,
+): String {
+    if (state == null || state.state == "unavailable" || !isRawValueDomain(domain)) {
+        return formatEntityState(domain, state?.state, state?.attributesJson?.let { unitFromJson(it) })
+    }
+    val locale = context.resources.configuration.locales[0]
+    return formatDisplayValue(domain, state.state, state.attributesJson, precision, datetimeFormat, locale)
+}
 
 @Composable
 private fun MultiEntityContent(
@@ -194,23 +234,40 @@ private fun MultiEntityContent(
     // Rammen fylder hele det tildelte areal (fillMaxSize) — ved oversize efterlades tomrum
     // under listen/stripen i stedet for at strække indholdet (bevidst accepteret, se
     // brainstorm-konklusionen). LazyColumn scroller allerede ved undersize/overflow.
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(FRAME_BACKGROUND)
-            .cornerRadius(16.dp)
-            .padding(FRAME_PADDING_DP.dp),
-    ) {
-        Column(modifier = GlanceModifier.fillMaxSize()) {
-            LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+    //
+    // ADR-3: refresh-stripen er et halvtransparent overlay der flyder OVEN PÅ listen (ikke en
+    // fast bjælke under den) — brugerønske, "ser fedt ud". Strukturelt: en ydre Box lægger
+    // LazyColumn'en (barn 0) og stripens Box (barn 1, bund-justeret) oven på hinanden. Glance
+    // kompilerer Box til en rigtig FrameLayout hvor senere børn tegnes OVEN PÅ tidligere børn og
+    // modtager touch FØRST (standard Android ViewGroup-opførsel) — stripen ligger derfor korrekt
+    // øverst og forbliver klikbar, uanset listens indhold bagved. LazyColumn'en får en usynlig
+    // spacer som SIDSTE element (kun når stripen vises) så et fuldt scroll ned viser den sidste
+    // række helt fri af stripen, ikke delvist skjult bag den.
+    Box(modifier = GlanceModifier.fillMaxSize()) {
+        Box(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(WidgetColors.frameBackground(context))
+                .cornerRadius(16.dp)
+                .padding(FRAME_PADDING_DP.dp),
+        ) {
+            LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
                 items(sorted, itemId = { it.slotIndex.toLong() }) { slot ->
                     Column {
                         SlotRow(context, slot, states)
                         Spacer(modifier = GlanceModifier.height(ROW_GAP_DP.dp))
                     }
                 }
+                if (showRefreshIcon) {
+                    item { Spacer(modifier = GlanceModifier.height(REFRESH_STRIP_HEIGHT_DP.dp)) }
+                }
             }
-            if (showRefreshIcon) {
+        }
+        if (showRefreshIcon) {
+            Box(
+                modifier = GlanceModifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
                 RefreshStrip(context)
             }
         }
@@ -220,11 +277,16 @@ private fun MultiEntityContent(
 @Composable
 private fun RefreshStrip(context: Context) {
     // Hele rækken (ikke kun ikonet) er klikbar — et 16dp-bredt hit-areal alene ville være for
-    // lille at ramme pålideligt i en kun 24dp høj bjælke.
+    // lille at ramme pålideligt i en kun 24dp høj bjælke. Halvtransparent baggrund (ADR-3) —
+    // "glas"-strip oven på listen i stedet for en uigennemsigtig bjælke under den. cornerRadius
+    // matcher rammens 16dp forneden, så stripen ikke stikker firkantet ud over rammens runde
+    // silhuet (stripen ligger nu UDENFOR den clippede rammens Box, jf. overlay-omstruktureringen).
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
             .height(REFRESH_STRIP_HEIGHT_DP.dp)
+            .background(WidgetColors.refreshOverlay(context))
+            .cornerRadius(16.dp)
             .clickable(actionRunCallback<RefreshEntityAction>(actionParametersOf())),
         horizontalAlignment = Alignment.End,
         verticalAlignment = Alignment.CenterVertically,
@@ -263,10 +325,7 @@ private fun SlotRow(
     val label = slot.label.ifEmpty {
         friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: slot.displayEntityId
     }
-    val statusBase = formatEntityState(
-        slot.displayDomain, displayState?.state,
-        displayState?.attributesJson?.let { unitFromJson(it) },
-    )
+    val statusBase = displayValueFor(context, slot.displayDomain, displayState, slot.displayPrecision, slot.datetimeFormat)
     val statusText = if (displayState != null && displayState.isStale()) "$statusBase ~" else statusBase
 
     val rowModifier = clickModifier(
@@ -278,6 +337,8 @@ private fun SlotRow(
         refreshEntityId = slot.displayEntityId,
         rangeLabel = label,
         actionState = actionState,
+        confirmAction = slot.confirmAction,
+        rangeInputMode = slot.rangeInputMode,
     )
 
     Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -346,6 +407,8 @@ private fun SecondaryChip(
         refreshEntityId = chip.displayEntityId,
         rangeLabel = label,
         actionState = actionState,
+        confirmAction = chip.confirmAction,
+        rangeInputMode = chip.rangeInputMode,
     )
 
     Row(modifier = chipModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -358,10 +421,7 @@ private fun SecondaryChip(
         if (showsValueText) {
             Spacer(modifier = GlanceModifier.width(4.dp))
             Text(
-                text = formatEntityState(
-                    chip.displayDomain, displayState?.state,
-                    displayState?.attributesJson?.let { unitFromJson(it) },
-                ),
+                text = displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat),
                 style = TextStyle(color = contentColor, fontSize = 11.sp),
                 maxLines = 1,
             )
@@ -381,6 +441,8 @@ private fun clickModifier(
     refreshEntityId: String,
     rangeLabel: String,
     actionState: EntityStateEntity?,
+    confirmAction: Boolean,
+    rangeInputMode: String?,
 ): GlanceModifier {
     if (action == "NONE") {
         return base.clickable(
@@ -390,6 +452,23 @@ private fun clickModifier(
         )
     }
     if (actionState == null || actionState.state == "unavailable") return base
+    // "Bekræft ved tryk" (B1): kun meningsfuldt for TOGGLE/TRIGGER (RANGE/TEXT/DATETIME åbner
+    // allerede en dialog med Gem-knap, så en ekstra bekræftelse ville være redundant). Grenen er
+    // rent ADDITIV: når confirmAction er false falder vi igennem til de UÆNDREDE original-grene
+    // nedenfor. Dialogen navngiver ALTID handlings-målet (ADR-1) — actionState ER action-målets
+    // state-entitet (states[actionEntityId]), så dens friendly_name er målets navn, ikke visningens.
+    if (confirmAction && (action == "TOGGLE" || action == "TRIGGER")) {
+        val targetName = friendlyNameFromJson(actionState.attributesJson) ?: actionEntityId
+        val intent = Intent(context, ConfirmActionActivity::class.java).apply {
+            putExtra(ConfirmActionActivity.EXTRA_ENTITY_ID, actionEntityId)
+            putExtra(ConfirmActionActivity.EXTRA_DOMAIN, actionDomain)
+            putExtra(ConfirmActionActivity.EXTRA_LABEL, targetName)
+            putExtra(ConfirmActionActivity.EXTRA_ACTION, action)
+            putExtra(ConfirmActionActivity.EXTRA_IS_ON, isActiveState(actionDomain, actionState.state))
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return base.clickable(actionStartActivity(intent))
+    }
     return when (action) {
         "TOGGLE" -> base.clickable(
             actionRunCallback<ToggleEntityAction>(
@@ -401,20 +480,42 @@ private fun clickModifier(
         )
         "RANGE" -> {
             val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
-            val intent = Intent(context, RangeControlActivity::class.java).apply {
-                putExtra(RangeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
-                putExtra(RangeControlActivity.EXTRA_LABEL, rangeLabel)
-                putExtra(RangeControlActivity.EXTRA_DOMAIN, actionDomain)
-                putExtra(RangeControlActivity.EXTRA_IS_ON, actionState.state != "off" && actionState.state != "closed")
-                // Sendes som præcise (decimal) værdier — number/input_number kan have en
-                // fraktioneret state/step (fx 21.5), som ikke må afrundes væk.
-                putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE_PRECISE, rangeCurrentValue(actionDomain, actionState, attrs))
-                putExtra(RangeControlActivity.EXTRA_MIN_VALUE_PRECISE, rangeMin(actionDomain, attrs))
-                putExtra(RangeControlActivity.EXTRA_MAX_VALUE_PRECISE, rangeMax(actionDomain, attrs))
-                if (actionDomain == "number" || actionDomain == "input_number") {
-                    putExtra(RangeControlActivity.EXTRA_UNIT_SUFFIX, attrs.optString("unit_of_measurement", ""))
+            val current = rangeCurrentValue(actionDomain, actionState, attrs)
+            val min = rangeMin(actionDomain, attrs)
+            val max = rangeMax(actionDomain, attrs)
+            val unit = if (actionDomain == "number" || actionDomain == "input_number") {
+                attrs.optString("unit_of_measurement", "")
+            } else ""
+            // Task 13 (del A): "FIELD" → indtast-værdi-dialog (NumberInputActivity); ellers
+            // (null/"SLIDER") den uændrede skyder-dialog (RangeControlActivity). Begge afsender
+            // samme service via den delte sendRangeValue.
+            val intent = if (rangeInputMode == "FIELD") {
+                Intent(context, NumberInputActivity::class.java).apply {
+                    putExtra(NumberInputActivity.EXTRA_ENTITY_ID, actionEntityId)
+                    putExtra(NumberInputActivity.EXTRA_LABEL, rangeLabel)
+                    putExtra(NumberInputActivity.EXTRA_DOMAIN, actionDomain)
+                    putExtra(NumberInputActivity.EXTRA_CURRENT_VALUE, current)
+                    putExtra(NumberInputActivity.EXTRA_MIN_VALUE, min)
+                    putExtra(NumberInputActivity.EXTRA_MAX_VALUE, max)
+                    putExtra(NumberInputActivity.EXTRA_UNIT_SUFFIX, unit)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            } else {
+                Intent(context, RangeControlActivity::class.java).apply {
+                    putExtra(RangeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                    putExtra(RangeControlActivity.EXTRA_LABEL, rangeLabel)
+                    putExtra(RangeControlActivity.EXTRA_DOMAIN, actionDomain)
+                    putExtra(RangeControlActivity.EXTRA_IS_ON, actionState.state != "off" && actionState.state != "closed")
+                    // Sendes som præcise (decimal) værdier — number/input_number kan have en
+                    // fraktioneret state/step (fx 21.5), som ikke må afrundes væk.
+                    putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE_PRECISE, current)
+                    putExtra(RangeControlActivity.EXTRA_MIN_VALUE_PRECISE, min)
+                    putExtra(RangeControlActivity.EXTRA_MAX_VALUE_PRECISE, max)
+                    if (actionDomain == "number" || actionDomain == "input_number") {
+                        putExtra(RangeControlActivity.EXTRA_UNIT_SUFFIX, unit)
+                    }
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
             }
             base.clickable(actionStartActivity(intent))
         }

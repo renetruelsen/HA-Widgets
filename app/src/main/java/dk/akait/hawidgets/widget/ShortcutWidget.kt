@@ -28,6 +28,7 @@ import dk.akait.hawidgets.data.WidgetConfig
 import dk.akait.hawidgets.data.WidgetConfigStore
 import dk.akait.hawidgets.web.WebViewActivity
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
 
@@ -55,11 +56,16 @@ class ShortcutWidget : GlanceAppWidget() {
         val config = WidgetConfigStore.get(context).get(appWidgetId)
 
         provideContent {
-            val isWide = LocalSize.current.width >= 110.dp
-            if (config == null) {
-                UnconfiguredWidgetContent(context, appWidgetId, ShortcutWidgetConfigActivity::class.java, R.drawable.ic_dashboard)
-            } else {
-                ShortcutContent(context, appWidgetId, config, isWide)
+            // Kun den ukonfigurerede "Opsæt"-visning bruger tema-farver (GlanceTheme.colors
+            // via UnconfiguredWidgetContent). Den konfigurerede genvej-tile er bevidst altid
+            // brand-blå (uafhængig af tema) — se ShortcutContent.
+            WidgetGlanceTheme(context) {
+                val isWide = LocalSize.current.width >= 110.dp
+                if (config == null) {
+                    UnconfiguredWidgetContent(context, appWidgetId, ShortcutWidgetConfigActivity::class.java, R.drawable.ic_dashboard)
+                } else {
+                    ShortcutContent(context, appWidgetId, config, isWide)
+                }
             }
         }
     }

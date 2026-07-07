@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Avbryt</string>
+    <string name="save">Spara</string>
     <string name="disconnect">Koppla från</string>
     <string name="connect">Anslut</string>
     <string name="connecting">Ansluter…</string>
@@ -108,4 +109,81 @@
     <string name="multi_entity_widget_label">HA Multi-entitet</string>
     <string name="multi_entity_widget_description">Flera entiteter i en widget — justera storlek efter behov</string>
     <string name="multi_entity_refresh_all">Uppdatera alla widgetar</string>
+
+    <!-- Widget UX pack: multi-entity config additions -->
+    <string name="add_to_widget">Lägg till i widget</string>
+    <string name="update_slot">Uppdatera</string>
+    <string name="confirm_action_switch">Bekräfta vid tryck</string>
+    <string name="confirm_dialog_cancel">Avbryt</string>
+    <string name="confirm_dialog_confirm">Bekräfta</string>
+    <string name="confirm_toggle_on">Slå på %1$s?</string>
+    <string name="confirm_toggle_off">Stäng av %1$s?</string>
+    <string name="confirm_lock">Lås %1$s?</string>
+    <string name="confirm_unlock">Lås upp %1$s?</string>
+    <string name="confirm_open_cover">Öppna %1$s?</string>
+    <string name="confirm_close_cover">Stäng %1$s?</string>
+    <string name="confirm_trigger">Kör %1$s?</string>
+    <string name="display_precision_label">Decimaler</string>
+    <string name="precision_auto">Auto</string>
+    <string name="datetime_format_label">Datumformat</string>
+    <string name="datetime_format_hint">t.ex. dd/MM HH:mm — tomt = automatiskt</string>
+    <string name="theme_label">Tema</string>
+    <string name="theme_light">Ljust</string>
+    <string name="theme_dark">Mörkt</string>
+    <string name="theme_system">Följ systemet</string>
+
+    <!-- Widget UX pack: i18n-regressionsfix — flyttat från hårdkodad UI-text -->
+    <string name="ha_not_connected_error">HA inte ansluten. Öppna HA Widgets och anslut först.</string>
+    <string name="customize_widget_title">Anpassa widget</string>
+    <string name="short_label_field">Kort etikett (valfritt)</string>
+    <string name="short_label_placeholder">t.ex. Badrum 1</string>
+    <string name="short_label_supporting">Visas på widgeten i stället för enhetsnamnet. Max 12 tecken.</string>
+    <string name="back">Tillbaka</string>
+    <string name="search_hint">Sök…</string>
+    <string name="multi_entity_config_title">Kombinerad widget</string>
+    <string name="multi_entity_empty_hint">Inga platser än — tryck på \"Lägg till plats\" för att börja.</string>
+    <string name="multi_entity_show_refresh_icon">Visa uppdateringsikon</string>
+    <string name="add_slot">+ Lägg till plats</string>
+    <string name="cd_edit">Redigera</string>
+    <string name="cd_remove">Ta bort</string>
+    <string name="cd_move_up">Flytta upp</string>
+    <string name="cd_move_down">Flytta ner</string>
+    <string name="slot_editor_title">Anpassa enhet</string>
+    <string name="section_view">Visning</string>
+    <string name="section_action">Åtgärd</string>
+    <string name="change_entity">Byt enhet</string>
+    <string name="change">Byt</string>
+    <string name="action_invalid_target">Den här enheten kan inte styras — välj ett annat mål.</string>
+    <string name="action_read_only">Den här enheten kan bara visas — inget händer vid tryck.</string>
+    <string name="reacts_on_tap">Reagera vid tryck</string>
+    <string name="on_tap_label">Vid tryck: %1$s</string>
+    <string name="slot_view_only_hint">Platsen visar bara status — tryck gör ingenting.</string>
+    <string name="target_label">Mål: %1$s</string>
+    <string name="choose_other_target">Välj ett annat mål</string>
+    <string name="act_on_other_entity">Styr en annan enhet</string>
+    <string name="extra_info_section">Extra info (%1$d/%2$d)</string>
+    <string name="extra_info_room_for_more">Plats för %1$d till</string>
+    <string name="add_extra_entity">+ Lägg till extra enhet</string>
+    <string name="show_value_on_chip">Visa värde på chippen</string>
+    <string name="picker_target_display_title">Välj enhet som ska visas</string>
+    <string name="picker_target_action_title">Välj åtgärdens mål</string>
+    <string name="action_toggle">Slå på/av</string>
+    <string name="action_range">Öppna skjutreglage</string>
+    <string name="action_trigger_long">Utlös automatisering/skript</string>
+    <string name="action_trigger_short">Utlös</string>
+    <string name="action_text">Redigera text</string>
+    <string name="action_datetime">Redigera datum/tid</string>
+    <string name="action_view_only">Endast visning</string>
+    <string name="action_view_only_short">Visa endast status</string>
+    <!-- Task 13: RANGE −/+ steg-knappar (alla widgetar) -->
+    <string name="range_step_down">Minska</string>
+    <string name="range_step_up">Öka</string>
+    <!-- Task 13: RANGE inmatningsläge (endast multi-entity) -->
+    <string name="range_input_mode_label">Vid tryck</string>
+    <string name="range_input_mode_slider">Skjutreglage</string>
+    <string name="range_input_mode_field">Ange värde</string>
+    <string name="number_input_out_of_range">Värdet måste vara mellan %1$s och %2$s</string>
+    <string name="label_with_target">%1$s → %2$s</string>
+    <string name="label_dash">%1$s — %2$s</string>
+    <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>
 </resources>

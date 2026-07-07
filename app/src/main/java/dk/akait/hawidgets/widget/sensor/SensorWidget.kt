@@ -30,15 +30,20 @@ import androidx.glance.action.actionParametersOf
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.STALE_THRESHOLD_MS
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
+import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.widget.common.WidgetCompactLayout
 import dk.akait.hawidgets.widget.common.WidgetWideLayout
+import dk.akait.hawidgets.widget.common.autoDateTime
+import dk.akait.hawidgets.widget.common.formatNumericState
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
+import dk.akait.hawidgets.widget.common.isDateTimeLike
 import dk.akait.hawidgets.widget.common.unitFromJson
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
+import java.util.Locale
 
 class SensorWidget : GlanceAppWidget() {
 
@@ -60,12 +65,12 @@ class SensorWidget : GlanceAppWidget() {
                 }
                 .collectAsState(initial = initialCfg to initialState)
             val (cfg, state) = viewState
-            GlanceTheme {
+            WidgetGlanceTheme(context) {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (cfg == null) {
                     UnconfiguredWidgetContent(context, appWidgetId, SensorWidgetConfigActivity::class.java, R.drawable.ic_sensor)
                 } else {
-                    SensorContent(cfg, state, isWide)
+                    SensorContent(context, cfg, state, isWide)
                 }
             }
         }
@@ -74,6 +79,7 @@ class SensorWidget : GlanceAppWidget() {
 
 @androidx.compose.runtime.Composable
 private fun SensorContent(
+    context: Context,
     config: EntityWidgetEntity,
     state: EntityStateEntity?,
     isWide: Boolean,
@@ -88,10 +94,11 @@ private fun SensorContent(
 
     val attrs = state?.let { parseSensorAttrs(it.attributesJson) }
     val label = config.label.ifEmpty { attrs?.friendlyName ?: config.entityId }
+    val locale = context.resources.configuration.locales[0]
     val statusBase = when {
         state == null -> "Henter…"
         isUnavailable -> "Utilgængelig"
-        else -> buildSensorValue(state.state, attrs?.unit)
+        else -> buildSensorValue(config.entityId.substringBefore('.'), state.state, state.attributesJson, attrs?.unit, locale)
     }
     val statusText = if (isStale && state != null) "$statusBase ~" else statusBase
     val iconRes = iconForDeviceClass(attrs?.deviceClass)
@@ -129,8 +136,19 @@ private fun iconForDeviceClass(deviceClass: String?): Int = when (deviceClass) {
     else -> R.drawable.ic_sensor
 }
 
-private fun buildSensorValue(state: String, unit: String?): String =
-    if (unit != null) "$state $unit" else state
+// Auto-only (ingen precision/datetime-format-override-UI for denne standalone-widget — det er
+// kun MultiEntityWidget der har Task 3's Room-kolonner til brugervalgte overrides pr. slot/chip).
+// Bevarer eksisterende enheds-håndtering (unit efter tallet, kun for ikke-datetime-agtige sensorer).
+private fun buildSensorValue(domain: String, state: String, attributesJson: String, unit: String?, locale: Locale): String {
+    if (isDateTimeLike(domain, attributesJson)) {
+        val attrs = runCatching { JSONObject(attributesJson) }.getOrNull()
+        val hasDate = attrs?.optBoolean("has_date", true) ?: true
+        val hasTime = attrs?.optBoolean("has_time", true) ?: true
+        return autoDateTime(state, hasDate, hasTime, locale)
+    }
+    val numeric = formatNumericState(state, null)
+    return if (unit != null) "$numeric $unit" else numeric
+}
 
 class SensorWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SensorWidget()

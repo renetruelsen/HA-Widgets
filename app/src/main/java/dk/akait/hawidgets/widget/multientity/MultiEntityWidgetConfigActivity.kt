@@ -8,13 +8,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,11 +33,15 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -59,7 +62,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
+import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.db.AppDatabase
@@ -69,9 +76,14 @@ import dk.akait.hawidgets.widget.common.MULTI_ENTITY_DOMAINS
 import dk.akait.hawidgets.widget.common.compatibleActionsFor
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
 import dk.akait.hawidgets.widget.common.domainIconResId
+import dk.akait.hawidgets.widget.common.formatDateTimeState
 import dk.akait.hawidgets.widget.common.formatEntityState
+import dk.akait.hawidgets.widget.common.isDateTimeLike
+import dk.akait.hawidgets.widget.common.isRawValueDomain
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.util.Locale
 
 class MultiEntityWidgetConfigActivity : ComponentActivity() {
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
@@ -83,7 +95,7 @@ class MultiEntityWidgetConfigActivity : ComponentActivity() {
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
 
         setContent {
-            MaterialTheme {
+            HaWidgetsTheme {
                 MultiEntityConfigScreen(
                     appWidgetId = appWidgetId,
                     onSaved = {
@@ -113,6 +125,13 @@ private data class SecondarySlotDraft(
     val action: String,
     /** Vis værditekst (ikke kun ikon) på chippen — brugervalgt, default via [defaultShowValueFor]. */
     val showValue: Boolean = defaultShowValueFor(action),
+    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
+    val confirmAction: Boolean = false,
+    /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
+    val displayPrecision: Int? = null,
+    val datetimeFormat: String? = null,
+    /** RANGE input-tilstand (Task 13) — "SLIDER"/"FIELD". null = "SLIDER". Kun relevant for RANGE. */
+    val rangeInputMode: String? = null,
 )
 
 private data class SlotDraft(
@@ -121,6 +140,13 @@ private data class SlotDraft(
     val action: String = "NONE",
     val label: String = "",
     val secondaryEntities: List<SecondarySlotDraft> = emptyList(),
+    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
+    val confirmAction: Boolean = false,
+    /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
+    val displayPrecision: Int? = null,
+    val datetimeFormat: String? = null,
+    /** RANGE input-tilstand (Task 13) — "SLIDER"/"FIELD". null = "SLIDER". Kun relevant for RANGE. */
+    val rangeInputMode: String? = null,
 )
 
 private const val MAX_SECONDARY_ENTITIES = 3
@@ -131,23 +157,25 @@ private sealed interface Step {
     data class EntityPicker(val forTarget: PickerTarget, val editIndex: Int?, val draft: SlotDraft) : Step
 }
 
+@Composable
 private fun actionLabel(action: String): String = when (action) {
-    "TOGGLE" -> "Slå til/fra"
-    "RANGE" -> "Åbn skyder"
-    "TRIGGER" -> "Udløs automatisering/script"
-    "TEXT" -> "Rediger tekst"
-    "DATETIME" -> "Rediger dato/tid"
-    else -> "Kun visning"
+    "TOGGLE" -> stringResource(R.string.action_toggle)
+    "RANGE" -> stringResource(R.string.action_range)
+    "TRIGGER" -> stringResource(R.string.action_trigger_long)
+    "TEXT" -> stringResource(R.string.action_text)
+    "DATETIME" -> stringResource(R.string.action_datetime)
+    else -> stringResource(R.string.action_view_only)
 }
 
 /** Kort variant til radios + auto-linjen i SlotEditorScreen (undgår den lange TRIGGER-tekst). */
+@Composable
 private fun actionShortLabel(action: String): String = when (action) {
-    "TOGGLE" -> "Slå til/fra"
-    "RANGE" -> "Åbn skyder"
-    "TRIGGER" -> "Udløs"
-    "TEXT" -> "Rediger tekst"
-    "DATETIME" -> "Rediger dato/tid"
-    else -> "Vis kun status"
+    "TOGGLE" -> stringResource(R.string.action_toggle)
+    "RANGE" -> stringResource(R.string.action_range)
+    "TRIGGER" -> stringResource(R.string.action_trigger_short)
+    "TEXT" -> stringResource(R.string.action_text)
+    "DATETIME" -> stringResource(R.string.action_datetime)
+    else -> stringResource(R.string.action_view_only_short)
 }
 
 /** Handlings-typer (ex. NONE) et domæne understøtter som action-mål. Tom = read-only. */
@@ -170,13 +198,19 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     var showRefreshIcon by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(true) }
     var allEntities by remember { mutableStateOf<List<HaApiClient.EntityBrief>>(emptyList()) }
+    // entityId → attributesJson (fra Room-cachen, samme kilde SyncWorker fylder widget-renderingen
+    // fra) — bruges til isDateTimeLike-detektion (has_date/has_time/device_class) og live-preview
+    // i "Ekstra info"/"Visning"-sektionerne. Genbruger eksisterende Room-infrastruktur i stedet for
+    // at føje et nyt attributesJson-felt til HaApiClient.EntityBrief (uden for denne opgaves scope).
+    var attrsByEntityId by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var step by remember { mutableStateOf<Step>(Step.ListScreen) }
+    val haNotConnectedError = stringResource(R.string.ha_not_connected_error)
 
     LaunchedEffect(Unit) {
         val store = SecureStore.get(context)
         if (!store.isConfigured) {
-            loadError = "HA ikke forbundet. Åbn HA Widgets og forbind først."
+            loadError = haNotConnectedError
             isLoading = false
             return@LaunchedEffect
         }
@@ -185,6 +219,9 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         val db = AppDatabase.get(context)
         slots = db.multiWidgetDao().getSlots(appWidgetId)
         showRefreshIcon = db.multiWidgetDao().get(appWidgetId)?.showRefreshIcon ?: true
+        attrsByEntityId = allEntities.mapNotNull { entity ->
+            db.entityStateDao().get(entity.entityId)?.attributesJson?.let { entity.entityId to it }
+        }.toMap()
         isLoading = false
     }
 
@@ -195,7 +232,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     fun secondaryDraftFrom(
         displayId: String?, displayDomain: String?,
         actionId: String?, actionDomain: String?,
-        action: String?, showValue: Boolean?,
+        action: String?, showValue: Boolean?, confirmAction: Boolean?,
+        displayPrecision: Int?, datetimeFormat: String?, rangeInputMode: String?,
     ): SecondarySlotDraft? {
         if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
         return SecondarySlotDraft(
@@ -203,6 +241,10 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             actionEntity = entityOrPlaceholder(actionId, actionDomain),
             action = action,
             showValue = showValue ?: defaultShowValueFor(action),
+            confirmAction = confirmAction ?: false,
+            displayPrecision = displayPrecision,
+            datetimeFormat = datetimeFormat,
+            rangeInputMode = rangeInputMode,
         )
     }
 
@@ -223,20 +265,26 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             secondaryDraftFrom(
                 slot.secondary1DisplayEntityId, slot.secondary1DisplayDomain,
                 slot.secondary1ActionEntityId, slot.secondary1ActionDomain, slot.secondary1Action,
-                slot.secondary1ShowValue,
+                slot.secondary1ShowValue, slot.secondary1ConfirmAction,
+                slot.secondary1DisplayPrecision, slot.secondary1DatetimeFormat, slot.secondary1RangeInputMode,
             ),
             secondaryDraftFrom(
                 slot.secondary2DisplayEntityId, slot.secondary2DisplayDomain,
                 slot.secondary2ActionEntityId, slot.secondary2ActionDomain, slot.secondary2Action,
-                slot.secondary2ShowValue,
+                slot.secondary2ShowValue, slot.secondary2ConfirmAction,
+                slot.secondary2DisplayPrecision, slot.secondary2DatetimeFormat, slot.secondary2RangeInputMode,
             ),
             secondaryDraftFrom(
                 slot.secondary3DisplayEntityId, slot.secondary3DisplayDomain,
                 slot.secondary3ActionEntityId, slot.secondary3ActionDomain, slot.secondary3Action,
-                slot.secondary3ShowValue,
+                slot.secondary3ShowValue, slot.secondary3ConfirmAction,
+                slot.secondary3DisplayPrecision, slot.secondary3DatetimeFormat, slot.secondary3RangeInputMode,
             ),
         )
-        return SlotDraft(display, actionEntity, normalizedAction, slot.label, secondaries)
+        return SlotDraft(
+            display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction,
+            slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode,
+        )
     }
 
     fun saveSlot(editIndex: Int?, draft: SlotDraft) {
@@ -252,24 +300,40 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             actionDomain = action.domain,
             action = draft.action,
             label = draft.label.trim(),
+            confirmAction = draft.confirmAction,
+            displayPrecision = draft.displayPrecision,
+            datetimeFormat = draft.datetimeFormat,
+            rangeInputMode = draft.rangeInputMode,
             secondary1DisplayEntityId = sec.getOrNull(0)?.displayEntity?.entityId,
             secondary1DisplayDomain = sec.getOrNull(0)?.displayEntity?.domain,
             secondary1ActionEntityId = sec.getOrNull(0)?.actionEntity?.entityId,
             secondary1ActionDomain = sec.getOrNull(0)?.actionEntity?.domain,
             secondary1Action = sec.getOrNull(0)?.action,
             secondary1ShowValue = sec.getOrNull(0)?.showValue,
+            secondary1ConfirmAction = sec.getOrNull(0)?.confirmAction,
+            secondary1DisplayPrecision = sec.getOrNull(0)?.displayPrecision,
+            secondary1DatetimeFormat = sec.getOrNull(0)?.datetimeFormat,
+            secondary1RangeInputMode = sec.getOrNull(0)?.rangeInputMode,
             secondary2DisplayEntityId = sec.getOrNull(1)?.displayEntity?.entityId,
             secondary2DisplayDomain = sec.getOrNull(1)?.displayEntity?.domain,
             secondary2ActionEntityId = sec.getOrNull(1)?.actionEntity?.entityId,
             secondary2ActionDomain = sec.getOrNull(1)?.actionEntity?.domain,
             secondary2Action = sec.getOrNull(1)?.action,
             secondary2ShowValue = sec.getOrNull(1)?.showValue,
+            secondary2ConfirmAction = sec.getOrNull(1)?.confirmAction,
+            secondary2DisplayPrecision = sec.getOrNull(1)?.displayPrecision,
+            secondary2DatetimeFormat = sec.getOrNull(1)?.datetimeFormat,
+            secondary2RangeInputMode = sec.getOrNull(1)?.rangeInputMode,
             secondary3DisplayEntityId = sec.getOrNull(2)?.displayEntity?.entityId,
             secondary3DisplayDomain = sec.getOrNull(2)?.displayEntity?.domain,
             secondary3ActionEntityId = sec.getOrNull(2)?.actionEntity?.entityId,
             secondary3ActionDomain = sec.getOrNull(2)?.actionEntity?.domain,
             secondary3Action = sec.getOrNull(2)?.action,
             secondary3ShowValue = sec.getOrNull(2)?.showValue,
+            secondary3ConfirmAction = sec.getOrNull(2)?.confirmAction,
+            secondary3DisplayPrecision = sec.getOrNull(2)?.displayPrecision,
+            secondary3DatetimeFormat = sec.getOrNull(2)?.datetimeFormat,
+            secondary3RangeInputMode = sec.getOrNull(2)?.rangeInputMode,
         )
         slots = if (editIndex == null) slots + newSlot
         else slots.toMutableList().also { it[editIndex] = newSlot }
@@ -312,8 +376,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 
         is Step.EntityPicker -> EntityPickerSubScreen(
             title = when (s.forTarget) {
-                PickerTarget.Display, is PickerTarget.SecondaryDisplay -> "Vælg entitet der skal vises"
-                PickerTarget.Action, is PickerTarget.SecondaryAction -> "Vælg handlingens mål"
+                PickerTarget.Display, is PickerTarget.SecondaryDisplay -> stringResource(R.string.picker_target_display_title)
+                PickerTarget.Action, is PickerTarget.SecondaryAction -> stringResource(R.string.picker_target_action_title)
             },
             entities = when (s.forTarget) {
                 // Handlings-mål-valg filtreres til domæner der understøtter mindst én handling —
@@ -356,10 +420,16 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 
         is Step.SlotEditor -> SlotEditorScreen(
             draft = s.draft,
+            isEditing = s.editIndex != null,
+            attrsByEntityId = attrsByEntityId,
             onChangeDisplay = { step = Step.EntityPicker(PickerTarget.Display, s.editIndex, s.draft) },
             onChangeTarget = { step = Step.EntityPicker(PickerTarget.Action, s.editIndex, s.draft) },
             onActionChange = { newAction -> step = Step.SlotEditor(s.editIndex, s.draft.copy(action = newAction)) },
+            onRangeInputModeChange = { mode -> step = Step.SlotEditor(s.editIndex, s.draft.copy(rangeInputMode = mode)) },
             onLabelChange = { newLabel -> step = Step.SlotEditor(s.editIndex, s.draft.copy(label = newLabel)) },
+            onConfirmActionChange = { confirm -> step = Step.SlotEditor(s.editIndex, s.draft.copy(confirmAction = confirm)) },
+            onDisplayPrecisionChange = { precision -> step = Step.SlotEditor(s.editIndex, s.draft.copy(displayPrecision = precision)) },
+            onDatetimeFormatChange = { pattern -> step = Step.SlotEditor(s.editIndex, s.draft.copy(datetimeFormat = pattern)) },
             onAddSecondary = {
                 step = Step.EntityPicker(PickerTarget.SecondaryDisplay(s.draft.secondaryEntities.size), s.editIndex, s.draft)
             },
@@ -375,9 +445,29 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 updated[index] = updated[index].copy(action = newAction)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
+            onSecondaryRangeInputModeChange = { index, mode ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(rangeInputMode = mode)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
             onSecondaryShowValueChange = { index, showValue ->
                 val updated = s.draft.secondaryEntities.toMutableList()
                 updated[index] = updated[index].copy(showValue = showValue)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryConfirmActionChange = { index, confirm ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(confirmAction = confirm)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryDisplayPrecisionChange = { index, precision ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(displayPrecision = precision)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryDatetimeFormatChange = { index, pattern ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(datetimeFormat = pattern)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
             onSave = { saveSlot(s.editIndex, s.draft) },
@@ -398,7 +488,7 @@ private fun ListScreen(
     onMoveSlot: (Int, Int) -> Unit,
     onSave: () -> Unit,
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text("Kombineret widget") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.multi_entity_config_title)) }) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -408,7 +498,7 @@ private fun ListScreen(
         ) {
             if (slots.isEmpty()) {
                 Text(
-                    "Ingen slots endnu — tryk \"Tilføj slot\" for at starte.",
+                    stringResource(R.string.multi_entity_empty_hint),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
@@ -430,24 +520,25 @@ private fun ListScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Vis refresh-ikon", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.multi_entity_show_refresh_icon), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Switch(checked = showRefreshIcon, onCheckedChange = onShowRefreshIconChange)
             }
             Spacer(Modifier.padding(4.dp))
             Button(onClick = onAddSlot, enabled = slots.size < 5, modifier = Modifier.fillMaxWidth()) {
-                Text("+ Tilføj slot")
+                Text(stringResource(R.string.add_slot))
             }
             Spacer(Modifier.padding(4.dp))
             Button(onClick = onSave, enabled = slots.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
-                Text("Gem widget")
+                Text(stringResource(R.string.save_widget))
             }
         }
     }
 }
 
-/** Kort pr. slot: klikbart (svagt tonet) hovedindhold m/chevron → åbner editor, smal
- * fjern-søjle, og en ↑/↓-sorteringssøjle der fylder kortets fulde højde. Alle sekundær-
- * entiteter listes altid fuldt synligt — ingen skjult "+N"-optælling. */
+/** Kort pr. slot: klikbart (svagt tonet) hovedindhold m/navn på egen fuld-bredde række
+ * (1 linje + ellipsis) og chevron → åbner editor, efterfulgt af en bund-række med
+ * ↑/↓/slet som separate 48dp-ikonknapper. Alle sekundær-entiteter listes altid fuldt
+ * synligt — ingen skjult "+N"-optælling. */
 @Composable
 private fun SlotCard(
     slot: MultiWidgetSlotEntity,
@@ -458,17 +549,15 @@ private fun SlotCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Max)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp)),
     ) {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f))
                 .clickable(onClick = onClick)
                 .padding(10.dp),
@@ -480,24 +569,33 @@ private fun SlotCard(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(slot.label.ifEmpty { slot.displayEntityId }, style = MaterialTheme.typography.bodyLarge)
-                        Icon(
-                            Icons.Filled.ChevronRight,
-                            contentDescription = "Rediger",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    val actionSummary = if (slot.actionEntityId == slot.displayEntityId) {
-                        actionLabel(slot.action)
-                    } else {
-                        "${actionLabel(slot.action)} → ${slot.actionEntityId}"
-                    }
-                    Text(actionSummary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text(
+                    slot.label.ifEmpty { slot.displayEntityId },
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.Filled.ChevronRight,
+                    contentDescription = stringResource(R.string.cd_edit),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
             }
+            val actionSummary = if (slot.actionEntityId == slot.displayEntityId) {
+                actionLabel(slot.action)
+            } else {
+                stringResource(R.string.label_with_target, actionLabel(slot.action), slot.actionEntityId)
+            }
+            Text(
+                actionSummary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 30.dp, top = 2.dp),
+            )
             val secondarySummaries = secondarySlotSummaries(slot)
             if (secondarySummaries.isNotEmpty()) {
                 Column(modifier = Modifier.padding(start = 30.dp, top = 6.dp)) {
@@ -519,62 +617,47 @@ private fun SlotCard(
                 }
             }
         }
-        Box(
+        Row(
             modifier = Modifier
-                .width(32.dp)
-                .fillMaxHeight()
+                .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                .clickable(onClick = onRemove),
-            contentAlignment = Alignment.Center,
+                .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Filled.Delete, contentDescription = "Fjern", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-        }
-        Column(modifier = Modifier.width(36.dp).fillMaxHeight()) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                    .then(if (canMoveUp) Modifier.clickable(onClick = onMoveUp) else Modifier),
-                contentAlignment = Alignment.Center,
-            ) {
+            IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Filled.KeyboardArrowUp,
-                    contentDescription = "Flyt op",
+                    contentDescription = stringResource(R.string.cd_move_up),
                     tint = if (canMoveUp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
             }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                    .then(if (canMoveDown) Modifier.clickable(onClick = onMoveDown) else Modifier),
-                contentAlignment = Alignment.Center,
-            ) {
+            IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "Flyt ned",
+                    contentDescription = stringResource(R.string.cd_move_down),
                     tint = if (canMoveDown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
+            }
+            IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
     }
 }
 
 /** (ikon, "navn — handlingslabel") for hver konfigureret sekundær-chip på sloten. */
+@Composable
 private fun secondarySlotSummaries(slot: MultiWidgetSlotEntity): List<Pair<Int, String>> {
+    @Composable
     fun summaryFor(
         displayId: String?, displayDomain: String?, actionId: String?, action: String?,
     ): Pair<Int, String>? {
         if (displayId == null || displayDomain == null || action == null) return null
         val label = if (actionId != null && actionId != displayId) {
-            "$displayId — ${actionShortLabel(action)} → $actionId"
+            stringResource(R.string.label_dash_with_target, displayId, actionShortLabel(action), actionId)
         } else {
-            "$displayId — ${actionShortLabel(action)}"
+            stringResource(R.string.label_dash, displayId, actionShortLabel(action))
         }
         return domainIconResId(displayDomain) to label
     }
@@ -589,15 +672,25 @@ private fun secondarySlotSummaries(slot: MultiWidgetSlotEntity): List<Pair<Int, 
 @Composable
 private fun SlotEditorScreen(
     draft: SlotDraft,
+    isEditing: Boolean,
+    attrsByEntityId: Map<String, String>,
     onChangeDisplay: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
+    onRangeInputModeChange: (String?) -> Unit,
     onLabelChange: (String) -> Unit,
+    onConfirmActionChange: (Boolean) -> Unit,
+    onDisplayPrecisionChange: (Int?) -> Unit,
+    onDatetimeFormatChange: (String?) -> Unit,
     onAddSecondary: () -> Unit,
     onRemoveSecondary: (Int) -> Unit,
     onSecondaryChangeTarget: (Int) -> Unit,
     onSecondaryActionChange: (Int, String) -> Unit,
+    onSecondaryRangeInputModeChange: (Int, String?) -> Unit,
     onSecondaryShowValueChange: (Int, Boolean) -> Unit,
+    onSecondaryConfirmActionChange: (Int, Boolean) -> Unit,
+    onSecondaryDisplayPrecisionChange: (Int, Int?) -> Unit,
+    onSecondaryDatetimeFormatChange: (Int, String?) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -617,7 +710,7 @@ private fun SlotEditorScreen(
         mutableStateOf(draft.action.takeIf { it != "NONE" })
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Tilpas entitet") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.slot_editor_title)) }) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -628,35 +721,44 @@ private fun SlotEditorScreen(
             OutlinedTextField(
                 value = draft.label,
                 onValueChange = { if (it.length <= 12) onLabelChange(it) },
-                label = { Text("Kort label (valgfrit)") },
-                placeholder = { Text("f.eks. Bad 1") },
-                supportingText = { Text("Vises på widget i stedet for enhedsnavn. Maks 12 tegn.") },
+                label = { Text(stringResource(R.string.short_label_field)) },
+                placeholder = { Text(stringResource(R.string.short_label_placeholder)) },
+                supportingText = { Text(stringResource(R.string.short_label_supporting)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
             Spacer(Modifier.padding(8.dp))
 
             // ── VISNING ──
-            SectionCard(title = "Visning") {
+            SectionCard(title = stringResource(R.string.section_view)) {
                 Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
                 Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text("Skift entitet") }
+                TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change_entity)) }
+                ValueFormattingControls(
+                    domain = display.domain,
+                    attributesJson = attrsByEntityId[display.entityId],
+                    currentState = display.state,
+                    displayPrecision = draft.displayPrecision,
+                    datetimeFormat = draft.datetimeFormat,
+                    onDisplayPrecisionChange = onDisplayPrecisionChange,
+                    onDatetimeFormatChange = onDatetimeFormatChange,
+                )
             }
             Spacer(Modifier.padding(8.dp))
 
             // ── HANDLING ──
-            SectionCard(title = "Handling") {
+            SectionCard(title = stringResource(R.string.section_action)) {
                 when {
                     invalidTarget -> {
                         Text(
-                            "Denne enhed kan ikke handles på — vælg et andet mål.",
+                            stringResource(R.string.action_invalid_target),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
                     readOnly -> {
                         Text(
-                            "Denne enhed kan kun vises — intet sker ved tryk.",
+                            stringResource(R.string.action_read_only),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -669,7 +771,7 @@ private fun SlotEditorScreen(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text("Reagér på tryk", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                                 Switch(
                                     checked = reactsToTap,
                                     onCheckedChange = { on ->
@@ -685,7 +787,7 @@ private fun SlotEditorScreen(
                         if (showActionChoice) {
                             if (opts.size == 1) {
                                 Text(
-                                    "Ved tryk: ${actionShortLabel(opts[0])}",
+                                    stringResource(R.string.on_tap_label, actionShortLabel(opts[0])),
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.padding(vertical = 4.dp),
                                 )
@@ -711,7 +813,7 @@ private fun SlotEditorScreen(
                         } else {
                             // Kontakt FRA (mål == visning): slotten viser kun status.
                             Text(
-                                "Slotten viser kun status — tryk gør ingenting.",
+                                stringResource(R.string.slot_view_only_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(vertical = 2.dp),
@@ -719,34 +821,54 @@ private fun SlotEditorScreen(
                         }
                     }
                 }
+                if (draft.action == "TOGGLE" || draft.action == "TRIGGER") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.confirm_action_switch), modifier = Modifier.weight(1f))
+                        Switch(checked = draft.confirmAction, onCheckedChange = onConfirmActionChange)
+                    }
+                }
+                if (draft.action == "RANGE") {
+                    RangeInputModeControl(
+                        selected = draft.rangeInputMode,
+                        onSelected = onRangeInputModeChange,
+                    )
+                }
                 if (targetDiffers) {
                     Text(
-                        "Mål: ${action.friendlyName}",
+                        stringResource(R.string.target_label, action.friendlyName),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
                 TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) {
-                    Text(if (targetDiffers) "Vælg andet mål" else "Handl på en anden enhed")
+                    Text(if (targetDiffers) stringResource(R.string.choose_other_target) else stringResource(R.string.act_on_other_entity))
                 }
             }
             Spacer(Modifier.padding(8.dp))
 
             // ── EKSTRA INFO ──
-            SectionCard(title = "Ekstra info (${draft.secondaryEntities.size}/$MAX_SECONDARY_ENTITIES)") {
+            SectionCard(title = stringResource(R.string.extra_info_section, draft.secondaryEntities.size, MAX_SECONDARY_ENTITIES)) {
                 draft.secondaryEntities.forEachIndexed { index, secondary ->
                     SecondaryEntityRow(
                         secondary = secondary,
+                        attrsByEntityId = attrsByEntityId,
                         onRemove = { onRemoveSecondary(index) },
                         onChangeTarget = { onSecondaryChangeTarget(index) },
                         onActionChange = { newAction -> onSecondaryActionChange(index, newAction) },
+                        onRangeInputModeChange = { mode -> onSecondaryRangeInputModeChange(index, mode) },
                         onShowValueChange = { showValue -> onSecondaryShowValueChange(index, showValue) },
+                        onConfirmActionChange = { confirm -> onSecondaryConfirmActionChange(index, confirm) },
+                        onDisplayPrecisionChange = { precision -> onSecondaryDisplayPrecisionChange(index, precision) },
+                        onDatetimeFormatChange = { pattern -> onSecondaryDatetimeFormatChange(index, pattern) },
                     )
                     if (index < draft.secondaryEntities.size - 1) HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 }
                 if (draft.secondaryEntities.size in 1 until MAX_SECONDARY_ENTITIES) {
                     Text(
-                        "Plads til ${MAX_SECONDARY_ENTITIES - draft.secondaryEntities.size} mere",
+                        stringResource(R.string.extra_info_room_for_more, MAX_SECONDARY_ENTITIES - draft.secondaryEntities.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
@@ -758,13 +880,15 @@ private fun SlotEditorScreen(
                     onClick = onAddSecondary,
                     enabled = draft.secondaryEntities.size < MAX_SECONDARY_ENTITIES,
                     contentPadding = PaddingValues(0.dp),
-                ) { Text("+ Tilføj ekstra entitet") }
+                ) { Text(stringResource(R.string.add_extra_entity)) }
             }
             Spacer(Modifier.padding(12.dp))
 
-            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("Annullér") }
+            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cancel)) }
             Spacer(Modifier.padding(2.dp))
-            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) { Text("Tilføj til widget") }
+            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(if (isEditing) R.string.update_slot else R.string.add_to_widget))
+            }
         }
     }
 }
@@ -777,10 +901,15 @@ private fun SlotEditorScreen(
 @Composable
 private fun SecondaryEntityRow(
     secondary: SecondarySlotDraft,
+    attrsByEntityId: Map<String, String>,
     onRemove: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
+    onRangeInputModeChange: (String?) -> Unit,
     onShowValueChange: (Boolean) -> Unit,
+    onConfirmActionChange: (Boolean) -> Unit,
+    onDisplayPrecisionChange: (Int?) -> Unit,
+    onDatetimeFormatChange: (String?) -> Unit,
 ) {
     val display = secondary.displayEntity
     val action = secondary.actionEntity
@@ -797,33 +926,42 @@ private fun SecondaryEntityRow(
             )
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Visning", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.section_view), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Text(display.friendlyName, style = MaterialTheme.typography.bodyMedium)
             }
             IconButton(onClick = onRemove) {
-                Icon(Icons.Filled.Close, contentDescription = "Fjern", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
+        ValueFormattingControls(
+            domain = display.domain,
+            attributesJson = attrsByEntityId[display.entityId],
+            currentState = display.state,
+            displayPrecision = secondary.displayPrecision,
+            datetimeFormat = secondary.datetimeFormat,
+            onDisplayPrecisionChange = onDisplayPrecisionChange,
+            onDatetimeFormatChange = onDatetimeFormatChange,
+        )
         Spacer(Modifier.padding(top = 6.dp))
-        Text("Handling", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.section_action), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
             Column(modifier = Modifier.weight(1f)) {
                 if (readOnly) {
                     Text(
-                        "Denne enhed kan kun vises — intet sker ved tryk.",
+                        stringResource(R.string.action_read_only),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     if (targetDiffers) {
-                        Text("Mål: ${action.friendlyName}", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.target_label, action.friendlyName), style = MaterialTheme.typography.bodySmall)
                     }
                     if (opts.size == 1) {
-                        Text("Ved tryk: ${actionShortLabel(opts[0])}", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.on_tap_label, actionShortLabel(opts[0])), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
-            TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text("Skift") }
+            TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change)) }
         }
         if (!readOnly && opts.size > 1) {
             opts.forEach { actionType ->
@@ -838,17 +976,149 @@ private fun SecondaryEntityRow(
                 }
             }
         }
+        if (!readOnly && secondary.action == "RANGE") {
+            RangeInputModeControl(
+                selected = secondary.rangeInputMode,
+                onSelected = onRangeInputModeChange,
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Vis værdi på chippen",
+                stringResource(R.string.show_value_on_chip),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
             Switch(checked = secondary.showValue, onCheckedChange = onShowValueChange)
+        }
+        if (!readOnly && (secondary.action == "TOGGLE" || secondary.action == "TRIGGER")) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.confirm_action_switch),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(checked = secondary.confirmAction, onCheckedChange = onConfirmActionChange)
+            }
+        }
+    }
+}
+
+/** Precision-dropdown (Auto/0/1/2) for rå numeriske domæner + frit datoformat-felt (m. live
+ * preview) for datetime-agtige domæner (v0.3.0, C2) — vises for hoved-entitetens VISNING-sektion
+ * OG hver sekundær-chips visnings-entitet. Ingen kontrol vises for domæner med en fast tekst-tabel
+ * i formatEntityState (fx light/switch) — de har intet tal/dato at formattere. [attributesJson]
+ * kommer fra Room-cachen (samme kilde widget-renderingen selv bruger); kan være null hvis
+ * entiteten endnu ikke er synket — kontrollerne skjules da for datetime-agtige domæner (kan ikke
+ * afgøre has_date/has_time), men precision-dropdown for almindelige sensor/number-domæner vises
+ * stadig (afhænger ikke af attrs). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ValueFormattingControls(
+    domain: String,
+    attributesJson: String?,
+    currentState: String,
+    displayPrecision: Int?,
+    datetimeFormat: String?,
+    onDisplayPrecisionChange: (Int?) -> Unit,
+    onDatetimeFormatChange: (String?) -> Unit,
+) {
+    if (!isRawValueDomain(domain)) return
+    val dateTimeLike = isDateTimeLike(domain, attributesJson)
+
+    if (dateTimeLike) {
+        var pattern by remember(datetimeFormat) { mutableStateOf(datetimeFormat ?: "") }
+        val locale = Locale.getDefault()
+        val attrs = attributesJson?.let { runCatching { JSONObject(it) }.getOrNull() }
+        val hasDate = attrs?.optBoolean("has_date", true) ?: true
+        val hasTime = attrs?.optBoolean("has_time", true) ?: true
+        Spacer(Modifier.padding(top = 8.dp))
+        OutlinedTextField(
+            value = pattern,
+            onValueChange = { newValue ->
+                pattern = newValue
+                onDatetimeFormatChange(newValue.ifBlank { null })
+            },
+            label = { Text(stringResource(R.string.datetime_format_label)) },
+            supportingText = { Text(stringResource(R.string.datetime_format_hint)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        // Live preview — bruger den faktiske aktuelle state, så brugeren straks ser resultatet af
+        // et frit mønster (og at et ugyldigt mønster falder trygt tilbage til auto, jf. Task 2).
+        val preview = formatDateTimeState(currentState, pattern.ifBlank { null }, hasDate, hasTime, locale)
+        Text(
+            preview,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    } else {
+        var expanded by remember { mutableStateOf(false) }
+        val options: List<Int?> = listOf(null, 0, 1, 2)
+        val autoLabel = stringResource(R.string.precision_auto)
+        fun optionLabel(value: Int?) = value?.toString() ?: autoLabel
+
+        Spacer(Modifier.padding(top = 8.dp))
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = optionLabel(displayPrecision),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(stringResource(R.string.display_precision_label)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { value ->
+                    DropdownMenuItem(
+                        text = { Text(optionLabel(value)) },
+                        onClick = {
+                            onDisplayPrecisionChange(value)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** RANGE input-tilstand: «Skyder» (skyder-dialog) eller «Indtast værdi» (talfelt-dialog) — Task 13,
+ * del A. Vises kun når handlingen er RANGE, både for hoved-slotten og hver sekundær-chip. Sentinel:
+ * null = "SLIDER" (uændret default); "FIELD" = talfelt. «Skyder» gemmer null, så en slot der aldrig
+ * har rørt kontrollen forbliver present som "ingen override" i DB'en. */
+@Composable
+private fun RangeInputModeControl(selected: String?, onSelected: (String?) -> Unit) {
+    // null/"SLIDER" behandles ens (skyder). Kun "FIELD" er felt-tilstand.
+    val isField = selected == "FIELD"
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Text(
+            stringResource(R.string.range_input_mode_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        val options = listOf(false to R.string.range_input_mode_slider, true to R.string.range_input_mode_field)
+        options.forEach { (fieldValue, labelRes) ->
+            val pick = { onSelected(if (fieldValue) "FIELD" else null) }
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = pick).padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = isField == fieldValue, onClick = pick)
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(labelRes), style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -886,14 +1156,14 @@ private fun EntityPickerSubScreen(
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(title) },
-            navigationIcon = { TextButton(onClick = onBack) { Text("Tilbage") } },
+            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } },
         )
     }) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Søg…") },
+                placeholder = { Text(stringResource(R.string.search_hint)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
