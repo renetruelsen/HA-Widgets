@@ -59,15 +59,21 @@ class TextControlActivity : ComponentActivity() {
                             val store = SecureStore.get(applicationContext)
                             val base = store.baseUrl
                             val token = store.token
-                            if (base != null && token != null) {
+                            val result = if (base != null && token != null) {
                                 HaApiClient(base, token).callService(
                                     "input_text", "set_value", entityId,
                                     extraData = mapOf("value" to text),
                                 )
-                                EntityRepository.refresh(applicationContext, entityId)
+                            } else {
+                                null
                             }
                             busy = false
-                            finish()
+                            if (result is HaApiClient.Result.Ok) {
+                                EntityRepository.refresh(applicationContext, entityId)
+                                finish()
+                            } else {
+                                showActionError(applicationContext)
+                            }
                         }
                     }
 
