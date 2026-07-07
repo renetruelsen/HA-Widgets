@@ -103,7 +103,10 @@ class RangeControlActivity : ComponentActivity() {
                     // Delt domain→service-mapping i sendRangeValue (RangeService.kt) — samme kald som
                     // NumberInputActivity bruger, så der ikke findes to divergerende RANGE-mappinger.
                     fun sendRangeCommand(value: Double) {
-                        scope.launch { sendRangeValue(applicationContext, domain, entityId, value) }
+                        scope.launch {
+                            val ok = sendRangeValue(applicationContext, domain, entityId, value)
+                            if (!ok) showActionError(applicationContext)
+                        }
                     }
 
                     fun sendToggle() {
@@ -113,7 +116,7 @@ class RangeControlActivity : ComponentActivity() {
                             val base = store.baseUrl ?: run { busy = false; return@launch }
                             val token = store.token ?: run { busy = false; return@launch }
                             val api = HaApiClient(base, token)
-                            when (domain) {
+                            val result = when (domain) {
                                 "light" -> if (isOn) {
                                     api.callService("light", "turn_off", entityId)
                                 } else {
@@ -129,9 +132,14 @@ class RangeControlActivity : ComponentActivity() {
                                 } else {
                                     api.callService("climate", "turn_on", entityId)
                                 }
+                                else -> null
                             }
-                            isOn = !isOn
-                            EntityRepository.refresh(applicationContext, entityId)
+                            if (result is HaApiClient.Result.Ok) {
+                                isOn = !isOn
+                                EntityRepository.refresh(applicationContext, entityId)
+                            } else {
+                                showActionError(applicationContext)
+                            }
                             busy = false
                         }
                     }

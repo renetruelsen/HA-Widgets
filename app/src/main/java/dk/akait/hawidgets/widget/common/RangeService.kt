@@ -18,12 +18,12 @@ import dk.akait.hawidgets.data.SecureStore
  * light/cover/climate afrunder til heltal (uændret historisk adfærd — brightness-%, position, °C);
  * number/input_number sender den fulde decimalværdi (bevarer step 0.5 osv., jf. v0.2.34).
  */
-suspend fun sendRangeValue(context: Context, domain: String, entityId: String, value: Double) {
+suspend fun sendRangeValue(context: Context, domain: String, entityId: String, value: Double): Boolean {
     val store = SecureStore.get(context.applicationContext)
-    val base = store.baseUrl ?: return
-    val token = store.token ?: return
+    val base = store.baseUrl ?: return false
+    val token = store.token ?: return false
     val api = HaApiClient(base, token)
-    when (domain) {
+    val result = when (domain) {
         "light" -> api.callService(
             "light", "turn_on", entityId,
             extraData = mapOf("brightness" to (value.toInt() * 255 / 100).coerceIn(1, 255)),
@@ -44,6 +44,9 @@ suspend fun sendRangeValue(context: Context, domain: String, entityId: String, v
             "input_number", "set_value", entityId,
             extraData = mapOf("value" to value),
         )
+        else -> return false
     }
-    EntityRepository.refresh(context.applicationContext, entityId)
+    val ok = result is HaApiClient.Result.Ok
+    if (ok) EntityRepository.refresh(context.applicationContext, entityId)
+    return ok
 }
