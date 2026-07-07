@@ -21,11 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
+import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
-import dk.akait.hawidgets.data.SecureStore
 import kotlinx.coroutines.launch
 
 /** Redigér en input_text-entitets værdi — simpel tekstboks + Gem, kalder input_text.set_value. */
@@ -56,17 +57,10 @@ class TextControlActivity : ComponentActivity() {
                     fun save() {
                         scope.launch {
                             busy = true
-                            val store = SecureStore.get(applicationContext)
-                            val base = store.baseUrl
-                            val token = store.token
-                            val result = if (base != null && token != null) {
-                                HaApiClient(base, token).callService(
-                                    "input_text", "set_value", entityId,
-                                    extraData = mapOf("value" to text),
-                                )
-                            } else {
-                                null
-                            }
+                            val result = resolveHaApiClient(applicationContext)?.callService(
+                                "input_text", "set_value", entityId,
+                                extraData = mapOf("value" to text),
+                            )
                             busy = false
                             if (result is HaApiClient.Result.Ok) {
                                 EntityRepository.refresh(applicationContext, entityId)
@@ -92,9 +86,9 @@ class TextControlActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
                         ) {
-                            OutlinedButton(onClick = { finish() }, enabled = !busy) { Text("Annullér") }
+                            OutlinedButton(onClick = { finish() }, enabled = !busy) { Text(stringResource(R.string.cancel)) }
                             Spacer(Modifier.padding(4.dp))
-                            Button(onClick = { save() }, enabled = !busy) { Text("Gem") }
+                            Button(onClick = { save() }, enabled = !busy) { Text(stringResource(R.string.save)) }
                         }
                     }
                 }

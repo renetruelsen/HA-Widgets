@@ -114,14 +114,15 @@ private fun OnboardingScreen() {
     val store = remember { SecureStore.get(context) }
     val scope = rememberCoroutineScope()
 
-    var baseUrl by remember { mutableStateOf(store.baseUrl ?: if (BuildConfig.DEBUG) BuildConfig.DEV_URL else "http://homeassistant.local:8123") }
-    var token by remember { mutableStateOf(store.token ?: if (BuildConfig.DEBUG) BuildConfig.DEV_TOKEN else "") }
+    var baseUrl by remember { mutableStateOf(store.baseUrl ?: "http://homeassistant.local:8123") }
+    var token by remember { mutableStateOf(store.token ?: "") }
     var connected by remember { mutableStateOf(store.isConfigured) }
     var status by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var showTokenHelp by remember { mutableStateOf(false) }
 
     val pm = remember { context.getSystemService(PowerManager::class.java) }
     LaunchedEffect(connected) {
@@ -172,6 +173,24 @@ private fun OnboardingScreen() {
                 TextButton(onClick = { showBatteryDialog = false }) {
                     Text(stringResource(R.string.battery_dialog_later))
                 }
+            }
+        )
+    }
+
+    if (showTokenHelp) {
+        AlertDialog(
+            onDismissRequest = { showTokenHelp = false },
+            title = { Text(stringResource(R.string.token_help_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StepRow(1, stringResource(R.string.token_help_step1))
+                    StepRow(2, stringResource(R.string.token_help_step2))
+                    StepRow(3, stringResource(R.string.token_help_step3))
+                    StepRow(4, stringResource(R.string.token_help_step4))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTokenHelp = false }) { Text(stringResource(R.string.close)) }
             }
         )
     }
@@ -328,6 +347,10 @@ private fun OnboardingScreen() {
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                TextButton(onClick = { showTokenHelp = true }) {
+                    Text(stringResource(R.string.token_help_link))
+                }
+
                 Button(
                     enabled = !busy && baseUrl.isNotBlank() && token.isNotBlank(),
                     onClick = {
@@ -440,6 +463,9 @@ private fun SettingsSheet(
                 LanguageRow(currentTag = currentTag) { tag ->
                     setAppLocale(context, tag)
                     currentTag = tag
+                    // Widgets gen-læser ikke locale reaktivt (samme begrundelse som tema, ADR-5) —
+                    // uden dette ville placerede widgets først skifte sprog ved næste periodiske sync.
+                    scope.launch { updateAllWidgets(context) }
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }

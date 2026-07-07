@@ -54,7 +54,9 @@ import kotlinx.coroutines.launch
 abstract class BaseEntityPickerActivity : ComponentActivity() {
 
     abstract val domain: String
-    abstract val pickerTitle: String
+    // Function, not `val` — a val initializer runs during construction, before attachBaseContext(),
+    // when getString() is not yet safe to call. This is evaluated lazily from onCreate() instead.
+    abstract fun pickerTitle(): String
     abstract val domainIconResId: Int
 
     /** Translate state string to display label in entity list. Default: raw state. */
@@ -78,7 +80,7 @@ abstract class BaseEntityPickerActivity : ComponentActivity() {
                 EntityPickerScreen(
                     appWidgetId = appWidgetId,
                     domain = domain,
-                    title = pickerTitle,
+                    title = pickerTitle(),
                     iconResId = domainIconResId,
                     formatState = ::formatEntityState,
                     onEntitySelected = { brief, label -> saveAndFinish(brief, label) },
@@ -159,7 +161,7 @@ private fun EntityPickerScreen(
                 Spacer(Modifier.padding(8.dp))
                 OutlinedTextField(
                     value = labelInput,
-                    onValueChange = { if (it.length <= 12) labelInput = it },
+                    onValueChange = { if (it.length <= 22) labelInput = it },
                     label = { Text(stringResource(R.string.short_label_field)) },
                     placeholder = { Text(stringResource(R.string.short_label_placeholder)) },
                     supportingText = { Text(stringResource(R.string.short_label_supporting)) },

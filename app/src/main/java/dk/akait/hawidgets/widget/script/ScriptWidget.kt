@@ -95,10 +95,10 @@ private fun ScriptContent(
     val friendlyName = state?.let { friendlyNameFromJson(it.attributesJson) }
     val label = config.label.ifEmpty { friendlyName ?: config.entityId }
     val statusBase = when {
-        state == null -> "Henter status…"
-        isUnavailable -> "Utilgængelig"
-        isRunning -> "Kører…"
-        else -> "Klar"
+        state == null -> context.getString(R.string.state_loading_status)
+        isUnavailable -> context.getString(R.string.state_unavailable)
+        isRunning -> context.getString(R.string.state_running_ellipsis)
+        else -> context.getString(R.string.state_ready)
     }
     val statusText = if (isStale && state != null) "$statusBase ~" else statusBase
 

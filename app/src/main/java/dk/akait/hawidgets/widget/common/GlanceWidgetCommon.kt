@@ -23,6 +23,7 @@ import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
+import dk.akait.hawidgets.R
 import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
@@ -70,7 +71,7 @@ fun UnconfiguredWidgetContent(
                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onSurfaceVariant),
             )
             Text(
-                text = "Opsæt",
+                text = context.getString(R.string.widget_setup_placeholder),
                 style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 10.sp),
             )
         }

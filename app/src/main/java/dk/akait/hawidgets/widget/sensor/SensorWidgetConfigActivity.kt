@@ -5,6 +5,6 @@ import dk.akait.hawidgets.widget.common.BaseEntityPickerActivity
 
 class SensorWidgetConfigActivity : BaseEntityPickerActivity() {
     override val domain = "sensor"
-    override val pickerTitle = "Vælg sensor"
+    override fun pickerTitle() = getString(R.string.picker_title_sensor)
     override val domainIconResId = R.drawable.ic_sensor
 }

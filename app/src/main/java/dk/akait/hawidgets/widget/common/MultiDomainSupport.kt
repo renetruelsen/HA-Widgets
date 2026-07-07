@@ -1,5 +1,6 @@
 package dk.akait.hawidgets.widget.common
 
+import android.content.Context
 import dk.akait.hawidgets.R
 
 /** De 18 domains valgbare i MultiEntityWidget (både til visning og som action-mål) — inkl.
@@ -10,94 +11,186 @@ val MULTI_ENTITY_DOMAINS = listOf(
     "input_boolean", "input_number", "input_text", "input_datetime", "input_select", "input_button",
 )
 
-fun domainIconResId(domain: String): Int = when (domain) {
-    "light" -> R.drawable.ic_lightbulb
-    "switch" -> R.drawable.ic_switch
-    "scene" -> R.drawable.ic_scene
-    "script" -> R.drawable.ic_script
-    "automation" -> R.drawable.ic_automation
-    "sensor" -> R.drawable.ic_sensor
-    "binary_sensor" -> R.drawable.ic_binary_sensor
-    "cover" -> R.drawable.ic_cover
-    "climate" -> R.drawable.ic_climate
-    "lock" -> R.drawable.ic_lock
-    "number", "input_number" -> R.drawable.ic_number
-    "device_tracker" -> R.drawable.ic_device_tracker
-    "input_boolean" -> R.drawable.ic_switch
-    "input_button", "input_select" -> R.drawable.ic_script
-    // input_text, input_datetime: intet dedikeret ikon — falder til generisk sensor-ikon.
-    else -> R.drawable.ic_sensor
-}
+/** Samlet per-domæne "kapabilitet" — ikon, on/off-udseende, gyldige action-mål og state-formattering.
+ * Konsoliderer hvad der tidligere var 5 uafhængige `when(domain)`-funktioner (v0.2.45-oprydning,
+ * jf. v0.2.34-fund #10): at tilføje et nyt domæne kræver nu ét opslag i [DOMAIN_CAPABILITIES] i
+ * stedet for fem separate steder der let kunne komme ud af trit med hinanden. */
+private class DomainCapability(
+    val iconResId: Int,
+    val hasOnOffState: Boolean,
+    val compatibleActions: List<String>,
+    val isActive: (String) -> Boolean = { false },
+    /** Formatteret, lokaliseret visningstekst for en KENDT, tilgængelig state (null/"unavailable"
+     * håndteres centralt i [formatEntityState] før dette kaldes). [unit] er kun relevant for rå
+     * værdi-domæner. */
+    val stateText: (context: Context, state: String, unit: String?) -> String =
+        { _, state, unit -> unit?.let { "$state $it" } ?: state },
+)
+
+private val DEFAULT_CAPABILITY = DomainCapability(
+    iconResId = R.drawable.ic_sensor,
+    hasOnOffState = false,
+    compatibleActions = listOf("NONE"),
+)
+
+private val DOMAIN_CAPABILITIES: Map<String, DomainCapability> = mapOf(
+    "light" to DomainCapability(
+        iconResId = R.drawable.ic_lightbulb,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE", "TOGGLE", "RANGE"),
+        isActive = { it == "on" },
+        stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_on else R.string.state_off) },
+    ),
+    "switch" to DomainCapability(
+        iconResId = R.drawable.ic_switch,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE", "TOGGLE"),
+        isActive = { it == "on" },
+        stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_on else R.string.state_off) },
+    ),
+    "input_boolean" to DomainCapability(
+        iconResId = R.drawable.ic_switch,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE", "TOGGLE"),
+        isActive = { it == "on" },
+        stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_on else R.string.state_off) },
+    ),
+    "lock" to DomainCapability(
+        iconResId = R.drawable.ic_lock,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE", "TOGGLE"),
+        isActive = { it == "locked" },
+        stateText = { c, state, _ -> c.getString(if (state == "locked") R.string.state_locked else R.string.state_unlocked) },
+    ),
+    "cover" to DomainCapability(
+        iconResId = R.drawable.ic_cover,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE", "TOGGLE", "RANGE"),
+        isActive = { it == "open" || it == "opening" },
+        stateText = { c, state, _ ->
+            when (state) {
+                "open" -> c.getString(R.string.state_open)
+                "closed" -> c.getString(R.string.state_closed)
+                "opening" -> c.getString(R.string.state_opening)
+                "closing" -> c.getString(R.string.state_closing)
+                else -> state
+            }
+        },
+    ),
+    "climate" to DomainCapability(
+        iconResId = R.drawable.ic_climate,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE", "TOGGLE", "RANGE"),
+        isActive = { it == "on" },
+        stateText = { c, state, _ ->
+            when (state) {
+                "heat" -> c.getString(R.string.climate_heat)
+                "cool" -> c.getString(R.string.climate_cool)
+                "auto", "heat_cool" -> c.getString(R.string.climate_auto)
+                "dry" -> c.getString(R.string.climate_dry)
+                "fan_only" -> c.getString(R.string.climate_fan_only)
+                "off" -> c.getString(R.string.state_off)
+                else -> state
+            }
+        },
+    ),
+    "automation" to DomainCapability(
+        iconResId = R.drawable.ic_automation,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE", "TOGGLE", "TRIGGER"),
+        isActive = { it == "on" },
+        stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_active else R.string.state_deactivated) },
+    ),
+    "binary_sensor" to DomainCapability(
+        iconResId = R.drawable.ic_binary_sensor,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE"),
+        isActive = { it == "on" },
+        stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_active else R.string.state_inactive) },
+    ),
+    "device_tracker" to DomainCapability(
+        iconResId = R.drawable.ic_device_tracker,
+        hasOnOffState = true,
+        compatibleActions = listOf("NONE"),
+        isActive = { it == "home" },
+        stateText = { c, state, _ -> c.getString(if (state == "home") R.string.state_home else R.string.state_away) },
+    ),
+    "scene" to DomainCapability(
+        iconResId = R.drawable.ic_scene,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE", "TRIGGER"),
+        stateText = { c, _, _ -> c.getString(R.string.state_scene_activate) },
+    ),
+    "script" to DomainCapability(
+        iconResId = R.drawable.ic_script,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE", "TRIGGER"),
+        stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_running else R.string.state_ready) },
+    ),
+    "sensor" to DomainCapability(
+        iconResId = R.drawable.ic_sensor,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE"),
+    ),
+    "number" to DomainCapability(
+        iconResId = R.drawable.ic_number,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE", "RANGE"),
+    ),
+    "input_number" to DomainCapability(
+        iconResId = R.drawable.ic_number,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE", "RANGE"),
+    ),
+    "input_text" to DomainCapability(
+        iconResId = R.drawable.ic_sensor,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE", "TEXT"),
+    ),
+    "input_datetime" to DomainCapability(
+        iconResId = R.drawable.ic_sensor,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE", "DATETIME"),
+    ),
+    "input_select" to DomainCapability(
+        iconResId = R.drawable.ic_script,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE"),
+    ),
+    "input_button" to DomainCapability(
+        iconResId = R.drawable.ic_script,
+        hasOnOffState = false,
+        compatibleActions = listOf("NONE", "TRIGGER"),
+    ),
+)
+
+private fun capabilityFor(domain: String): DomainCapability = DOMAIN_CAPABILITIES[domain] ?: DEFAULT_CAPABILITY
+
+fun domainIconResId(domain: String): Int = capabilityFor(domain).iconResId
 
 /** Domain-specifik state-formattering — matcher docs/widget-settings-spec.md's tabel + de 3 nye domains.
  * [unit], hvis angivet (fra entitetens `unit_of_measurement`-attribut), tilføjes efter rå værdier
  * (sensor/number/input_number m.fl.) — samme mønster som SensorWidgets `buildSensorValue`. */
-fun formatEntityState(domain: String, state: String?, unit: String? = null): String = when {
-    state == null -> "…"
-    state == "unavailable" -> "Utilgængelig"
-    domain == "light" || domain == "switch" || domain == "input_boolean" -> if (state == "on") "Tændt" else "Slukket"
-    domain == "lock" -> if (state == "locked") "Låst" else "Ulåst"
-    domain == "cover" -> when (state) {
-        "open" -> "Åben"
-        "closed" -> "Lukket"
-        "opening" -> "Åbner…"
-        "closing" -> "Lukker…"
-        else -> state
-    }
-    domain == "climate" -> when (state) {
-        "heat" -> "Opvarmning"
-        "cool" -> "Køling"
-        "auto", "heat_cool" -> "Auto"
-        "dry" -> "Affugtning"
-        "fan_only" -> "Ventilator"
-        "off" -> "Slukket"
-        else -> state
-    }
-    domain == "automation" -> if (state == "on") "Aktiv" else "Deaktiveret"
-    domain == "binary_sensor" -> if (state == "on") "Aktiv" else "Inaktiv"
-    domain == "scene" -> "Aktiver"
-    domain == "script" -> if (state == "on") "Kører" else "Klar"
-    domain == "device_tracker" -> if (state == "home") "Hjemme" else "Ude"
-    unit != null -> "$state $unit" // sensor, number, input_number m.fl. med kendt enhed
-    else -> state // øvrige rå værdi-domæner uden enhed
+fun formatEntityState(context: Context, domain: String, state: String?, unit: String? = null): String {
+    if (state == null) return "…"
+    if (state == "unavailable") return context.getString(R.string.state_unavailable)
+    return capabilityFor(domain).stateText(context, state, unit)
 }
 
 /** Skal domænets "aktiv"-tilstand fremhæves med primary-farve? Matcher eksisterende widgets' konvention. */
-fun isActiveState(domain: String, state: String?): Boolean = when (domain) {
-    "light", "switch", "automation", "climate", "binary_sensor", "input_boolean" -> state == "on"
-    "lock" -> state == "locked"
-    "cover" -> state == "open" || state == "opening"
-    "device_tracker" -> state == "home"
-    else -> false // sensor, number, scene, script, øvrige inputs: intet vedvarende on/off-udseende
-}
+fun isActiveState(domain: String, state: String?): Boolean = state != null && capabilityFor(domain).isActive(state)
 
 /** Har domænet et vedvarende tændt/slukket-udseende (og dermed en meningsfuld "outline når slukket /
  * fuld farve når tændt"-styling)? Præcis de domæner hvor [isActiveState] kan blive true. Rene
  * værdi-/udløs-domæner (sensor/number/scene/script/…) er info-agtige og bruger et neutralt fyld. */
-fun hasOnOffState(domain: String): Boolean = when (domain) {
-    "light", "switch", "automation", "climate", "binary_sensor", "input_boolean",
-    "lock", "cover", "device_tracker" -> true
-    else -> false
-}
+fun hasOnOffState(domain: String): Boolean = capabilityFor(domain).hasOnOffState
 
 /**
  * Action-typer der giver mening for et givent domæne SOM ACTION-MÅL. Ikke filtreret på
  * live kapabilitet (fx dimmable/positionable) — brugeren vælger selv, ligesom resten af
  * "brugervalgt action pr slot"-modellen.
  */
-fun compatibleActionsFor(domain: String): List<String> = when (domain) {
-    "light", "cover", "climate" -> listOf("NONE", "TOGGLE", "RANGE")
-    "switch", "lock", "input_boolean" -> listOf("NONE", "TOGGLE")
-    "number", "input_number" -> listOf("NONE", "RANGE")
-    "automation" -> listOf("NONE", "TOGGLE", "TRIGGER")
-    "scene", "script", "input_button" -> listOf("NONE", "TRIGGER")
-    "input_text" -> listOf("NONE", "TEXT")
-    "input_datetime" -> listOf("NONE", "DATETIME")
-    // sensor, binary_sensor, device_tracker, input_select: read-only — input_select er bevidst
-    // read-only i denne omgang (kræver en options-vælger-skærm at sætte en specifik værdi,
-    // ikke en simpel 1-tryks toggle/range/trigger/tekst/dato-tid som resten).
-    else -> listOf("NONE")
-}
+fun compatibleActionsFor(domain: String): List<String> = capabilityFor(domain).compatibleActions
 
 /** Standard-forslag for "vis værdi"-indstillingen på en sekundær-chip, når brugeren ikke selv
  * har valgt — værdi-bærende handlinger (info/range/tekst/dato-tid) foreslår værdi-tekst,

@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.R
@@ -114,6 +115,7 @@ private fun SlotCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
 ) {
+    val name = slot.label.ifEmpty { slot.displayEntityId }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -124,7 +126,7 @@ private fun SlotCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f))
-                .clickable(onClick = onClick)
+                .clickable(onClickLabel = stringResource(R.string.cd_edit), role = Role.Button, onClick = onClick)
                 .padding(10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -135,7 +137,7 @@ private fun SlotCard(
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    slot.label.ifEmpty { slot.displayEntityId },
+                    name,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -193,19 +195,19 @@ private fun SlotCard(
             IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Filled.KeyboardArrowUp,
-                    contentDescription = stringResource(R.string.cd_move_up),
+                    contentDescription = stringResource(R.string.cd_move_up, name),
                     tint = if (canMoveUp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
             }
             IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(48.dp)) {
                 Icon(
                     Icons.Filled.KeyboardArrowDown,
-                    contentDescription = stringResource(R.string.cd_move_down),
+                    contentDescription = stringResource(R.string.cd_move_down, name),
                     tint = if (canMoveDown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                 )
             }
             IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_remove, name), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
     }

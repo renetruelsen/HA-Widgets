@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Annuller</string>
+    <string name="close">Luk</string>
     <string name="save">Gem</string>
     <string name="disconnect">Frakobl</string>
     <string name="connect">Forbind</string>
@@ -30,6 +31,12 @@
     <string name="how_to_use_step3">Tryk på widget-ikonet på hjemskærmen for at åbne dit dashboard</string>
     <string name="how_to_use_tip_more_widgets">Der findes mange flere widgets (lys, sensorer, kontakter m.m.) — find dem via telefonens egen \'Tilføj widget\': hold på hjemskærmen → Widgets → HA Widgets.</string>
     <string name="onboarding_intro">Forbind din Home Assistant-instans nedenfor. Du kan også springe dette over og forbinde første gang du tilføjer en widget.</string>
+    <string name="token_help_link">Hvordan laver jeg et token?</string>
+    <string name="token_help_title">Sådan laver du et Long-Lived Access Token</string>
+    <string name="token_help_step1">Åbn Home Assistant i en browser og klik på dit profilnavn (nederst i sidemenuen)</string>
+    <string name="token_help_step2">Scroll ned til \'Langtidsholdbare adgangstokens\' og tryk \'Opret token\'</string>
+    <string name="token_help_step3">Giv det et navn (fx \'HA Widgets\') og kopiér tokenet — det vises kun én gang</string>
+    <string name="token_help_step4">Indsæt det i feltet ovenfor</string>
 
     <!-- Section labels & settings overlay -->
     <string name="section_connection">Forbindelse</string>
@@ -137,7 +144,7 @@
     <string name="customize_widget_title">Tilpas widget</string>
     <string name="short_label_field">Kort label (valgfrit)</string>
     <string name="short_label_placeholder">f.eks. Bad 1</string>
-    <string name="short_label_supporting">Vises på widget i stedet for enhedsnavn. Maks 12 tegn.</string>
+    <string name="short_label_supporting">Vises på widget i stedet for enhedsnavn. Maks 22 tegn.</string>
     <string name="back">Tilbage</string>
     <string name="search_hint">Søg…</string>
     <string name="multi_entity_config_title">Kombineret widget</string>
@@ -145,9 +152,9 @@
     <string name="multi_entity_show_refresh_icon">Vis refresh-ikon</string>
     <string name="add_slot">+ Tilføj slot</string>
     <string name="cd_edit">Rediger</string>
-    <string name="cd_remove">Fjern</string>
-    <string name="cd_move_up">Flyt op</string>
-    <string name="cd_move_down">Flyt ned</string>
+    <string name="cd_remove">Fjern %1$s</string>
+    <string name="cd_move_up">Flyt %1$s op</string>
+    <string name="cd_move_down">Flyt %1$s ned</string>
     <string name="slot_editor_title">Tilpas entitet</string>
     <string name="section_view">Visning</string>
     <string name="section_action">Handling</string>
@@ -166,7 +173,7 @@
     <string name="add_extra_entity">+ Tilføj ekstra entitet</string>
     <string name="show_value_on_chip">Vis værdi på chippen</string>
     <string name="chip_label_field">Chip-label (valgfri)</string>
-    <string name="chip_label_supporting">Vises på chippen. Maks 12 tegn.</string>
+    <string name="chip_label_supporting">Vises på chippen. Maks 22 tegn.</string>
     <string name="picker_target_display_title">Vælg entitet der skal vises</string>
     <string name="picker_target_action_title">Vælg handlingens mål</string>
     <string name="action_toggle">Slå til/fra</string>
@@ -189,4 +196,72 @@
     <string name="label_dash">%1$s — %2$s</string>
     <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>
     <string name="action_failed">Kunne ikke sende til Home Assistant</string>
+    <!-- RangeControlActivity / TextControlActivity -->
+    <string name="range_close_fully">Luk helt</string>
+    <string name="range_open_fully">Åbn helt</string>
+    <string name="range_turn_off">Sluk</string>
+    <string name="range_turn_on">Tænd</string>
+    <string name="range_label_position">Position</string>
+    <string name="range_label_temperature">Temperatur</string>
+    <string name="range_label_value">Værdi</string>
+    <string name="range_label_brightness">Lysstyrke</string>
+    <string name="range_current_temp">Aktuel temperatur: %1$d°C</string>
+    <!-- Entity-picker skærmtitler -->
+    <string name="picker_title_light">Vælg lyskilde</string>
+    <string name="picker_title_switch">Vælg kontakt</string>
+    <string name="picker_title_scene">Vælg scene</string>
+    <string name="picker_title_script">Vælg script</string>
+    <string name="picker_title_automation">Vælg automatisering</string>
+    <string name="picker_title_sensor">Vælg sensor</string>
+    <string name="picker_title_binary_sensor">Vælg binær sensor</string>
+    <string name="picker_title_cover">Vælg cover / persienne</string>
+    <string name="picker_title_climate">Vælg klimastyring</string>
+
+    <!-- Widget-statustekst (live widget-rendering + entity-picker-forhåndsvisning) -->
+    <string name="widget_setup_placeholder">Opsæt</string>
+    <string name="state_loading">Henter…</string>
+    <string name="state_loading_status">Henter status…</string>
+    <string name="state_unavailable">Utilgængelig</string>
+    <string name="state_on">Tændt</string>
+    <string name="state_off">Slukket</string>
+    <string name="state_locked">Låst</string>
+    <string name="state_unlocked">Ulåst</string>
+    <string name="state_open">Åben</string>
+    <string name="state_closed">Lukket</string>
+    <string name="state_opening">Åbner…</string>
+    <string name="state_closing">Lukker…</string>
+    <string name="state_active">Aktiv</string>
+    <string name="state_deactivated">Deaktiveret</string>
+    <string name="state_inactive">Inaktiv</string>
+    <string name="state_home">Hjemme</string>
+    <string name="state_away">Ude</string>
+    <string name="state_scene_activate">Aktiver</string>
+    <string name="state_scene_activating">Aktiverer…</string>
+    <string name="state_running">Kører</string>
+    <string name="state_running_ellipsis">Kører…</string>
+    <string name="state_ready">Klar</string>
+    <string name="climate_heat">Opvarmning</string>
+    <string name="climate_cool">Køling</string>
+    <string name="climate_auto">Auto</string>
+    <string name="climate_dry">Affugtning</string>
+    <string name="climate_fan_only">Ventilator</string>
+    <!-- Binær sensor device-class-tekst -->
+    <string name="binary_motion">Bevægelse</string>
+    <string name="binary_clear">Ro</string>
+    <string name="binary_low_battery">Lav batteri</string>
+    <string name="binary_ok">OK</string>
+    <string name="binary_charging">Oplader</string>
+    <string name="binary_not_charging">Oplader ikke</string>
+    <string name="binary_cold">Koldt</string>
+    <string name="binary_connected">Forbundet</string>
+    <string name="binary_not_connected">Ikke forbundet</string>
+    <string name="binary_hot">Varmt</string>
+    <string name="binary_light">Lyst</string>
+    <string name="binary_dark">Mørkt</string>
+    <string name="binary_wet">Vådt</string>
+    <string name="binary_dry">Tørt</string>
+    <string name="binary_alarm">Alarm!</string>
+    <string name="binary_detected">Registreret</string>
+    <string name="binary_problem">Problem</string>
+    <string name="binary_stopped">Stoppet</string>
 </resources>

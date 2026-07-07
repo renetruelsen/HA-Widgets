@@ -20,7 +20,7 @@ data class MultiWidgetSlotEntity(
     val actionEntityId: String,
     val actionDomain: String,
     val action: String, // "TOGGLE" | "RANGE" | "TRIGGER" | "NONE"
-    val label: String, // tom = brug friendly_name fra displayEntityId, maks 12 tegn
+    val label: String, // tom = brug friendly_name fra displayEntityId, maks 22 tegn
     // v0.3.0: Bekræft ved tryk (B1) — kun meningsfuld for TOGGLE/TRIGGER
     val confirmAction: Boolean = false,
     // v0.3.0: Værdi-formatering (C2) — null = auto

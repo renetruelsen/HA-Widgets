@@ -78,8 +78,8 @@ Vises efter brugeren vælger entitet på Skærm 1.
 | Label-felt | `OutlinedTextField`, `fillMaxWidth`, `singleLine=true` |
 | → label | `"Kort label (valgfrit)"` |
 | → placeholder | `"f.eks. Bad 1"` |
-| → supportingText | `"Vises på widget i stedet for enhedsnavn. Maks 12 tegn."` |
-| → maxLength | 12 tegn (hard enforced: `if (it.length <= 12)`) |
+| → supportingText | `"Vises på widget i stedet for enhedsnavn. Maks 22 tegn."` |
+| → maxLength | 22 tegn (hard enforced: `if (it.length <= 22)`) |
 | Spacer | 8dp |
 | Gem-knap | `Button`, `fillMaxWidth`, tekst `"Gem widget"` |
 | Tilbage-knap | `TextButton`, `fillMaxWidth`, tekst `"Tilbage"` → nulstiller til Skærm 1 |

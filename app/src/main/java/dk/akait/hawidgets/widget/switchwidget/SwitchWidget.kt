@@ -96,10 +96,10 @@ private fun SwitchContent(
     val friendlyName = state?.let { friendlyNameFromJson(it.attributesJson) }
     val label = config.label.ifEmpty { friendlyName ?: config.entityId }
     val statusBase = when {
-        state == null -> "Henter status…"
-        isUnavailable -> "Utilgængelig"
-        isOn -> "Tændt"
-        else -> "Slukket"
+        state == null -> context.getString(R.string.state_loading_status)
+        isUnavailable -> context.getString(R.string.state_unavailable)
+        isOn -> context.getString(R.string.state_on)
+        else -> context.getString(R.string.state_off)
     }
     val statusText = if (isStale && state != null) "$statusBase ~" else statusBase
 

@@ -170,7 +170,7 @@ private fun displayValueFor(
     datetimeFormat: String?,
 ): String {
     if (state == null || state.state == "unavailable" || !isRawValueDomain(domain)) {
-        return formatEntityState(domain, state?.state, state?.attributesJson?.let { unitFromJson(it) })
+        return formatEntityState(context, domain, state?.state, state?.attributesJson?.let { unitFromJson(it) })
     }
     val locale = context.resources.configuration.locales[0]
     return formatDisplayValue(domain, state.state, state.attributesJson, precision, datetimeFormat, locale)

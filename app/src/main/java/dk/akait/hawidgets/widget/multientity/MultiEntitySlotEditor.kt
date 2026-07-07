@@ -116,7 +116,7 @@ internal fun SlotEditorScreen(
         ) {
             OutlinedTextField(
                 value = draft.label,
-                onValueChange = { if (it.length <= 12) onLabelChange(it) },
+                onValueChange = { if (it.length <= 22) onLabelChange(it) },
                 label = { Text(stringResource(R.string.short_label_field)) },
                 placeholder = { Text(stringResource(R.string.short_label_placeholder)) },
                 supportingText = { Text(stringResource(R.string.short_label_supporting)) },
@@ -333,7 +333,7 @@ private fun SecondaryEntityRow(
         }
         OutlinedTextField(
             value = secondary.label,
-            onValueChange = { if (it.length <= 12) onLabelChange(it) },
+            onValueChange = { if (it.length <= 22) onLabelChange(it) },
             label = { Text(stringResource(R.string.chip_label_field)) },
             supportingText = { Text(stringResource(R.string.chip_label_supporting)) },
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),

@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
 import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
-import dk.akait.hawidgets.BuildConfig
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.DashboardInfo
 import dk.akait.hawidgets.data.DisplayMode
@@ -124,10 +123,10 @@ private fun ConfigScreen(
     // Step 1: HA connection (skipped if already configured)
     var haConfigured by remember { mutableStateOf(store.isConfigured) }
     var haUrl by remember {
-        mutableStateOf(store.baseUrl ?: if (BuildConfig.DEBUG) BuildConfig.DEV_URL else "http://homeassistant.local:8123")
+        mutableStateOf(store.baseUrl ?: "http://homeassistant.local:8123")
     }
     var haToken by remember {
-        mutableStateOf(store.token ?: if (BuildConfig.DEBUG) BuildConfig.DEV_TOKEN else "")
+        mutableStateOf(store.token ?: "")
     }
     var connecting by remember { mutableStateOf(false) }
     var connectError by remember { mutableStateOf<String?>(null) }

@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
     <string name="save">Save</string>
     <string name="disconnect">Disconnect</string>
     <string name="connect">Connect</string>
@@ -30,6 +31,12 @@
     <string name="how_to_use_step3">Tap the widget icon on the home screen to open your dashboard</string>
     <string name="how_to_use_tip_more_widgets">There are many more widgets (lights, sensors, switches and more) — find them via your phone\'s own \'Add widget\': long-press the home screen → Widgets → HA Widgets.</string>
     <string name="onboarding_intro">Connect your Home Assistant instance below. You can also skip this and connect the first time you add a widget.</string>
+    <string name="token_help_link">How do I create a token?</string>
+    <string name="token_help_title">Create a Long-Lived Access Token</string>
+    <string name="token_help_step1">Open Home Assistant in a browser and click your profile name (bottom of the sidebar)</string>
+    <string name="token_help_step2">Scroll down to \'Long-lived access tokens\' and tap \'Create token\'</string>
+    <string name="token_help_step3">Give it a name (e.g. \'HA Widgets\') and copy the token — it is only shown once</string>
+    <string name="token_help_step4">Paste it into the field above</string>
 
     <!-- Section labels & settings overlay -->
     <string name="section_connection">Connection</string>
@@ -137,7 +144,7 @@
     <string name="customize_widget_title">Customize widget</string>
     <string name="short_label_field">Short label (optional)</string>
     <string name="short_label_placeholder">e.g. Bathroom 1</string>
-    <string name="short_label_supporting">Shown on the widget instead of the entity name. Max 12 characters.</string>
+    <string name="short_label_supporting">Shown on the widget instead of the entity name. Max 22 characters.</string>
     <string name="back">Back</string>
     <string name="search_hint">Search…</string>
     <string name="multi_entity_config_title">Combined widget</string>
@@ -145,9 +152,9 @@
     <string name="multi_entity_show_refresh_icon">Show refresh icon</string>
     <string name="add_slot">+ Add slot</string>
     <string name="cd_edit">Edit</string>
-    <string name="cd_remove">Remove</string>
-    <string name="cd_move_up">Move up</string>
-    <string name="cd_move_down">Move down</string>
+    <string name="cd_remove">Remove %1$s</string>
+    <string name="cd_move_up">Move %1$s up</string>
+    <string name="cd_move_down">Move %1$s down</string>
     <string name="slot_editor_title">Customize entity</string>
     <string name="section_view">View</string>
     <string name="section_action">Action</string>
@@ -166,7 +173,7 @@
     <string name="add_extra_entity">+ Add extra entity</string>
     <string name="show_value_on_chip">Show value on chip</string>
     <string name="chip_label_field">Chip label (optional)</string>
-    <string name="chip_label_supporting">Shown on the chip. Max 12 characters.</string>
+    <string name="chip_label_supporting">Shown on the chip. Max 22 characters.</string>
     <string name="picker_target_display_title">Choose entity to display</string>
     <string name="picker_target_action_title">Choose the action\'s target</string>
     <string name="action_toggle">Toggle on/off</string>
@@ -189,4 +196,72 @@
     <string name="label_dash">%1$s — %2$s</string>
     <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>
     <string name="action_failed">Couldn\'t send to Home Assistant</string>
+    <!-- RangeControlActivity / TextControlActivity -->
+    <string name="range_close_fully">Close fully</string>
+    <string name="range_open_fully">Open fully</string>
+    <string name="range_turn_off">Turn off</string>
+    <string name="range_turn_on">Turn on</string>
+    <string name="range_label_position">Position</string>
+    <string name="range_label_temperature">Temperature</string>
+    <string name="range_label_value">Value</string>
+    <string name="range_label_brightness">Brightness</string>
+    <string name="range_current_temp">Current temperature: %1$d°C</string>
+    <!-- Entity-picker screen titles -->
+    <string name="picker_title_light">Choose light source</string>
+    <string name="picker_title_switch">Choose switch</string>
+    <string name="picker_title_scene">Choose scene</string>
+    <string name="picker_title_script">Choose script</string>
+    <string name="picker_title_automation">Choose automation</string>
+    <string name="picker_title_sensor">Choose sensor</string>
+    <string name="picker_title_binary_sensor">Choose binary sensor</string>
+    <string name="picker_title_cover">Choose cover / blind</string>
+    <string name="picker_title_climate">Choose climate control</string>
+
+    <!-- Widget state text (live widget rendering + entity-picker previews) -->
+    <string name="widget_setup_placeholder">Set up</string>
+    <string name="state_loading">Loading…</string>
+    <string name="state_loading_status">Loading status…</string>
+    <string name="state_unavailable">Unavailable</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="state_locked">Locked</string>
+    <string name="state_unlocked">Unlocked</string>
+    <string name="state_open">Open</string>
+    <string name="state_closed">Closed</string>
+    <string name="state_opening">Opening…</string>
+    <string name="state_closing">Closing…</string>
+    <string name="state_active">Active</string>
+    <string name="state_deactivated">Deactivated</string>
+    <string name="state_inactive">Inactive</string>
+    <string name="state_home">Home</string>
+    <string name="state_away">Away</string>
+    <string name="state_scene_activate">Activate</string>
+    <string name="state_scene_activating">Activating…</string>
+    <string name="state_running">Running</string>
+    <string name="state_running_ellipsis">Running…</string>
+    <string name="state_ready">Ready</string>
+    <string name="climate_heat">Heating</string>
+    <string name="climate_cool">Cooling</string>
+    <string name="climate_auto">Auto</string>
+    <string name="climate_dry">Drying</string>
+    <string name="climate_fan_only">Fan</string>
+    <!-- Binary sensor device-class text -->
+    <string name="binary_motion">Motion</string>
+    <string name="binary_clear">Clear</string>
+    <string name="binary_low_battery">Low battery</string>
+    <string name="binary_ok">OK</string>
+    <string name="binary_charging">Charging</string>
+    <string name="binary_not_charging">Not charging</string>
+    <string name="binary_cold">Cold</string>
+    <string name="binary_connected">Connected</string>
+    <string name="binary_not_connected">Not connected</string>
+    <string name="binary_hot">Hot</string>
+    <string name="binary_light">Light</string>
+    <string name="binary_dark">Dark</string>
+    <string name="binary_wet">Wet</string>
+    <string name="binary_dry">Dry</string>
+    <string name="binary_alarm">Alarm!</string>
+    <string name="binary_detected">Detected</string>
+    <string name="binary_problem">Problem</string>
+    <string name="binary_stopped">Stopped</string>
 </resources>

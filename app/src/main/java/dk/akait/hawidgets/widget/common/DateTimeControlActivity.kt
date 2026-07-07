@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
-import dk.akait.hawidgets.data.SecureStore
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -42,15 +41,13 @@ class DateTimeControlActivity : ComponentActivity() {
 
         fun submit(date: String?, time: String?) {
             lifecycleScope.launch {
-                val store = SecureStore.get(applicationContext)
-                val base = store.baseUrl
-                val token = store.token
-                if (base != null && token != null) {
+                val api = resolveHaApiClient(applicationContext)
+                if (api != null) {
                     val extraData = buildMap<String, Any> {
                         date?.let { put("date", it) }
                         time?.let { put("time", it) }
                     }
-                    val result = HaApiClient(base, token).callService(
+                    val result = api.callService(
                         "input_datetime", "set_datetime", entityId, extraData = extraData,
                     )
                     if (result is HaApiClient.Result.Ok) {

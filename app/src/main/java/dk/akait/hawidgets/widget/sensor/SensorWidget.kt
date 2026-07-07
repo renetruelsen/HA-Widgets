@@ -96,8 +96,8 @@ private fun SensorContent(
     val label = config.label.ifEmpty { attrs?.friendlyName ?: config.entityId }
     val locale = context.resources.configuration.locales[0]
     val statusBase = when {
-        state == null -> "Henter…"
-        isUnavailable -> "Utilgængelig"
+        state == null -> context.getString(R.string.state_loading)
+        isUnavailable -> context.getString(R.string.state_unavailable)
         else -> buildSensorValue(config.entityId.substringBefore('.'), state.state, state.attributesJson, attrs?.unit, locale)
     }
     val statusText = if (isStale && state != null) "$statusBase ~" else statusBase

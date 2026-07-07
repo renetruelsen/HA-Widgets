@@ -81,7 +81,7 @@ private fun SceneContent(
     val label = config.label.ifEmpty { friendlyName ?: config.entityId }
     // Optimistically set "scening" on tap → "Aktiverer…" feedback for ~15s until next sync.
     val isActivating = state?.state == "scening"
-    val statusText = if (isActivating) "Aktiverer…" else "Aktiver"
+    val statusText = if (isActivating) context.getString(R.string.state_scene_activating) else context.getString(R.string.state_scene_activate)
     val bgColor = if (isActivating) GlanceTheme.colors.primary else GlanceTheme.colors.surfaceVariant
     val contentColor = if (isActivating) GlanceTheme.colors.onPrimary else GlanceTheme.colors.onSurfaceVariant
 

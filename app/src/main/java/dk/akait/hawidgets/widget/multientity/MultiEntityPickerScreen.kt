@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ internal fun EntityPickerSubScreen(
     onBack: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
+    val context = LocalContext.current
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(title) },
@@ -102,7 +104,7 @@ internal fun EntityPickerSubScreen(
                                     Text(brief.friendlyName, style = MaterialTheme.typography.bodyLarge)
                                     Text(brief.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                SuggestionChip(onClick = {}, label = { Text(formatEntityState(brief.domain, brief.state, brief.unit)) })
+                                SuggestionChip(onClick = {}, label = { Text(formatEntityState(context, brief.domain, brief.state, brief.unit)) })
                             }
                             HorizontalDivider()
                         }

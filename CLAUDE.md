@@ -661,8 +661,121 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
       `SecondaryColumns` — bruges nu af BÅDE `toChipData` (render) og `toDraft` (config), så de to
       sider aldrig kan divergere på hvad en null-kolonne betyder.
   - **QA:** build grøn; emulator (`pixel_test`) — refaktoren renderer identisk (outline-rækker/chips
-    + neutral sensor, ingen crash), resize verificeret bredere. Device-QA på S23 afventer bruger
-    (overvejende ren refaktor + config).
+    + neutral sensor, ingen crash), resize verificeret bredere. **Device-QA (S23): bekræftet OK af
+    bruger (2026-07-07)** — samme gælder v0.2.41's resterende 4 kontrol-dialoger (RangeControl/
+    TextControl/NumberInput/DateTimeControl) og v0.2.27's resize-banner, som tidligere stod som
+    "afventer" i denne fil; alle bekræftet testet OK af bruger på rigtig enhed.
+- ✅ **v0.2.45 — fjernet hardcoded HA-token/URL + LLT-vejledning + kodeoprydning (2026-07-07):**
+  - **Sikkerhedsfund:** `app/build.gradle.kts`s `debug`-buildType havde et RIGTIGT, langtidsholdbart
+    HA-access-token (JWT mod `home.rtr.dk:8123`) hardcoded som `DEV_TOKEN`/`DEV_URL`
+    `buildConfigField`, sporet i git siden allerførste commit — og repoet er offentligt på GitHub.
+    Tokenet var reelt lækket offentligt. **Fix:** `buildConfigField`'erne + hele `debug`-buildType-
+    blokken fjernet fra `build.gradle.kts`; `BuildConfig.DEBUG`-forgreningerne i `MainActivity.kt`
+    og `ShortcutWidgetConfigActivity.kt` fjernet, så URL/token-felterne altid falder tilbage til
+    samme (tomme/default) værdi uanset build-type. **Bruger tilbagekalder selv tokenet i HA og
+    rydder git-historikken** (uden for denne sessions scope).
+  - **Default HA-URL:** onboarding og genvej-config'ens URL-felt bruger nu ubetinget
+    `http://homeassistant.local:8123` som default (før kun for release-builds).
+  - **LLT-vejledning:** nyt "Hvordan laver jeg et token?"-link under token-feltet i onboarding
+    (`MainActivity.kt`) åbner en dialog med 4 nummererede trin (genbruger eksisterende `StepRow`),
+    lokaliseret på alle 3 sprog (`token_help_*`-strenge).
+  - **Kodeoprydning af udskudte fund (fra v0.2.26/v0.2.34):**
+    - `MultiWidgetEntity.title`-kolonnen (ubrugt af UI siden v0.2.23) fjernet — ny
+      `MIGRATION_8_9` (Room v8→v9) genskaber `multi_widget`-tabellen uden kolonnen (tabel-
+      genskabelse i stedet for `DROP COLUMN`, som ikke er tilgængeligt på alle Android-versioner
+      ved minSdk 26).
+    - `MultiDomainSupport.kt`s 5 parallelle `when(domain)`-funktioner (`domainIconResId`,
+      `formatEntityState`, `isActiveState`, `hasOnOffState`, `compatibleActionsFor`) konsolideret
+      til én privat `DOMAIN_CAPABILITIES`-registry — nyt domæne kræver nu ét opslag, ikke fem.
+      Verificeret felt-for-felt behavior-lig med originalen (inkl. de hardcodede danske
+      state-tekster, som IKKE er en del af denne oprydning — se kendt udestående nedenfor).
+    - `MultiEntityClickModifier.kt`s ikke-udtømmende `else -> // TRIGGER` gjort eksplicit
+      (`"TRIGGER" -> {...}`) med en sikker `else -> base` (intet klik) for en ukendt action-værdi,
+      i stedet for at antage TRIGGER.
+    - Ny delt `resolveHaApiClient()` (`ActionFeedback.kt`) erstatter det 4×-kopierede
+      `SecureStore.get()`+`HaApiClient(...)`-konstruktionsmønster i `RangeControlActivity`
+      (`sendToggle`), `TextControlActivity`, `DateTimeControlActivity` og `RangeService`.
+      `ConfirmActionActivity`s egen TOGGLE/TRIGGER-service-mapping er bevidst IKKE rørt — den er
+      allerede dokumenteret som et accepteret, byte-for-byte-verificeret duplikat (v0.2.34-fund #7).
+    - `SlotCard` (`MultiEntityListScreen.kt`) a11y: ↑/↓/slet-knappernes `contentDescription`
+      inkluderer nu entitetsnavnet (`cd_move_up`/`cd_move_down`/`cd_remove` parametriseret,
+      alle 3 sprog) i stedet for identiske "Flyt op"/"Flyt ned"/"Fjern" på tværs af kort; hoved-
+      rækkens klikbare område har nu `role = Role.Button` + `onClickLabel`.
+  - **QA:** build + 25 unit-tests grønne. Emulator (`pixel_test`, ægte HA mod `home.rtr.dk`,
+    EKSISTERENDE data fra tidligere sessioner): migration v8→v9 verificeret direkte i databasen
+    (`user_version=9`, `multi_widget`-skema uden `title`-kolonne, alle 5 eksisterende widget-rækker
+    + 14 slots bevaret uden datatab); en placeret multi-entity-widget renderede identisk efter
+    domain-registry-refaktoren (ikoner, danske state-tekster, outline/fuld-farve-styling); tryk på
+    en lys-række udløste korrekt bekræft-dialogen (`"TRIGGER"`-omskrivningen ændrer ikke adfærd);
+    config-skærmen for samme widget åbnede uden crash, viste `SlotCard` korrekt (ingen titel-felt),
+    og ↑-knappen flyttede en slot korrekt (ikke gemt, for ikke at ændre brugerens rigtige widget).
+    **Ikke live-testet:** LLT-hjælpedialogen (kræver frakobling af emulatorens ægte HA-forbindelse,
+    som ikke kunne genoprettes uden et token efter denne sessions egen token-fjernelse — bevidst
+    undladt for ikke at strande test-opsætningen) og RangeControlActivity/TextControlActivity/
+    DateTimeControlActivity's `resolveHaApiClient`-sti (mekanisk, adfærds-lig ekstraktion, dækket af
+    grøn build). Device-QA på S23 afventer bruger.
+  - **Kendt, bevidst IKKE rettet i v0.2.45:** `formatEntityState`s state-tekster ("Tændt"/"Slukket"
+    osv.) er hardcodet danske, uafhængigt af app-sprogvalget (da/en/sv) — opdaget under denne
+    oprydning, men var ikke en del af de 5 udskudte fund. **Rettet i v0.2.46, se dér.**
+- ✅ **v0.2.46 — al widget-statustekst lokaliseret + widgets opdaterer ved sprogskift
+  (2026-07-07, opfølgning på v0.2.45's fund):**
+  - **Omfang udvidet efter afklaring med bruger:** startede som "ret formatEntityState" (kun
+    `MultiEntityWidget`), men samme mønster (hardcodet dansk uafhængigt af `da/en/sv`-valget) fandtes
+    i **alle** 9 entity-widgets' live rendering — ikke kun `MultiDomainSupport.kt`. Bruger valgte
+    eksplicit "alle widgets" frem for kun det oprindeligt flaggede sted.
+  - **`MultiDomainSupport.kt`:** `DomainCapability.stateText`-lambdaen tager nu `Context` og
+    resolver via nye `state_*`/`climate_*`-strengressourcer (alle 3 sprog) i stedet for danske
+    literals; `formatEntityState()` fik en `context`-parameter (opdateret begge call-sites:
+    `MultiEntityRendering.displayValueFor` og `MultiEntityPickerScreen` via `LocalContext.current`).
+  - **De 8 øvrige live widgets** (`LightWidget`, `SwitchWidget`, `CoverWidget`, `BinarySensorWidget`,
+    `AutomationWidget`, `SensorWidget`, `ClimateWidget`, `ScriptWidget`) + `GlanceWidgetCommon`s
+    fælles `UnconfiguredWidgetContent` ("Opsæt"): alle hardcodede status-/loading-/"unavailable"-
+    strenge erstattet med `context.getString(R.string.xxx)` — `BinarySensorContent` manglede helt en
+    `context`-parameter og fik den tilføjet. `BinarySensorWidget`s ~20-værdis device-class-tabel
+    (bevægelse/batteri/fugt/alarm osv.) fik hver sin strengressource; mange genbruges på tværs af
+    device-classes hvor teksten reelt er identisk (fx "OK" på 5 forskellige classes).
+  - **De 9 `*WidgetConfigActivity`s entity-picker-titler** ("Vælg lyskilde" osv.) var SEPARAT
+    hardcodet i hver config-activity (ikke relateret til `MultiDomainSupport`). `BaseEntityPicker
+    Activity.pickerTitle` ændret fra `abstract val` til `abstract fun pickerTitle()` — en `val`-
+    initializer kører under objekt-konstruktion, FØR `attachBaseContext()`, hvor `getString()` endnu
+    ikke er sikkert at kalde; en funktion udskyder opslaget til `onCreate`/`setContent`-tidspunktet.
+  - **`RangeControlActivity`/`TextControlActivity`:** fandt undervejs (bredere grep for resterende
+    danske literals) at disse to — brugt af LightWidget/CoverWidget/ClimateWidget/number/
+    input_number's skyder-dialog samt input_text-dialogen — også havde hardcodede knap-/felt-labels
+    ("Luk helt"/"Tænd"/"Værdi"/"Annullér"/"Gem" m.fl.). Rettet med nye `range_*`-ressourcer hhv.
+    genbrug af eksisterende `R.string.cancel`/`R.string.save`.
+  - **Ny opdaget fejl, rettet:** app'ens sprogvælger (`MainActivity`s `LanguageRow`/`setAppLocale`)
+    kaldte IKKE `updateAllWidgets()` efter et sprogskift — modsat tema-vælgeren, som eksplicit gør
+    det (ADR-5-kommentaren forklarer hvorfor: widgets observerer ikke `SecureStore` reaktivt). Uden
+    dette ville placerede widgets først vise det nye sprog ved næste periodiske sync (op til 15 min).
+    Tilføjet samme `scope.launch { updateAllWidgets(context) }`-kald i sprogvælgerens `onSelect`.
+  - **Bevidst IKKE rettet (separat bug-klasse, større omfang):** `HaApiClient.kt`s forbindelses-
+    fejlbeskeder ("Token afvist", "Kunne ikke nå HA: …") er stadig hardcodet danske — klassen har
+    ingen `Context` og bruges fra mange call-sites; at rette kræver enten at tråde `Context` gennem
+    hele netværkslaget eller omlægge `Result.Error` til at bære en strengressource-id + args i stedet
+    for en færdigformateret besked. Ikke gjort her.
+  - **QA:** build + 25 unit-tests grønne efter hver iteration. Emulator (`pixel_test`, ægte HA):
+    skiftede app-sprog via den FAKTISKE in-app sprogvælger (Indstillinger → Sprog → Svenska) —
+    placeret multi-entity-widget skiftede STRAKS fra "Slukket" til "Av" uden manuel widget-
+    genopfriskning (bekræfter `updateAllWidgets()`-fixet virker via den rigtige brugervej, ikke kun
+    via adb-bypass som IKKE trigger widget-opdatering). `LightWidgetConfigActivity`s entity-picker
+    viste korrekt "Välj ljuskälla" (lokaliseret titel) + "Av" (lokaliseret off-state) på svensk.
+    `ConfirmActionActivity`s bekræft-dialog verificeret på engelsk ("Turn on Hue Stuelampe?").
+    **Kendt, ikke-regressivt fund:** enkelt-widgets' entity-picker-lister (BaseEntityPickerActivity)
+    viser stadig rå `"unavailable"`-state uoversat i chippen — det gjorde de også FØR denne ændring
+    (kun "on"/"off" blev nogensinde oversat i disse pickere; `else -> state` er uændret adfærd, ikke
+    en regression, og ikke rettet her).
+- ✅ **v0.2.47 — kort label udvidet fra 12 til 22 tegn (2026-07-07, brugerønske):**
+  - `if (it.length <= 12)` → `<= 22` på de 3 steder der håndhæver grænsen: enkelt-widgets'
+    label-felt (`BaseEntityPickerActivity.kt`), MultiEntityWidget-slottets hoved-label og
+    sekundær-chip-label (begge `MultiEntitySlotEditor.kt`). Tilhørende supporting-tekster
+    (`short_label_supporting`/`chip_label_supporting`, alle 3 sprog) og kommentaren i
+    `MultiWidgetSlotEntity.kt` opdateret til "22 tegn"/"22 characters"/"22 tecken". Ren UI-
+    grænse — ingen Room-migration nødvendig (`label` var altid en ubegrænset `String`-kolonne).
+    `docs/widget-settings-spec.md` (kanonisk spec) opdateret til at matche.
+  - **QA:** build + unit-tests grønne. Emulator: åbnede `LightWidgetConfigActivity`s label-felt,
+    indtastede 26 tegn, feltet stoppede korrekt ved præcis 22 ("1234567890123456789012"),
+    supporting-teksten viste "Max 22 tecken" (app-sprog var stadig svensk fra v0.2.46-QA).
 
 ## Næste skridt
 

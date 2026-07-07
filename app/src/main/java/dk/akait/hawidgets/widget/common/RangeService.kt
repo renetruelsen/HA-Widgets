@@ -3,7 +3,6 @@ package dk.akait.hawidgets.widget.common
 import android.content.Context
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
-import dk.akait.hawidgets.data.SecureStore
 
 /**
  * Delt RANGE-værdi-afsendelse: én kanonisk domain→service-mapping for at SÆTTE en numerisk værdi
@@ -19,10 +18,7 @@ import dk.akait.hawidgets.data.SecureStore
  * number/input_number sender den fulde decimalværdi (bevarer step 0.5 osv., jf. v0.2.34).
  */
 suspend fun sendRangeValue(context: Context, domain: String, entityId: String, value: Double): Boolean {
-    val store = SecureStore.get(context.applicationContext)
-    val base = store.baseUrl ?: return false
-    val token = store.token ?: return false
-    val api = HaApiClient(base, token)
+    val api = resolveHaApiClient(context) ?: return false
     val result = when (domain) {
         "light" -> api.callService(
             "light", "turn_on", entityId,

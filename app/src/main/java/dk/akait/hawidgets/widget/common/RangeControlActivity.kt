@@ -32,7 +32,6 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
-import dk.akait.hawidgets.data.SecureStore
 import kotlinx.coroutines.launch
 
 class RangeControlActivity : ComponentActivity() {
@@ -112,10 +111,7 @@ class RangeControlActivity : ComponentActivity() {
                     fun sendToggle() {
                         scope.launch {
                             busy = true
-                            val store = SecureStore.get(applicationContext)
-                            val base = store.baseUrl ?: run { busy = false; return@launch }
-                            val token = store.token ?: run { busy = false; return@launch }
-                            val api = HaApiClient(base, token)
+                            val api = resolveHaApiClient(applicationContext) ?: run { busy = false; return@launch }
                             val result = when (domain) {
                                 "light" -> if (isOn) {
                                     api.callService("light", "turn_off", entityId)
@@ -151,23 +147,23 @@ class RangeControlActivity : ComponentActivity() {
                         Text(label, style = MaterialTheme.typography.titleMedium)
                         if (domain == "climate" && actualTemp != Int.MIN_VALUE) {
                             Text(
-                                "Aktuel temperatur: ${actualTemp}°C",
+                                stringResource(R.string.range_current_temp, actualTemp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
                         val toggleLabel = when {
-                            domain == "cover" && isOn -> "Luk helt"
-                            domain == "cover" -> "Åbn helt"
-                            isOn -> "Sluk"
-                            else -> "Tænd"
+                            domain == "cover" && isOn -> stringResource(R.string.range_close_fully)
+                            domain == "cover" -> stringResource(R.string.range_open_fully)
+                            isOn -> stringResource(R.string.range_turn_off)
+                            else -> stringResource(R.string.range_turn_on)
                         }
                         val valueLabel = when (domain) {
-                            "cover" -> "Position"
-                            "climate" -> "Temperatur"
-                            "number", "input_number" -> "Værdi"
-                            else -> "Lysstyrke"
+                            "cover" -> stringResource(R.string.range_label_position)
+                            "climate" -> stringResource(R.string.range_label_temperature)
+                            "number", "input_number" -> stringResource(R.string.range_label_value)
+                            else -> stringResource(R.string.range_label_brightness)
                         }
                         val unitSuffix = unitSuffixOverride ?: when (domain) {
                             "climate" -> "°C"

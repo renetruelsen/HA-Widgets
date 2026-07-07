@@ -113,7 +113,7 @@ private fun LightContent(
 
     val attrs = state?.let { parseLightAttrs(it.attributesJson) }
     val label = config.label.ifEmpty { attrs?.friendlyName ?: config.entityId }
-    val statusText = buildStatusText(state, attrs, isStale)
+    val statusText = buildStatusText(context, state, attrs, isStale)
 
     val baseModifier = GlanceModifier
         .fillMaxSize()
@@ -159,16 +159,17 @@ private fun LightContent(
 }
 
 private fun buildStatusText(
+    context: Context,
     state: EntityStateEntity?,
     attrs: LightAttrs?,
     isStale: Boolean,
 ): String {
     val base = when {
-        state == null -> "Henter status…"
-        state.state == "unavailable" -> "Utilgængelig"
+        state == null -> context.getString(R.string.state_loading_status)
+        state.state == "unavailable" -> context.getString(R.string.state_unavailable)
         state.state == "on" && attrs?.brightnessPercent != null -> "${attrs.brightnessPercent}%"
-        state.state == "on" -> "Tændt"
-        else -> "Slukket"
+        state.state == "on" -> context.getString(R.string.state_on)
+        else -> context.getString(R.string.state_off)
     }
     return if (isStale && state != null) "$base ~" else base
 }

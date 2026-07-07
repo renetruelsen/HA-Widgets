@@ -65,7 +65,7 @@ class BinarySensorWidget : GlanceAppWidget() {
                 if (cfg == null) {
                     UnconfiguredWidgetContent(context, appWidgetId, BinarySensorWidgetConfigActivity::class.java, R.drawable.ic_binary_sensor)
                 } else {
-                    BinarySensorContent(cfg, state, isWide)
+                    BinarySensorContent(context, cfg, state, isWide)
                 }
             }
         }
@@ -74,6 +74,7 @@ class BinarySensorWidget : GlanceAppWidget() {
 
 @androidx.compose.runtime.Composable
 private fun BinarySensorContent(
+    context: Context,
     config: EntityWidgetEntity,
     state: EntityStateEntity?,
     isWide: Boolean,
@@ -101,9 +102,9 @@ private fun BinarySensorContent(
 
     val label = config.label.ifEmpty { attrs?.friendlyName ?: config.entityId }
     val statusBase = when {
-        state == null -> "Henter…"
-        isUnavailable -> "Utilgængelig"
-        else -> stateLabel(attrs?.deviceClass, isActive)
+        state == null -> context.getString(R.string.state_loading)
+        isUnavailable -> context.getString(R.string.state_unavailable)
+        else -> stateLabel(context, attrs?.deviceClass, isActive)
     }
     val statusText = if (isStale && state != null) "$statusBase ~" else statusBase
 
@@ -135,23 +136,26 @@ private fun parseBinaryAttrs(attributesJson: String): BinaryAttrs =
 
 private val ALERT_CLASSES = setOf("smoke", "gas", "carbon_monoxide", "carbon_dioxide", "problem", "safety", "tamper")
 
-private fun stateLabel(deviceClass: String?, isActive: Boolean): String = when (deviceClass) {
-    "motion", "occupancy", "presence" -> if (isActive) "Bevægelse" else "Ro"
-    "door", "garage_door", "lock" -> if (isActive) "Åben" else "Lukket"
-    "window" -> if (isActive) "Åben" else "Lukket"
-    "battery" -> if (isActive) "Lav batteri" else "OK"
-    "battery_charging" -> if (isActive) "Oplader" else "Oplader ikke"
-    "cold" -> if (isActive) "Koldt" else "OK"
-    "connectivity" -> if (isActive) "Forbundet" else "Ikke forbundet"
-    "heat" -> if (isActive) "Varmt" else "OK"
-    "light" -> if (isActive) "Lyst" else "Mørkt"
-    "moisture", "rain" -> if (isActive) "Vådt" else "Tørt"
-    "plug", "power" -> if (isActive) "Aktiv" else "Inaktiv"
-    "running" -> if (isActive) "Kører" else "Stoppet"
-    "smoke", "gas", "carbon_monoxide", "carbon_dioxide" -> if (isActive) "Alarm!" else "OK"
-    "sound", "vibration" -> if (isActive) "Registreret" else "Ro"
-    "tamper", "problem", "safety" -> if (isActive) "Problem" else "OK"
-    else -> if (isActive) "Aktiv" else "Inaktiv"
+private fun stateLabel(context: Context, deviceClass: String?, isActive: Boolean): String {
+    fun s(resId: Int) = context.getString(resId)
+    return when (deviceClass) {
+        "motion", "occupancy", "presence" -> s(if (isActive) R.string.binary_motion else R.string.binary_clear)
+        "door", "garage_door", "lock" -> s(if (isActive) R.string.state_open else R.string.state_closed)
+        "window" -> s(if (isActive) R.string.state_open else R.string.state_closed)
+        "battery" -> s(if (isActive) R.string.binary_low_battery else R.string.binary_ok)
+        "battery_charging" -> s(if (isActive) R.string.binary_charging else R.string.binary_not_charging)
+        "cold" -> s(if (isActive) R.string.binary_cold else R.string.binary_ok)
+        "connectivity" -> s(if (isActive) R.string.binary_connected else R.string.binary_not_connected)
+        "heat" -> s(if (isActive) R.string.binary_hot else R.string.binary_ok)
+        "light" -> s(if (isActive) R.string.binary_light else R.string.binary_dark)
+        "moisture", "rain" -> s(if (isActive) R.string.binary_wet else R.string.binary_dry)
+        "plug", "power" -> s(if (isActive) R.string.state_active else R.string.state_inactive)
+        "running" -> s(if (isActive) R.string.state_running else R.string.binary_stopped)
+        "smoke", "gas", "carbon_monoxide", "carbon_dioxide" -> s(if (isActive) R.string.binary_alarm else R.string.binary_ok)
+        "sound", "vibration" -> s(if (isActive) R.string.binary_detected else R.string.binary_clear)
+        "tamper", "problem", "safety" -> s(if (isActive) R.string.binary_problem else R.string.binary_ok)
+        else -> s(if (isActive) R.string.state_active else R.string.state_inactive)
+    }
 }
 
 class BinarySensorWidgetReceiver : GlanceAppWidgetReceiver() {

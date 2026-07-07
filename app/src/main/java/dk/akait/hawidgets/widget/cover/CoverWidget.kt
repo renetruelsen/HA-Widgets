@@ -97,13 +97,13 @@ private fun CoverContent(
     val attrs = state?.let { parseCoverAttrs(it.attributesJson) }
     val label = config.label.ifEmpty { attrs?.friendlyName ?: config.entityId }
     val statusBase = when {
-        state == null -> "Henter…"
-        isUnavailable -> "Utilgængelig"
-        coverState == "opening" -> "Åbner…"
-        coverState == "closing" -> "Lukker…"
+        state == null -> context.getString(R.string.state_loading)
+        isUnavailable -> context.getString(R.string.state_unavailable)
+        coverState == "opening" -> context.getString(R.string.state_opening)
+        coverState == "closing" -> context.getString(R.string.state_closing)
         attrs?.position != null -> "${attrs.position}%"
-        coverState == "open" -> "Åben"
-        else -> "Lukket"
+        coverState == "open" -> context.getString(R.string.state_open)
+        else -> context.getString(R.string.state_closed)
     }
     val statusText = if (isStale && state != null) "$statusBase ~" else statusBase
 

@@ -98,15 +98,15 @@ private fun AutomationContent(
     val friendlyName = state?.let { friendlyNameFromJson(it.attributesJson) }
     val label = config.label.ifEmpty { friendlyName ?: config.entityId }
     val enabledLabel = when {
-        state == null -> "Henter…"
-        isUnavailable -> "Utilgængelig"
-        isEnabled -> "Aktiv"
-        else -> "Deaktiveret"
+        state == null -> context.getString(R.string.state_loading)
+        isUnavailable -> context.getString(R.string.state_unavailable)
+        isEnabled -> context.getString(R.string.state_active)
+        else -> context.getString(R.string.state_deactivated)
     }
-    // Compact shows "Udløs" always — makes tap affordance unambiguous even when disabled.
+    // Compact shows the trigger CTA always — makes tap affordance unambiguous even when disabled.
     // Background color (primary=enabled, surface=disabled) conveys state without text.
     // Wide has room for the explicit enabled/disabled label.
-    val compactStatus = if (isUnavailable || state == null) enabledLabel else "Udløs"
+    val compactStatus = if (isUnavailable || state == null) enabledLabel else context.getString(R.string.action_trigger_short)
     val wideStatus = if (isStale && state != null) "$enabledLabel ~" else enabledLabel
 
     val baseModifier = GlanceModifier.fillMaxSize().background(bgColor).cornerRadius(16.dp)

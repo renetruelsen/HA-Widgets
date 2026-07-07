@@ -133,7 +133,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onSave = {
                 scope.launch {
                     val db = AppDatabase.get(context)
-                    db.multiWidgetDao().upsert(MultiWidgetEntity(appWidgetId, "", showRefreshIcon = showRefreshIcon))
+                    db.multiWidgetDao().upsert(MultiWidgetEntity(appWidgetId, showRefreshIcon = showRefreshIcon))
                     db.multiWidgetDao().deleteAllSlots(appWidgetId)
                     slots.forEachIndexed { i, sl -> db.multiWidgetDao().upsertSlot(sl.copy(slotIndex = i)) }
                     SyncWorker.runNow(context)

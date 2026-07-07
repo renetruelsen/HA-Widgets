@@ -13,20 +13,11 @@ android {
         applicationId = "dk.akait.hawidgets"
         minSdk = 26
         targetSdk = 35
-        versionCode = 44
-        versionName = "0.2.44"
+        versionCode = 47
+        versionName = "0.2.47"
     }
 
     buildTypes {
-        debug {
-            buildConfigField("String", "DEV_URL", "\"https://home.rtr.dk:8123\"")
-            buildConfigField(
-                "String", "DEV_TOKEN",
-                "\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
-                "eyJpc3MiOiI4NzQ3MTRiOGJhMTM0OTExODNhMTVkNDdmYjIxODM1NyIsImlhdCI6MTc4MjQxNDM4NiwiZXhwIjoyMDk3Nzc0Mzg2fQ." +
-                "R62LIUzVFfSpbsfrDgTiCTfGy7_9MOPg8waVThhNKLg\""
-            )
-        }
         release {
             isMinifyEnabled = false
             proguardFiles(

@@ -95,3 +95,26 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         }
     }
 }
+
+/** v8 → v9: fjerner den ubrugte `title`-kolonne (aldrig vist af UI siden v0.2.23, se v0.2.45-oprydning).
+ * SQLite's `DROP COLUMN` er ikke tilgængeligt på alle Android-versioner (minSdk 26) — genskaber
+ * tabellen uden kolonnen i stedet, hvilket virker på alle SQLite-versioner. */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE `multi_widget_new` (
+                `appWidgetId` INTEGER NOT NULL,
+                `showRefreshIcon` INTEGER NOT NULL DEFAULT 1,
+                PRIMARY KEY(`appWidgetId`)
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "INSERT INTO `multi_widget_new` (appWidgetId, showRefreshIcon) " +
+                "SELECT appWidgetId, showRefreshIcon FROM `multi_widget`"
+        )
+        db.execSQL("DROP TABLE `multi_widget`")
+        db.execSQL("ALTER TABLE `multi_widget_new` RENAME TO `multi_widget`")
+    }
+}

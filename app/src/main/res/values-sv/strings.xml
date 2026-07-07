@@ -9,6 +9,7 @@
 
     <!-- Common -->
     <string name="cancel">Avbryt</string>
+    <string name="close">Stäng</string>
     <string name="save">Spara</string>
     <string name="disconnect">Koppla från</string>
     <string name="connect">Anslut</string>
@@ -30,6 +31,12 @@
     <string name="how_to_use_step3">Tryck på widgetikonen på hemskärmen för att öppna din instrumentpanel</string>
     <string name="how_to_use_tip_more_widgets">Det finns många fler widgetar (lampor, sensorer, kontakter med mera) — hitta dem via telefonens egen \'Lägg till widget\': tryck länge på hemskärmen → Widgetar → HA Widgets.</string>
     <string name="onboarding_intro">Anslut din Home Assistant-instans nedan. Du kan även hoppa över detta och ansluta första gången du lägger till en widget.</string>
+    <string name="token_help_link">Hur skapar jag ett token?</string>
+    <string name="token_help_title">Skapa ett Long-Lived Access Token</string>
+    <string name="token_help_step1">Öppna Home Assistant i en webbläsare och klicka på ditt profilnamn (längst ner i sidomenyn)</string>
+    <string name="token_help_step2">Scrolla ner till \'Long-lived access tokens\' och tryck \'Create token\'</string>
+    <string name="token_help_step3">Ge det ett namn (t.ex. \'HA Widgets\') och kopiera token — det visas bara en gång</string>
+    <string name="token_help_step4">Klistra in det i fältet ovan</string>
 
     <!-- Section labels & settings overlay -->
     <string name="section_connection">Anslutning</string>
@@ -137,7 +144,7 @@
     <string name="customize_widget_title">Anpassa widget</string>
     <string name="short_label_field">Kort etikett (valfritt)</string>
     <string name="short_label_placeholder">t.ex. Badrum 1</string>
-    <string name="short_label_supporting">Visas på widgeten i stället för enhetsnamnet. Max 12 tecken.</string>
+    <string name="short_label_supporting">Visas på widgeten i stället för enhetsnamnet. Max 22 tecken.</string>
     <string name="back">Tillbaka</string>
     <string name="search_hint">Sök…</string>
     <string name="multi_entity_config_title">Kombinerad widget</string>
@@ -145,9 +152,9 @@
     <string name="multi_entity_show_refresh_icon">Visa uppdateringsikon</string>
     <string name="add_slot">+ Lägg till plats</string>
     <string name="cd_edit">Redigera</string>
-    <string name="cd_remove">Ta bort</string>
-    <string name="cd_move_up">Flytta upp</string>
-    <string name="cd_move_down">Flytta ner</string>
+    <string name="cd_remove">Ta bort %1$s</string>
+    <string name="cd_move_up">Flytta %1$s upp</string>
+    <string name="cd_move_down">Flytta %1$s ner</string>
     <string name="slot_editor_title">Anpassa enhet</string>
     <string name="section_view">Visning</string>
     <string name="section_action">Åtgärd</string>
@@ -166,7 +173,7 @@
     <string name="add_extra_entity">+ Lägg till extra enhet</string>
     <string name="show_value_on_chip">Visa värde på chippen</string>
     <string name="chip_label_field">Chip-etikett (valfri)</string>
-    <string name="chip_label_supporting">Visas på chippen. Max 12 tecken.</string>
+    <string name="chip_label_supporting">Visas på chippen. Max 22 tecken.</string>
     <string name="picker_target_display_title">Välj enhet som ska visas</string>
     <string name="picker_target_action_title">Välj åtgärdens mål</string>
     <string name="action_toggle">Slå på/av</string>
@@ -189,4 +196,72 @@
     <string name="label_dash">%1$s — %2$s</string>
     <string name="label_dash_with_target">%1$s — %2$s → %3$s</string>
     <string name="action_failed">Kunde inte skicka till Home Assistant</string>
+    <!-- RangeControlActivity / TextControlActivity -->
+    <string name="range_close_fully">Stäng helt</string>
+    <string name="range_open_fully">Öppna helt</string>
+    <string name="range_turn_off">Stäng av</string>
+    <string name="range_turn_on">Sätt på</string>
+    <string name="range_label_position">Position</string>
+    <string name="range_label_temperature">Temperatur</string>
+    <string name="range_label_value">Värde</string>
+    <string name="range_label_brightness">Ljusstyrka</string>
+    <string name="range_current_temp">Aktuell temperatur: %1$d°C</string>
+    <!-- Entitetsväljarens skärmtitlar -->
+    <string name="picker_title_light">Välj ljuskälla</string>
+    <string name="picker_title_switch">Välj strömbrytare</string>
+    <string name="picker_title_scene">Välj scen</string>
+    <string name="picker_title_script">Välj skript</string>
+    <string name="picker_title_automation">Välj automatisering</string>
+    <string name="picker_title_sensor">Välj sensor</string>
+    <string name="picker_title_binary_sensor">Välj binär sensor</string>
+    <string name="picker_title_cover">Välj cover / persienn</string>
+    <string name="picker_title_climate">Välj klimatstyrning</string>
+
+    <!-- Widget-statustext (live widget-rendering + entitetsväljarens förhandsvisning) -->
+    <string name="widget_setup_placeholder">Konfigurera</string>
+    <string name="state_loading">Hämtar…</string>
+    <string name="state_loading_status">Hämtar status…</string>
+    <string name="state_unavailable">Otillgänglig</string>
+    <string name="state_on">På</string>
+    <string name="state_off">Av</string>
+    <string name="state_locked">Låst</string>
+    <string name="state_unlocked">Olåst</string>
+    <string name="state_open">Öppen</string>
+    <string name="state_closed">Stängd</string>
+    <string name="state_opening">Öppnar…</string>
+    <string name="state_closing">Stänger…</string>
+    <string name="state_active">Aktiv</string>
+    <string name="state_deactivated">Inaktiverad</string>
+    <string name="state_inactive">Inaktiv</string>
+    <string name="state_home">Hemma</string>
+    <string name="state_away">Borta</string>
+    <string name="state_scene_activate">Aktivera</string>
+    <string name="state_scene_activating">Aktiverar…</string>
+    <string name="state_running">Kör</string>
+    <string name="state_running_ellipsis">Kör…</string>
+    <string name="state_ready">Klar</string>
+    <string name="climate_heat">Uppvärmning</string>
+    <string name="climate_cool">Kylning</string>
+    <string name="climate_auto">Auto</string>
+    <string name="climate_dry">Avfuktning</string>
+    <string name="climate_fan_only">Fläkt</string>
+    <!-- Binär sensor device-class-text -->
+    <string name="binary_motion">Rörelse</string>
+    <string name="binary_clear">Klart</string>
+    <string name="binary_low_battery">Lågt batteri</string>
+    <string name="binary_ok">OK</string>
+    <string name="binary_charging">Laddar</string>
+    <string name="binary_not_charging">Laddar inte</string>
+    <string name="binary_cold">Kallt</string>
+    <string name="binary_connected">Ansluten</string>
+    <string name="binary_not_connected">Ej ansluten</string>
+    <string name="binary_hot">Varmt</string>
+    <string name="binary_light">Ljust</string>
+    <string name="binary_dark">Mörkt</string>
+    <string name="binary_wet">Vått</string>
+    <string name="binary_dry">Torrt</string>
+    <string name="binary_alarm">Alarm!</string>
+    <string name="binary_detected">Upptäckt</string>
+    <string name="binary_problem">Problem</string>
+    <string name="binary_stopped">Stoppad</string>
 </resources>

@@ -132,7 +132,7 @@ internal fun clickModifier(
             }
             base.clickable(actionStartActivity(intent))
         }
-        else -> { // "TRIGGER"
+        "TRIGGER" -> {
             val service = when (actionDomain) {
                 "automation" -> "trigger"
                 "input_button" -> "press"
@@ -148,6 +148,9 @@ internal fun clickModifier(
                 )
             )
         }
+        // Ukendt/uventet action-værdi (bør ikke forekomme — compatibleActionsFor begrænser hvad
+        // der kan gemmes) → ingen klik-handling i stedet for at antage TRIGGER.
+        else -> base
     }
 }
 

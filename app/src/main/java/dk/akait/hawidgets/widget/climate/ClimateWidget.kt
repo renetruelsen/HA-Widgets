@@ -106,16 +106,16 @@ private fun ClimateContent(
         else -> buildTempLabel(attrs) ?: entityName
     }
     val modeStatus = when {
-        state == null -> "Henter…"
-        isUnavailable -> "Utilgængelig"
-        else -> hvacModeLabel(hvacMode)
+        state == null -> context.getString(R.string.state_loading)
+        isUnavailable -> context.getString(R.string.state_unavailable)
+        else -> hvacModeLabel(context, hvacMode)
     }
     val modeStatusStale = if (isStale && state != null) "$modeStatus ~" else modeStatus
 
     // Compact status includes current temperature when available
     val compactStatus = when {
-        state == null -> "Henter…"
-        isUnavailable -> "Utilgængelig"
+        state == null -> context.getString(R.string.state_loading)
+        isUnavailable -> context.getString(R.string.state_unavailable)
         else -> {
             val curTemp = attrs?.currentTemp?.roundToInt()
             if (curTemp != null) "$curTemp° $modeStatus" else modeStatus
@@ -198,14 +198,14 @@ private fun buildTempLabel(attrs: ClimateAttrs?): String? {
     }
 }
 
-private fun hvacModeLabel(mode: String): String = when (mode) {
-    "heat" -> "Opvarmning"
-    "cool" -> "Køling"
-    "heat_cool" -> "Auto"
-    "auto" -> "Auto"
-    "dry" -> "Affugtning"
-    "fan_only" -> "Ventilator"
-    "off" -> "Slukket"
+private fun hvacModeLabel(context: Context, mode: String): String = when (mode) {
+    "heat" -> context.getString(R.string.climate_heat)
+    "cool" -> context.getString(R.string.climate_cool)
+    "heat_cool" -> context.getString(R.string.climate_auto)
+    "auto" -> context.getString(R.string.climate_auto)
+    "dry" -> context.getString(R.string.climate_dry)
+    "fan_only" -> context.getString(R.string.climate_fan_only)
+    "off" -> context.getString(R.string.state_off)
     else -> mode
 }
 
