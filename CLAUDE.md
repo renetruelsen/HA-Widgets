@@ -582,6 +582,27 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     entity-picker → sensor-valg m. Decimaler-dropdown → Opdater → Gem widget →
     SyncWorker SUCCESS), widget re-renderer korrekt på hjemskærm. Ingen crashes.
     Device-QA på S23 sprunget over efter brugerønske (ren refaktorering).
+- ✅ **v0.2.41 — fejl-feedback i kontrol-dialoger (2026-07-07, efter PR-review-fund):**
+  - **Baggrund:** PR-review (PR #1) fandt at `RangeControlActivity`, `TextControlActivity`,
+    `DateTimeControlActivity`, `NumberInputActivity` og `ConfirmActionActivity` ignorerede
+    `HaApiClient.callService`s returværdi og lukkede/opdaterede ubetinget — en fejlet
+    HA-forbindelse så ud som en gemt værdi. Kørt gennem fuld proces: brainstorming →
+    spec → subagent-driven-development (6 opgaver, hver med uafhængig task-review).
+  - **Fix:** `RangeService.sendRangeValue` og `ConfirmActionActivity.executeConfirmedAction`
+    returnerer nu `Boolean`. Ved fejl: ny delt `showActionError()`-Toast (`ActionFeedback.kt`,
+    "Kunne ikke sende til Home Assistant", alle 3 sprog), dialogen forbliver åben (input
+    bevares) i stedet for at lukke. Eneste undtagelse: `DateTimeControlActivity` lukker
+    stadig ved fejl (native date/time-pickers er allerede lukket på det tidspunkt — intet
+    UI at holde åbent).
+  - Spec: `docs/superpowers/specs/2026-07-07-control-dialog-error-feedback-design.md`,
+    plan: `docs/superpowers/plans/2026-07-07-control-dialog-error-feedback.md`.
+  - **QA:** build grøn, alle 6 opgaver uafhængigt code-reviewet (0 fund på tværs).
+    `ConfirmActionActivity` fuldt verificeret end-to-end på emulator mod ægte HA
+    (`home.rtr.dk`): netværk slukket → Toast bekræftet i logcat + bekræft-dialogen forblev
+    åben + widget-raden fik stale-markør "~"; netværk genoprettet → dialog lukkede korrekt
+    + widget opdaterede uden stale-markør. De øvrige 4 dialoger deler samme verificerede
+    mønster men blev ikke selv live-testet denne session (emulator gik ned midtvejs i
+    forsøg på at placere en test-widget) — bruger fortsætter selv QA på emulator + S23.
 
 ## Næste skridt
 
