@@ -50,10 +50,14 @@ class DateTimeControlActivity : ComponentActivity() {
                         date?.let { put("date", it) }
                         time?.let { put("time", it) }
                     }
-                    HaApiClient(base, token).callService(
+                    val result = HaApiClient(base, token).callService(
                         "input_datetime", "set_datetime", entityId, extraData = extraData,
                     )
-                    EntityRepository.refresh(applicationContext, entityId)
+                    if (result is HaApiClient.Result.Ok) {
+                        EntityRepository.refresh(applicationContext, entityId)
+                    } else {
+                        showActionError(applicationContext)
+                    }
                 }
                 finish()
             }
