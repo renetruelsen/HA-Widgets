@@ -553,6 +553,35 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - Spec: `docs/superpowers/specs/2026-07-06-widget-ux-pack-design.md`, plan:
     `docs/superpowers/plans/2026-07-06-widget-ux-pack.md`, ADR'er:
     `docs/adr/2026-07-06-widget-ux-pack-adrs.md`.
+- ✅ **v0.2.40 — MultiEntityWidget: fil-opsplitning efter ansvar (2026-07-07, ren
+  refaktorering, INGEN adfærdsændring):**
+  - **Baggrund:** `MultiEntityWidgetConfigActivity.kt` (1218 linjer) og
+    `MultiEntityWidget.kt` (594) var vokset langt over ~300-linjers retningslinjen
+    gennem v0.2.23→v0.2.39. Opsplittet efter ansvar; ingen logik rørt.
+  - **Config-side (1218 → 6 filer):** `MultiEntityWidgetConfigActivity.kt` (246, Activity
+    + `MultiEntityConfigScreen`-orchestrator + `Step`/`PickerTarget`), `MultiEntityDrafts.kt`
+    (176, `SlotDraft`/`SecondarySlotDraft` + `draftFromSlot`/`SlotDraft.toSlotEntity` +
+    `actionOptionsFor`/`defaultActionFor`), `MultiEntitySlotEditor.kt` (426,
+    `SlotEditorScreen`/`SecondaryEntityRow`/`SectionCard` + label-helpers),
+    `MultiEntityValueControls.kt` (145, `ValueFormattingControls`/`RangeInputModeControl`),
+    `MultiEntityListScreen.kt` (234, `ListScreen`/`SlotCard`/`secondarySlotSummaries`),
+    `MultiEntityPickerScreen.kt` (114, `EntityPickerSubScreen`).
+  - **Widget-side (594 → 3 filer):** `MultiEntityWidget.kt` (110, widget-klasse +
+    `provideGlance` + receiver + `statesFlow`/`allEntityIds`/`MultiWidgetViewState`),
+    `MultiEntityRendering.kt` (327, `MultiEntityContent`/`SlotRow`/`SecondaryChip`/
+    `RefreshStrip` + `SecondaryChipData`/`displayValueFor`), `MultiEntityClickModifier.kt`
+    (174, `clickModifier` + `rangeCurrentValue`/`Min`/`Max`).
+  - **Nøgle-ændring:** de nestede `draftFromSlot`/`saveSlot`-closures (fangede
+    `allEntities`/`appWidgetId`/`slots`) blev rene top-level fns (`draftFromSlot(slot,
+    allEntities)` + `SlotDraft.toSlotEntity(appWidgetId, slotIndex)`); alle delte
+    `private` top-level-deklarationer → `internal`.
+  - **Rester over ~300:** `MultiEntitySlotEditor.kt` (426) og `MultiEntityRendering.kt`
+    (327) — sammenhængende composable-grupper, bevidst efterladt samlet.
+  - **QA:** build grøn (kun præeksisterende `ExperimentalCoroutinesApi`-warning).
+    Emulator (`pixel_test`, ægte HA): fuldt config-flow (list → slot-editor →
+    entity-picker → sensor-valg m. Decimaler-dropdown → Opdater → Gem widget →
+    SyncWorker SUCCESS), widget re-renderer korrekt på hjemskærm. Ingen crashes.
+    Device-QA på S23 sprunget over efter brugerønske (ren refaktorering).
 
 ## Næste skridt
 

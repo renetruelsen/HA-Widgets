@@ -1,0 +1,174 @@
+package dk.akait.hawidgets.widget.multientity
+
+import android.content.Context
+import android.content.Intent
+import androidx.glance.GlanceModifier
+import androidx.glance.action.actionParametersOf
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
+import dk.akait.hawidgets.data.db.EntityStateEntity
+import dk.akait.hawidgets.widget.common.ConfirmActionActivity
+import dk.akait.hawidgets.widget.common.DateTimeControlActivity
+import dk.akait.hawidgets.widget.common.NumberInputActivity
+import dk.akait.hawidgets.widget.common.RangeControlActivity
+import dk.akait.hawidgets.widget.common.TextControlActivity
+import dk.akait.hawidgets.widget.common.RefreshEntityAction
+import dk.akait.hawidgets.widget.common.ToggleEntityAction
+import dk.akait.hawidgets.widget.common.TriggerEntityAction
+import dk.akait.hawidgets.widget.common.friendlyNameFromJson
+import dk.akait.hawidgets.widget.common.isActiveState
+import org.json.JSONObject
+
+/** Fælles klik-håndtering for både hoved-rækken og sekundær-chips: NONE → opdatér kun
+ * [refreshEntityId]; ellers TOGGLE/RANGE/TRIGGER på ([actionEntityId], [actionDomain]) — kan
+ * være en anden entitet end den der vises (se designbeslutning i docs/widget-settings-spec.md §9). */
+internal fun clickModifier(
+    context: Context,
+    base: GlanceModifier,
+    action: String,
+    actionEntityId: String,
+    actionDomain: String,
+    refreshEntityId: String,
+    rangeLabel: String,
+    actionState: EntityStateEntity?,
+    confirmAction: Boolean,
+    rangeInputMode: String?,
+): GlanceModifier {
+    if (action == "NONE") {
+        return base.clickable(
+            actionRunCallback<RefreshEntityAction>(
+                actionParametersOf(RefreshEntityAction.entityIdKey to refreshEntityId)
+            )
+        )
+    }
+    if (actionState == null || actionState.state == "unavailable") return base
+    // "Bekræft ved tryk" (B1): kun meningsfuldt for TOGGLE/TRIGGER (RANGE/TEXT/DATETIME åbner
+    // allerede en dialog med Gem-knap, så en ekstra bekræftelse ville være redundant). Grenen er
+    // rent ADDITIV: når confirmAction er false falder vi igennem til de UÆNDREDE original-grene
+    // nedenfor. Dialogen navngiver ALTID handlings-målet (ADR-1) — actionState ER action-målets
+    // state-entitet (states[actionEntityId]), så dens friendly_name er målets navn, ikke visningens.
+    if (confirmAction && (action == "TOGGLE" || action == "TRIGGER")) {
+        val targetName = friendlyNameFromJson(actionState.attributesJson) ?: actionEntityId
+        val intent = Intent(context, ConfirmActionActivity::class.java).apply {
+            putExtra(ConfirmActionActivity.EXTRA_ENTITY_ID, actionEntityId)
+            putExtra(ConfirmActionActivity.EXTRA_DOMAIN, actionDomain)
+            putExtra(ConfirmActionActivity.EXTRA_LABEL, targetName)
+            putExtra(ConfirmActionActivity.EXTRA_ACTION, action)
+            putExtra(ConfirmActionActivity.EXTRA_IS_ON, isActiveState(actionDomain, actionState.state))
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return base.clickable(actionStartActivity(intent))
+    }
+    return when (action) {
+        "TOGGLE" -> base.clickable(
+            actionRunCallback<ToggleEntityAction>(
+                actionParametersOf(
+                    ToggleEntityAction.entityIdKey to actionEntityId,
+                    ToggleEntityAction.domainKey to actionDomain,
+                )
+            )
+        )
+        "RANGE" -> {
+            val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
+            val current = rangeCurrentValue(actionDomain, actionState, attrs)
+            val min = rangeMin(actionDomain, attrs)
+            val max = rangeMax(actionDomain, attrs)
+            val unit = if (actionDomain == "number" || actionDomain == "input_number") {
+                attrs.optString("unit_of_measurement", "")
+            } else ""
+            // Task 13 (del A): "FIELD" → indtast-værdi-dialog (NumberInputActivity); ellers
+            // (null/"SLIDER") den uændrede skyder-dialog (RangeControlActivity). Begge afsender
+            // samme service via den delte sendRangeValue.
+            val intent = if (rangeInputMode == "FIELD") {
+                Intent(context, NumberInputActivity::class.java).apply {
+                    putExtra(NumberInputActivity.EXTRA_ENTITY_ID, actionEntityId)
+                    putExtra(NumberInputActivity.EXTRA_LABEL, rangeLabel)
+                    putExtra(NumberInputActivity.EXTRA_DOMAIN, actionDomain)
+                    putExtra(NumberInputActivity.EXTRA_CURRENT_VALUE, current)
+                    putExtra(NumberInputActivity.EXTRA_MIN_VALUE, min)
+                    putExtra(NumberInputActivity.EXTRA_MAX_VALUE, max)
+                    putExtra(NumberInputActivity.EXTRA_UNIT_SUFFIX, unit)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            } else {
+                Intent(context, RangeControlActivity::class.java).apply {
+                    putExtra(RangeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                    putExtra(RangeControlActivity.EXTRA_LABEL, rangeLabel)
+                    putExtra(RangeControlActivity.EXTRA_DOMAIN, actionDomain)
+                    putExtra(RangeControlActivity.EXTRA_IS_ON, actionState.state != "off" && actionState.state != "closed")
+                    // Sendes som præcise (decimal) værdier — number/input_number kan have en
+                    // fraktioneret state/step (fx 21.5), som ikke må afrundes væk.
+                    putExtra(RangeControlActivity.EXTRA_CURRENT_VALUE_PRECISE, current)
+                    putExtra(RangeControlActivity.EXTRA_MIN_VALUE_PRECISE, min)
+                    putExtra(RangeControlActivity.EXTRA_MAX_VALUE_PRECISE, max)
+                    if (actionDomain == "number" || actionDomain == "input_number") {
+                        putExtra(RangeControlActivity.EXTRA_UNIT_SUFFIX, unit)
+                    }
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            base.clickable(actionStartActivity(intent))
+        }
+        "TEXT" -> {
+            val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
+            val intent = Intent(context, TextControlActivity::class.java).apply {
+                putExtra(TextControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                putExtra(TextControlActivity.EXTRA_LABEL, rangeLabel)
+                putExtra(TextControlActivity.EXTRA_CURRENT_VALUE, actionState.state)
+                putExtra(TextControlActivity.EXTRA_MAX_LENGTH, attrs.optInt("max", 255))
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            base.clickable(actionStartActivity(intent))
+        }
+        "DATETIME" -> {
+            val attrs = try { JSONObject(actionState.attributesJson) } catch (_: Exception) { JSONObject() }
+            val intent = Intent(context, DateTimeControlActivity::class.java).apply {
+                putExtra(DateTimeControlActivity.EXTRA_ENTITY_ID, actionEntityId)
+                putExtra(DateTimeControlActivity.EXTRA_HAS_DATE, attrs.optBoolean("has_date", true))
+                putExtra(DateTimeControlActivity.EXTRA_HAS_TIME, attrs.optBoolean("has_time", true))
+                putExtra(DateTimeControlActivity.EXTRA_CURRENT_VALUE, actionState.state)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            base.clickable(actionStartActivity(intent))
+        }
+        else -> { // "TRIGGER"
+            val service = when (actionDomain) {
+                "automation" -> "trigger"
+                "input_button" -> "press"
+                else -> "turn_on" // scene, script
+            }
+            base.clickable(
+                actionRunCallback<TriggerEntityAction>(
+                    actionParametersOf(
+                        TriggerEntityAction.entityIdKey to actionEntityId,
+                        TriggerEntityAction.domainKey to actionDomain,
+                        TriggerEntityAction.serviceKey to service,
+                    )
+                )
+            )
+        }
+    }
+}
+
+private fun rangeCurrentValue(domain: String, state: EntityStateEntity, attrs: JSONObject): Double = when (domain) {
+    "light" -> attrs.optInt("brightness", 255).let { (it * 100 / 255).coerceIn(0, 100) }.toDouble()
+    "cover" -> attrs.optInt("current_position", if (state.state == "open") 100 else 0).toDouble()
+    "climate" -> attrs.optInt("temperature", 20).toDouble()
+    // Bevarer decimaler (fx 21.5) i stedet for at afrunde til et heltal — number/input_number
+    // kan have en fraktioneret step.
+    "number", "input_number" -> state.state.toDoubleOrNull() ?: 0.0
+    else -> 0.0
+}
+
+private fun rangeMin(domain: String, attrs: JSONObject): Double = when (domain) {
+    "climate" -> attrs.optInt("min_temp", 16).toDouble()
+    "number", "input_number" -> attrs.optDouble("min", 0.0)
+    else -> 1.0
+}
+
+private fun rangeMax(domain: String, attrs: JSONObject): Double = when (domain) {
+    "climate" -> attrs.optInt("max_temp", 30).toDouble()
+    "number", "input_number" -> attrs.optDouble("max", 100.0)
+    else -> 100.0
+}
