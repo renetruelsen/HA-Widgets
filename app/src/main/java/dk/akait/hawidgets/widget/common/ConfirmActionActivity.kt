@@ -98,8 +98,9 @@ class ConfirmActionActivity : ComponentActivity() {
                                 onClick = {
                                     scope.launch {
                                         busy = true
-                                        executeConfirmedAction(applicationContext, domain, action, entityId)
-                                        finish()
+                                        val ok = executeConfirmedAction(applicationContext, domain, action, entityId)
+                                        busy = false
+                                        if (ok) finish() else showActionError(applicationContext)
                                     }
                                 },
                                 enabled = !busy,
@@ -132,9 +133,9 @@ internal suspend fun executeConfirmedAction(
     domain: String,
     action: String,
     entityId: String,
-) {
+): Boolean {
     val stateDao = AppDatabase.get(context).entityStateDao()
-    if (action == "TRIGGER") {
+    return if (action == "TRIGGER") {
         // Kopieret fra MultiEntityWidget.clickModifier "else -> // TRIGGER"-grenen.
         val service = when (domain) {
             "automation" -> "trigger"
@@ -153,7 +154,7 @@ internal suspend fun executeConfirmedAction(
         )
     } else {
         // "TOGGLE" — kopieret 1:1 fra ToggleEntityAction.onAction.
-        val current = stateDao.get(entityId) ?: return
+        val current = stateDao.get(entityId) ?: return false
         val (targetState, service) = when (domain) {
             "lock" -> if (current.state == "locked") "unlocked" to "unlock" else "locked" to "lock"
             "cover" -> if (current.state == "open") "closed" to "close_cover" else "open" to "open_cover"
