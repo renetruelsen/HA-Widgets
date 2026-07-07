@@ -60,6 +60,13 @@ internal data class SecondaryColumns(
     val label: String?,
 )
 
+/** Fælles udlednings-regler for "uset kolonne"-defaults, delt af render-siden ([toChipData]) og
+ * config-siden ([toDraft]) så de to aldrig kan divergere på hvad en null-kolonne betyder
+ * (v0.2.44-cleanup). Kaldes altid efter at [action] er verificeret ikke-null. */
+internal fun SecondaryColumns.showValueOrDefault(): Boolean = showValue ?: defaultShowValueFor(action ?: "NONE")
+internal fun SecondaryColumns.confirmActionOrDefault(): Boolean = confirmAction ?: false
+internal fun SecondaryColumns.labelOrEmpty(): String = label?.trim() ?: ""
+
 /** De 3 sekundær-pladser som liste (i rækkefølge) — tomme pladser har null-felter. */
 internal fun MultiWidgetSlotEntity.secondaryColumns(): List<SecondaryColumns> = listOf(
     SecondaryColumns(
@@ -130,12 +137,12 @@ private fun SecondaryColumns.toDraft(allEntities: List<HaApiClient.EntityBrief>)
         displayEntity = entityOrPlaceholder(allEntities, displayEntityId, displayDomain),
         actionEntity = entityOrPlaceholder(allEntities, actionEntityId, actionDomain),
         action = action,
-        showValue = showValue ?: defaultShowValueFor(action),
-        confirmAction = confirmAction ?: false,
+        showValue = showValueOrDefault(),
+        confirmAction = confirmActionOrDefault(),
         displayPrecision = displayPrecision,
         datetimeFormat = datetimeFormat,
         rangeInputMode = rangeInputMode,
-        label = label ?: "",
+        label = labelOrEmpty(),
     )
 }
 

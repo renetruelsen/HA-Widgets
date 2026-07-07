@@ -36,6 +36,11 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsDarkColorScheme
  */
 object WidgetColors {
 
+    /** Fast mørk ring om en TÆNDT chip (v0.2.42) — tema-uafhængig; sikrer chippens omrids ses
+     * når den sidder på en tændt (primary-farvet) række, hvor chip-fyld og række-fyld ellers
+     * ville smelte sammen. Samlet her med resten af widget-paletten (v0.2.44-cleanup). */
+    val chipActiveRing: ColorProvider = ColorProvider(Color(0x8A000000))
+
     // Faste providers bygget af app'ens brand-color-schemes. Begge sider (day/night) er ens,
     // så et tvunget tema aldrig følger systemets nattilstand.
     private val lightProviders: ColorProviders =

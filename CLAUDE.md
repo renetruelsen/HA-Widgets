@@ -646,6 +646,23 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     `displayState=="unavailable" || (action != "NONE" && actionState=="unavailable")` — så et dødt
     action-mål vises med error-styling i stedet for at ligne en aktiv kontrol.
   - **QA:** build grøn; device-QA på S23 grøn (samme tjekliste som v0.2.42 + edge-case bekræftet).
+- ✅ **v0.2.44 — MultiEntityWidget: cleanup + bredere resize (2026-07-07, code-review-cleanup +
+  brugerspørgsmål):**
+  - **Resize-fix:** `multi_entity_widget_info.xml` `maxResizeWidth` 320→640dp. Med `minWidth=244dp`
+    kunne widgetten kun vokse ~244→320dp (under én celle) → føltes som "kan ikke gøres bredere".
+    Layoutet er fuld-bredde scrollbare rækker (v0.2.29+), så bredere er strengt bedre. Verificeret
+    på emulator: venstre kant kan nu trækkes ud, lange navne vises fuldt.
+  - **Cleanup (adfærds-bevarende, fra v0.2.42-code-review):**
+    - Den 4×-gentagne to-lags-outline-branch i `SlotRow`/`SecondaryChip` samlet i én
+      `StatefulSurface`-composable (outer/inner sizing + padding + klik-wrapper som parametre).
+    - `DARK_RING`-literalen flyttet fra `MultiEntityRendering.kt` til `WidgetColors.chipActiveRing`
+      (samlet med resten af widget-paletten).
+    - Delte default-helpers `showValueOrDefault()`/`confirmActionOrDefault()`/`labelOrEmpty()` på
+      `SecondaryColumns` — bruges nu af BÅDE `toChipData` (render) og `toDraft` (config), så de to
+      sider aldrig kan divergere på hvad en null-kolonne betyder.
+  - **QA:** build grøn; emulator (`pixel_test`) — refaktoren renderer identisk (outline-rækker/chips
+    + neutral sensor, ingen crash), resize verificeret bredere. Device-QA på S23 afventer bruger
+    (overvejende ren refaktor + config).
 
 ## Næste skridt
 

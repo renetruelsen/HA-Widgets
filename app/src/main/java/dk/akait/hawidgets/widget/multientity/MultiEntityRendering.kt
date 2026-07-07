@@ -2,7 +2,6 @@ package dk.akait.hawidgets.widget.multientity
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
@@ -38,7 +37,6 @@ import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.WidgetColors
-import dk.akait.hawidgets.widget.common.defaultShowValueFor
 import dk.akait.hawidgets.widget.common.domainIconResId
 import dk.akait.hawidgets.widget.common.formatDisplayValue
 import dk.akait.hawidgets.widget.common.formatEntityState
@@ -72,10 +70,6 @@ private const val CHIP_SINGLE_H_PAD_DP = 6
 private const val ROW_CORNER_DP = 12
 private const val CHIP_CORNER_DP = 10
 
-// Mørk ring om en TÆNDT chip, så dens omrids stadig ses når den sidder på en tændt (primary-farvet)
-// række — ellers ville primary-chip på primary-række smelte sammen (brugerønske v0.2.42).
-private val DARK_RING: ColorProvider = ColorProvider(Color(0x8A000000))
-
 /** Farvelag for en række/chip: [outer] = ring-farve (null = ingen ring, ét enkelt lag),
  * [inner] = fyld-farve, [content] = ikon/tekst-farve. */
 private class Surface(val outer: ColorProvider?, val inner: ColorProvider, val content: ColorProvider)
@@ -87,10 +81,53 @@ private fun surfaceFor(stateful: Boolean, active: Boolean, unavailable: Boolean,
         unavailable -> Surface(null, c.errorContainer, c.onErrorContainer)
         // Info-agtige (sensor/number/scene/script + rene visnings-slots): neutralt fyld, ingen on/off.
         !stateful -> Surface(null, c.surfaceVariant, c.onSurfaceVariant)
-        // Tændt: fuld primary. Chips får en mørk ring (se DARK_RING); rækker står frit og behøver ingen.
-        active -> if (isChip) Surface(DARK_RING, c.primary, c.onPrimary) else Surface(null, c.primary, c.onPrimary)
+        // Tændt: fuld primary. Chips får en mørk ring (WidgetColors.chipActiveRing); rækker står
+        // frit og behøver ingen.
+        active -> if (isChip) Surface(WidgetColors.chipActiveRing, c.primary, c.onPrimary) else Surface(null, c.primary, c.onPrimary)
         // Slukket on/off: kun outline (primary ring + neutralt indre).
         else -> Surface(c.primary, c.surfaceVariant, c.onSurfaceVariant)
+    }
+}
+
+// v0.2.42 række/chip-styling: tændt = fuld primary-farve, slukket (on/off-domæner) = kun outline.
+// Glance har ingen border-modifier, så en "outline" laves med to lag: en ydre Box med ring-farve
+// + lille padding om en indre Box med fyld-farven → ringen ses som en kant.
+/** Renderer et [Surface] enten som ét fyldt lag (outer == null) eller to lag (ring om fyld).
+ * Samler den ellers 4×-gentagne branch-struktur fra [SlotRow] og [SecondaryChip] ét sted
+ * (v0.2.44-cleanup): [outerBase]/[innerBase] bærer sizing (fillMaxWidth vs height/fillMaxHeight),
+ * [ringInnerPad]/[singlePad] er content-padding for hhv. ring- og enkelt-lag-tilstand, og
+ * [makeClickable] wrapper det yderste lag med det rette klik-modifier. */
+@Composable
+private fun StatefulSurface(
+    surface: Surface,
+    cornerDp: Int,
+    outerBase: GlanceModifier,
+    innerBase: GlanceModifier,
+    ringInnerPad: GlanceModifier,
+    singlePad: GlanceModifier,
+    makeClickable: (GlanceModifier) -> GlanceModifier,
+    content: @Composable () -> Unit,
+) {
+    if (surface.outer != null) {
+        Box(
+            modifier = makeClickable(
+                outerBase.background(surface.outer).cornerRadius(cornerDp.dp).padding(SURFACE_BORDER_DP.dp),
+            ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = innerBase.background(surface.inner)
+                    .cornerRadius((cornerDp - SURFACE_BORDER_DP).dp).then(ringInnerPad),
+                contentAlignment = Alignment.Center,
+            ) { content() }
+        }
+    } else {
+        Box(
+            modifier = makeClickable(
+                outerBase.background(surface.inner).cornerRadius(cornerDp.dp).then(singlePad),
+            ),
+            contentAlignment = Alignment.Center,
+        ) { content() }
     }
 }
 
@@ -113,8 +150,8 @@ private fun SecondaryColumns.toChipData(): SecondaryChipData? {
     if (displayEntityId == null || displayDomain == null || actionEntityId == null || actionDomain == null || action == null) return null
     return SecondaryChipData(
         displayEntityId, displayDomain, actionEntityId, actionDomain, action,
-        showValue ?: defaultShowValueFor(action), confirmAction ?: false,
-        displayPrecision, datetimeFormat, rangeInputMode, label?.trim() ?: "",
+        showValueOrDefault(), confirmActionOrDefault(),
+        displayPrecision, datetimeFormat, rangeInputMode, labelOrEmpty(),
     )
 }
 
@@ -283,24 +320,16 @@ private fun SlotRow(
         rangeInputMode = slot.rangeInputMode,
     )
 
-    if (surface.outer != null) {
-        Box(
-            modifier = withClick(
-                GlanceModifier.fillMaxWidth().background(surface.outer).cornerRadius(ROW_CORNER_DP.dp).padding(SURFACE_BORDER_DP.dp),
-            ),
-        ) {
-            Box(
-                modifier = GlanceModifier.fillMaxWidth().background(surface.inner)
-                    .cornerRadius((ROW_CORNER_DP - SURFACE_BORDER_DP).dp).padding(ROW_INNER_PAD_DP.dp),
-            ) { rowContent() }
-        }
-    } else {
-        Box(
-            modifier = withClick(
-                GlanceModifier.fillMaxWidth().background(surface.inner).cornerRadius(ROW_CORNER_DP.dp).padding(ROW_SINGLE_PAD_DP.dp),
-            ),
-        ) { rowContent() }
-    }
+    StatefulSurface(
+        surface = surface,
+        cornerDp = ROW_CORNER_DP,
+        outerBase = GlanceModifier.fillMaxWidth(),
+        innerBase = GlanceModifier.fillMaxWidth(),
+        ringInnerPad = GlanceModifier.padding(ROW_INNER_PAD_DP.dp),
+        singlePad = GlanceModifier.padding(ROW_SINGLE_PAD_DP.dp),
+        makeClickable = { withClick(it) },
+        content = rowContent,
+    )
 }
 
 @Composable
@@ -365,25 +394,14 @@ private fun SecondaryChip(
     )
 
     // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum.
-    if (surface.outer != null) {
-        Box(
-            modifier = withClick(
-                GlanceModifier.background(surface.outer).cornerRadius(CHIP_CORNER_DP.dp).height(48.dp).padding(SURFACE_BORDER_DP.dp),
-            ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier = GlanceModifier.fillMaxHeight().background(surface.inner)
-                    .cornerRadius((CHIP_CORNER_DP - SURFACE_BORDER_DP).dp).padding(horizontal = CHIP_INNER_H_PAD_DP.dp),
-                contentAlignment = Alignment.Center,
-            ) { chipContent() }
-        }
-    } else {
-        Box(
-            modifier = withClick(
-                GlanceModifier.background(surface.inner).cornerRadius(CHIP_CORNER_DP.dp).height(48.dp).padding(horizontal = CHIP_SINGLE_H_PAD_DP.dp),
-            ),
-            contentAlignment = Alignment.Center,
-        ) { chipContent() }
-    }
+    StatefulSurface(
+        surface = surface,
+        cornerDp = CHIP_CORNER_DP,
+        outerBase = GlanceModifier.height(48.dp),
+        innerBase = GlanceModifier.fillMaxHeight(),
+        ringInnerPad = GlanceModifier.padding(horizontal = CHIP_INNER_H_PAD_DP.dp),
+        singlePad = GlanceModifier.padding(horizontal = CHIP_SINGLE_H_PAD_DP.dp),
+        makeClickable = { withClick(it) },
+        content = chipContent,
+    )
 }
