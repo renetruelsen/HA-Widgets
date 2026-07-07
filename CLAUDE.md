@@ -633,6 +633,19 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (brugervalg — ægte hul-outline fravalgt), sensor = neutralt fyld, 2-linje label+værdi. **Ikke
     set:** slukket hovedrække (begge test-lys var tændt; samme kodesti som verificeret slukket
     chip) og præcis højde-delta. Device-QA på S23 afventer bruger.
+  - **Device-QA (S23, `R3CWC00JY4M`):** grøn — slukket lys = outline-række, tændt = fuld farve,
+    tændt chip = fuld farve + mørk kant, slukket chip = gråt fyld, chip-label + værdi på 2 linjer,
+    bekræft-dialog på ny toggle-chip, ingen crash, eksisterende widgets bevaret efter migration.
+- ✅ **v0.2.43 — MultiEntityWidget: utilgængeligt action-mål giver nu error-styling (2026-07-07,
+  code-review-fund #2):**
+  - Chippens/rækkens `isUnavailable` aflæstes kun fra VISNINGS-entiteten, mens `isActive` (v0.2.42)
+    blev flyttet til ACTION-målet. En asymmetrisk slot/chip (viser A, handler på B) med et
+    utilgængeligt B så derfor tap-bar ud, selvom `clickModifier` tavst droppede klikket.
+  - **Fix (`MultiEntityRendering.kt`, både `SlotRow` og `SecondaryChip`):** `isUnavailable`
+    medregner nu action-målets state ved en rigtig handling —
+    `displayState=="unavailable" || (action != "NONE" && actionState=="unavailable")` — så et dødt
+    action-mål vises med error-styling i stedet for at ligne en aktiv kontrol.
+  - **QA:** build grøn; device-QA på S23 grøn (samme tjekliste som v0.2.42 + edge-case bekræftet).
 
 ## Næste skridt
 

@@ -225,7 +225,11 @@ private fun SlotRow(
 ) {
     val displayState = states[slot.displayEntityId]
     val actionState = states[slot.actionEntityId]
-    val isUnavailable = displayState?.state == "unavailable"
+    // Utilgængelig når enten visnings-entiteten ELLER (ved en rigtig handling) action-målet er
+    // "unavailable" — så en slot der viser A men handler på et dødt B får et visuelt signal, i
+    // stedet for at se tap-bar ud mens clickModifier tavst dropper klikket.
+    val isUnavailable = displayState?.state == "unavailable" ||
+        (slot.action != "NONE" && actionState?.state == "unavailable")
     val isActive = displayState != null && isActiveState(slot.displayDomain, displayState.state)
     val surface = surfaceFor(
         stateful = hasOnOffState(slot.displayDomain),
@@ -307,7 +311,11 @@ private fun SecondaryChip(
 ) {
     val displayState = states[chip.displayEntityId]
     val actionState = states[chip.actionEntityId]
-    val isUnavailable = displayState?.state == "unavailable"
+    // Utilgængelig når enten visnings-entiteten ELLER (ved en rigtig handling) action-målet er
+    // "unavailable" — samme konsistens som SlotRow: en chip der viser A men handler på et dødt B
+    // får error-styling i stedet for at se tap-bar ud (clickModifier dropper klikket tavst).
+    val isUnavailable = displayState?.state == "unavailable" ||
+        (chip.action != "NONE" && actionState?.state == "unavailable")
     // "Tændt" følger ACTION-målet (ikke visningen) for on/off-domæner — retter fejlen hvor en
     // toggle-chip der viste en anden entitet aldrig blev fuld-farvet.
     val stateful = chip.action != "NONE" && hasOnOffState(chip.actionDomain)
