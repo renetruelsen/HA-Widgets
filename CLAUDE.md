@@ -776,6 +776,42 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - **QA:** build + unit-tests grønne. Emulator: åbnede `LightWidgetConfigActivity`s label-felt,
     indtastede 26 tegn, feltet stoppede korrekt ved præcis 22 ("1234567890123456789012"),
     supporting-teksten viste "Max 22 tecken" (app-sprog var stadig svensk fra v0.2.46-QA).
+- ✅ **v0.2.48-50 — MultiEntityWidget: slukket hoved-række uden ring + climate-varme-rød + chip-ring
+  fjernet (2026-07-07, brugerfeedback på v0.2.42-46's styling):**
+  - **v0.2.48 — slukket hoved-række uden ring:** `surfaceFor()` (`MultiEntityRendering.kt`) gav
+    tidligere BÅDE rækker og chips en primary-ring når on/off-domænet var slukket. Bruger ønskede at
+    hoved-rækken (ikke chippen) skal være rent neutralt gråt fyld uden ring når slukket — kun det
+    fyldte lag skiller nu tændt/slukket for rækker; chips beholdt deres outline (indtil v0.2.50, se
+    nedenfor).
+  - **v0.2.48 — climate/hvac "varmer nu" → rød:** ny `hvacActionFromJson()`-helper
+    (`GlanceWidgetCommon.kt`) læser climate-entitetens `hvac_action`-attribut (hvad anlægget FAKTISK
+    gør: heating/cooling/idle/off — adskilt fra `state`, som er den VALGTE hvac_mode). En climate-
+    række/chip bliver rød når `hvac_action == "heating"` — matcher enten visnings- ELLER action-
+    entiteten (samme mønster som `isUnavailable`), så en slot der viser en anden entitet end den
+    styrede spa/klimaanlæg stadig farves rødt. Alle andre climate-tilstande (idle/cool/auto/off)
+    forbliver neutrale — bevidst fravalgt at farve køling blå (climate.isActive er i forvejen aldrig
+    true, se v0.2.34-fund).
+  - **v0.2.49 → v0.2.50 — rød-nuance valgt iterativt af bruger:** startede med Material Red 700
+    (`#D32F2F`, for kraftig/mørk), derefter lys koral `#FF6B6B` (v0.2.49, brugerfeedback: "står ikke
+    godt med de øvrige farver" — for mættet/skrigende ved siden af app'ens dæmpede lavendel-blå
+    tændt-farve `#B8C6EE` og grå slukket-farve `#44464F`, begge samplet direkte fra et S23-
+    skærmbillede). Endte på dæmpet rose-rød `#CF6679` (v0.2.50) — valgt via en side-om-side visuel
+    sammenligning (klikbar mockup) mod de faktiske sampled hex-værdier. `WidgetColors.heatingFill`/
+    `onHeating` (hvid tekst) — fast, tema-uafhængig, som resten af widget-paletten.
+  - **v0.2.50 — chip-ring fjernet helt:** brugerfeedback: den mørke ring om AKTIVE chips (v0.2.42,
+    `WidgetColors.chipActiveRing`) skulle enten væk eller matche den blå tændt-farve. Valgte at
+    fjerne ringen helt (chippen står nu solidt `primary`/`onPrimary` som rækken, ingen ring-lag) —
+    simplere end at style en blå ring der reelt ville være usynlig oven på en allerede blå flade.
+    `chipActiveRing`-konstanten fjernet fra `WidgetColors.kt` (ubrugt efter ændringen). Slukkede
+    chips beholder deres outline uændret (kun aktive/tændte mistede ringen).
+  - **QA:** build grøn efter hver iteration. Border-fjernelse (v0.2.48) og chip-ring-fjernelse
+    (v0.2.50) verificeret direkte på Galaxy S23 mod ægte HA (skærmbilleder: aktive Power/Filter-
+    chips solidt blå uden sort kant, slukket "Planlagt opv"-række neutralt gråt uden ring). Climate-
+    varme-rød (v0.2.48) verificeret ved at HA's rigtige spa (`climate.spav2_spa_thermostat`) reelt
+    varmede under testen (bekræftet ægte `hvac_action`-værdi via MCP før/efter); rose-nuancen
+    (v0.2.50) bruger-bekræftet OK på S23. Emulator (`pixel_test`) brugt til at verificere
+    entity-attributter og DB-cache undervejs (direkte SQL-injektion af testtilstand i
+    `entity_state`-tabellen for at fremtvinge visning uden at skulle vente på spaen varmede rigtigt).
 
 ## Næste skridt
 

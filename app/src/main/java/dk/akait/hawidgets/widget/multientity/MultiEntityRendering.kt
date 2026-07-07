@@ -42,6 +42,7 @@ import dk.akait.hawidgets.widget.common.formatDisplayValue
 import dk.akait.hawidgets.widget.common.formatEntityState
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
 import dk.akait.hawidgets.widget.common.hasOnOffState
+import dk.akait.hawidgets.widget.common.hvacActionFromJson
 import dk.akait.hawidgets.widget.common.isRawValueDomain
 import dk.akait.hawidgets.widget.common.unitFromJson
 import dk.akait.hawidgets.widget.common.isActiveState
@@ -75,19 +76,30 @@ private const val CHIP_CORNER_DP = 10
 private class Surface(val outer: ColorProvider?, val inner: ColorProvider, val content: ColorProvider)
 
 @Composable
-private fun surfaceFor(stateful: Boolean, active: Boolean, unavailable: Boolean, isChip: Boolean): Surface {
+private fun surfaceFor(stateful: Boolean, active: Boolean, unavailable: Boolean, heating: Boolean, isChip: Boolean): Surface {
     val c = GlanceTheme.colors
     return when {
         unavailable -> Surface(null, c.errorContainer, c.onErrorContainer)
+        // Climate der FAKTISK varmer (hvac_action == "heating", v0.2.48): fuld rød i stedet for blå.
+        // Ingen ring — hverken chip eller række (v0.2.50: aktive/varme chips står solidt uden kant).
+        // Andre climate-tilstande (idle/cool/auto/off) falder videre ned og bliver neutrale.
+        heating -> Surface(null, WidgetColors.heatingFill, WidgetColors.onHeating)
         // Info-agtige (sensor/number/scene/script + rene visnings-slots): neutralt fyld, ingen on/off.
         !stateful -> Surface(null, c.surfaceVariant, c.onSurfaceVariant)
-        // Tændt: fuld primary. Chips får en mørk ring (WidgetColors.chipActiveRing); rækker står
-        // frit og behøver ingen.
-        active -> if (isChip) Surface(WidgetColors.chipActiveRing, c.primary, c.onPrimary) else Surface(null, c.primary, c.onPrimary)
-        // Slukket on/off: kun outline (primary ring + neutralt indre).
-        else -> Surface(c.primary, c.surfaceVariant, c.onSurfaceVariant)
+        // Tændt: fuld primary — både chip og række, uden ring (v0.2.50: den tidligere mørke
+        // chip-ring fjernet efter brugerønske; en aktiv chip er nu bare solidt blå som rækken).
+        active -> Surface(null, c.primary, c.onPrimary)
+        // Slukket on/off: chips beholder outline (primary ring), men hoved-rækken har KUN neutralt
+        // gråt fyld uden ring (brugerønske v0.2.48) — kun det fyldte lag skiller tændt fra slukket.
+        else -> if (isChip) Surface(c.primary, c.surfaceVariant, c.onSurfaceVariant) else Surface(null, c.surfaceVariant, c.onSurfaceVariant)
     }
 }
+
+/** True når en climate-entitet FAKTISK varmer lige nu (hvac_action == "heating"). Kun climate-
+ * domænet kan give true — øvrige domæner rapporterer ikke hvac_action. */
+private fun isHeating(domain: String, state: EntityStateEntity?): Boolean =
+    domain == "climate" && state != null &&
+        hvacActionFromJson(state.attributesJson) == "heating"
 
 // v0.2.42 række/chip-styling: tændt = fuld primary-farve, slukket (on/off-domæner) = kun outline.
 // Glance har ingen border-modifier, så en "outline" laves med to lag: en ydre Box med ring-farve
@@ -268,10 +280,14 @@ private fun SlotRow(
     val isUnavailable = displayState?.state == "unavailable" ||
         (slot.action != "NONE" && actionState?.state == "unavailable")
     val isActive = displayState != null && isActiveState(slot.displayDomain, displayState.state)
+    // Rød når climate'en (uanset om den er visnings- eller action-entiteten) faktisk varmer.
+    val heating = isHeating(slot.displayDomain, displayState) ||
+        (slot.action != "NONE" && isHeating(slot.actionDomain, actionState))
     val surface = surfaceFor(
         stateful = hasOnOffState(slot.displayDomain),
         active = isActive,
         unavailable = isUnavailable,
+        heating = heating,
         isChip = false,
     )
 
@@ -349,7 +365,10 @@ private fun SecondaryChip(
     // toggle-chip der viste en anden entitet aldrig blev fuld-farvet.
     val stateful = chip.action != "NONE" && hasOnOffState(chip.actionDomain)
     val isActive = stateful && actionState != null && isActiveState(chip.actionDomain, actionState.state)
-    val surface = surfaceFor(stateful = stateful, active = isActive, unavailable = isUnavailable, isChip = true)
+    // Rød når climate'en (visnings- eller action-mål) faktisk varmer — samme som hoved-rækken.
+    val heating = isHeating(chip.displayDomain, displayState) ||
+        (chip.action != "NONE" && isHeating(chip.actionDomain, actionState))
+    val surface = surfaceFor(stateful = stateful, active = isActive, unavailable = isUnavailable, heating = heating, isChip = true)
 
     val labelText = chip.label
     // Ikon + (custom label og/eller værdi på 2 linjer). Bruger kan vise label, værdi, begge eller

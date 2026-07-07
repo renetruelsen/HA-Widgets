@@ -13,8 +13,8 @@ android {
         applicationId = "dk.akait.hawidgets"
         minSdk = 26
         targetSdk = 35
-        versionCode = 47
-        versionName = "0.2.47"
+        versionCode = 50
+        versionName = "0.2.50"
     }
 
     buildTypes {

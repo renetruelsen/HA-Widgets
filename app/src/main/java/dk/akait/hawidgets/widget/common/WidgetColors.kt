@@ -36,10 +36,12 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsDarkColorScheme
  */
 object WidgetColors {
 
-    /** Fast mørk ring om en TÆNDT chip (v0.2.42) — tema-uafhængig; sikrer chippens omrids ses
-     * når den sidder på en tændt (primary-farvet) række, hvor chip-fyld og række-fyld ellers
-     * ville smelte sammen. Samlet her med resten af widget-paletten (v0.2.44-cleanup). */
-    val chipActiveRing: ColorProvider = ColorProvider(Color(0x8A000000))
+    /** Fyld-/indhold-farve for en climate-række/chip der FAKTISK varmer (hvac_action == "heating",
+     * brugerønske v0.2.48) — rød i stedet for climate's normale blå. Fast (tema-uafhængig): en
+     * dæmpet rose-rød der harmonerer med den lavendel-blå tændt-farve; hvidt indhold har god
+     * kontrast i begge temaer. Nuance valgt af bruger (v0.2.50): #CF6679 (dæmpet rose). */
+    val heatingFill: ColorProvider = ColorProvider(Color(0xFFCF6679))
+    val onHeating: ColorProvider = ColorProvider(Color(0xFFFFFFFF))
 
     // Faste providers bygget af app'ens brand-color-schemes. Begge sider (day/night) er ens,
     // så et tvunget tema aldrig følger systemets nattilstand.

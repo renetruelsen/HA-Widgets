@@ -44,6 +44,12 @@ internal fun friendlyNameFromJson(attributesJson: String): String? =
 internal fun unitFromJson(attributesJson: String): String? =
     try { JSONObject(attributesJson).optString("unit_of_measurement").ifEmpty { null } } catch (_: Exception) { null }
 
+/** `hvac_action`-attributten for en climate-entitet (hvad den FAKTISK gør lige nu:
+ * "heating"/"cooling"/"idle"/"off"), i modsætning til `state` (den valgte hvac_mode). Null hvis
+ * entiteten ikke rapporterer den. Bruges til at farve en climate-række rød mens den varmer. */
+internal fun hvacActionFromJson(attributesJson: String): String? =
+    try { JSONObject(attributesJson).optString("hvac_action").ifEmpty { null } } catch (_: Exception) { null }
+
 @Composable
 fun UnconfiguredWidgetContent(
     context: Context,
