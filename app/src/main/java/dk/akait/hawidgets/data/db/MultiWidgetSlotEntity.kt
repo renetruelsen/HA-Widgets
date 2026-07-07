@@ -42,6 +42,8 @@ data class MultiWidgetSlotEntity(
     val secondary1DisplayPrecision: Int? = null,
     val secondary1DatetimeFormat: String? = null,
     val secondary1RangeInputMode: String? = null,
+    // Custom chip-label (v0.2.42) — vises på chippen (linje over evt. værdi). Null/tom = ingen label.
+    val secondary1Label: String? = null,
     val secondary2DisplayEntityId: String? = null,
     val secondary2DisplayDomain: String? = null,
     val secondary2ActionEntityId: String? = null,
@@ -52,6 +54,7 @@ data class MultiWidgetSlotEntity(
     val secondary2DisplayPrecision: Int? = null,
     val secondary2DatetimeFormat: String? = null,
     val secondary2RangeInputMode: String? = null,
+    val secondary2Label: String? = null,
     val secondary3DisplayEntityId: String? = null,
     val secondary3DisplayDomain: String? = null,
     val secondary3ActionEntityId: String? = null,
@@ -62,4 +65,5 @@ data class MultiWidgetSlotEntity(
     val secondary3DisplayPrecision: Int? = null,
     val secondary3DatetimeFormat: String? = null,
     val secondary3RangeInputMode: String? = null,
+    val secondary3Label: String? = null,
 )

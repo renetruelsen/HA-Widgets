@@ -82,6 +82,7 @@ internal fun SlotEditorScreen(
     onSecondaryChangeTarget: (Int) -> Unit,
     onSecondaryActionChange: (Int, String) -> Unit,
     onSecondaryRangeInputModeChange: (Int, String?) -> Unit,
+    onSecondaryLabelChange: (Int, String) -> Unit,
     onSecondaryShowValueChange: (Int, Boolean) -> Unit,
     onSecondaryConfirmActionChange: (Int, Boolean) -> Unit,
     onSecondaryDisplayPrecisionChange: (Int, Int?) -> Unit,
@@ -254,6 +255,7 @@ internal fun SlotEditorScreen(
                         onChangeTarget = { onSecondaryChangeTarget(index) },
                         onActionChange = { newAction -> onSecondaryActionChange(index, newAction) },
                         onRangeInputModeChange = { mode -> onSecondaryRangeInputModeChange(index, mode) },
+                        onLabelChange = { newLabel -> onSecondaryLabelChange(index, newLabel) },
                         onShowValueChange = { showValue -> onSecondaryShowValueChange(index, showValue) },
                         onConfirmActionChange = { confirm -> onSecondaryConfirmActionChange(index, confirm) },
                         onDisplayPrecisionChange = { precision -> onSecondaryDisplayPrecisionChange(index, precision) },
@@ -301,6 +303,7 @@ private fun SecondaryEntityRow(
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
     onRangeInputModeChange: (String?) -> Unit,
+    onLabelChange: (String) -> Unit,
     onShowValueChange: (Boolean) -> Unit,
     onConfirmActionChange: (Boolean) -> Unit,
     onDisplayPrecisionChange: (Int?) -> Unit,
@@ -328,6 +331,14 @@ private fun SecondaryEntityRow(
                 Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
+        OutlinedTextField(
+            value = secondary.label,
+            onValueChange = { if (it.length <= 12) onLabelChange(it) },
+            label = { Text(stringResource(R.string.chip_label_field)) },
+            supportingText = { Text(stringResource(R.string.chip_label_supporting)) },
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            singleLine = true,
+        )
         ValueFormattingControls(
             domain = display.domain,
             attributesJson = attrsByEntityId[display.entityId],

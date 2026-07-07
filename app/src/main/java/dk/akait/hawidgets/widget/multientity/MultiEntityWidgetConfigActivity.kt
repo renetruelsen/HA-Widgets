@@ -219,6 +219,11 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 updated[index] = updated[index].copy(rangeInputMode = mode)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
+            onSecondaryLabelChange = { index, newLabel ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(label = newLabel)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
             onSecondaryShowValueChange = { index, showValue ->
                 val updated = s.draft.secondaryEntities.toMutableList()
                 updated[index] = updated[index].copy(showValue = showValue)

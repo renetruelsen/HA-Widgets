@@ -14,13 +14,15 @@ internal data class SecondarySlotDraft(
     val action: String,
     /** Vis værditekst (ikke kun ikon) på chippen — brugervalgt, default via [defaultShowValueFor]. */
     val showValue: Boolean = defaultShowValueFor(action),
-    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
-    val confirmAction: Boolean = false,
+    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. Default TIL (v0.2.42). */
+    val confirmAction: Boolean = true,
     /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
     val displayPrecision: Int? = null,
     val datetimeFormat: String? = null,
     /** RANGE input-tilstand (Task 13) — "SLIDER"/"FIELD". null = "SLIDER". Kun relevant for RANGE. */
     val rangeInputMode: String? = null,
+    /** Custom chip-label (v0.2.42) — vises på chippen over evt. værdi. Tom = ingen label. */
+    val label: String = "",
 )
 
 internal data class SlotDraft(
@@ -29,14 +31,77 @@ internal data class SlotDraft(
     val action: String = "NONE",
     val label: String = "",
     val secondaryEntities: List<SecondarySlotDraft> = emptyList(),
-    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. */
-    val confirmAction: Boolean = false,
+    /** Bekræft ved tryk (v0.3.0, B1) — kun meningsfuld for TOGGLE/TRIGGER. Default TIL (v0.2.42). */
+    val confirmAction: Boolean = true,
     /** Værdi-formatering (v0.3.0, C2) — null = auto. Kun relevant for rå/enheds-bærende domæner. */
     val displayPrecision: Int? = null,
     val datetimeFormat: String? = null,
     /** RANGE input-tilstand (Task 13) — "SLIDER"/"FIELD". null = "SLIDER". Kun relevant for RANGE. */
     val rangeInputMode: String? = null,
 )
+
+/**
+ * Flad repræsentation af ÉN sekundær-chips kolonner (index 0..2). Findes udelukkende for at
+ * samle den ellers 3×-gentagne `secondary1/2/3…`-udrulning ét sted ([secondaryColumns] læser,
+ * [withSecondaryColumns] skriver), så resten af koden kan iterere over en liste i stedet for at
+ * kopiere de ~11 felter tre gange (pragmatisk DRY — det flade Room-skema bevares uændret).
+ */
+internal data class SecondaryColumns(
+    val displayEntityId: String?,
+    val displayDomain: String?,
+    val actionEntityId: String?,
+    val actionDomain: String?,
+    val action: String?,
+    val showValue: Boolean?,
+    val confirmAction: Boolean?,
+    val displayPrecision: Int?,
+    val datetimeFormat: String?,
+    val rangeInputMode: String?,
+    val label: String?,
+)
+
+/** De 3 sekundær-pladser som liste (i rækkefølge) — tomme pladser har null-felter. */
+internal fun MultiWidgetSlotEntity.secondaryColumns(): List<SecondaryColumns> = listOf(
+    SecondaryColumns(
+        secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain,
+        secondary1Action, secondary1ShowValue, secondary1ConfirmAction, secondary1DisplayPrecision,
+        secondary1DatetimeFormat, secondary1RangeInputMode, secondary1Label,
+    ),
+    SecondaryColumns(
+        secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain,
+        secondary2Action, secondary2ShowValue, secondary2ConfirmAction, secondary2DisplayPrecision,
+        secondary2DatetimeFormat, secondary2RangeInputMode, secondary2Label,
+    ),
+    SecondaryColumns(
+        secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain,
+        secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision,
+        secondary3DatetimeFormat, secondary3RangeInputMode, secondary3Label,
+    ),
+)
+
+/** Skriver op til 3 sekundær-pladser tilbage til de flade kolonner (resten nulstilles). */
+internal fun MultiWidgetSlotEntity.withSecondaryColumns(cols: List<SecondaryColumns>): MultiWidgetSlotEntity {
+    val c0 = cols.getOrNull(0)
+    val c1 = cols.getOrNull(1)
+    val c2 = cols.getOrNull(2)
+    return copy(
+        secondary1DisplayEntityId = c0?.displayEntityId, secondary1DisplayDomain = c0?.displayDomain,
+        secondary1ActionEntityId = c0?.actionEntityId, secondary1ActionDomain = c0?.actionDomain,
+        secondary1Action = c0?.action, secondary1ShowValue = c0?.showValue, secondary1ConfirmAction = c0?.confirmAction,
+        secondary1DisplayPrecision = c0?.displayPrecision, secondary1DatetimeFormat = c0?.datetimeFormat,
+        secondary1RangeInputMode = c0?.rangeInputMode, secondary1Label = c0?.label,
+        secondary2DisplayEntityId = c1?.displayEntityId, secondary2DisplayDomain = c1?.displayDomain,
+        secondary2ActionEntityId = c1?.actionEntityId, secondary2ActionDomain = c1?.actionDomain,
+        secondary2Action = c1?.action, secondary2ShowValue = c1?.showValue, secondary2ConfirmAction = c1?.confirmAction,
+        secondary2DisplayPrecision = c1?.displayPrecision, secondary2DatetimeFormat = c1?.datetimeFormat,
+        secondary2RangeInputMode = c1?.rangeInputMode, secondary2Label = c1?.label,
+        secondary3DisplayEntityId = c2?.displayEntityId, secondary3DisplayDomain = c2?.displayDomain,
+        secondary3ActionEntityId = c2?.actionEntityId, secondary3ActionDomain = c2?.actionDomain,
+        secondary3Action = c2?.action, secondary3ShowValue = c2?.showValue, secondary3ConfirmAction = c2?.confirmAction,
+        secondary3DisplayPrecision = c2?.displayPrecision, secondary3DatetimeFormat = c2?.datetimeFormat,
+        secondary3RangeInputMode = c2?.rangeInputMode, secondary3Label = c2?.label,
+    )
+}
 
 /** Handlings-typer (ex. NONE) et domæne understøtter som action-mål. Tom = read-only. */
 internal fun actionOptionsFor(domain: String): List<String> =
@@ -58,25 +123,36 @@ internal fun entityOrPlaceholder(
     allEntities.find { it.entityId == entityId }
         ?: HaApiClient.EntityBrief(entityId, entityId, "unknown", domain)
 
-private fun secondaryDraftFrom(
-    allEntities: List<HaApiClient.EntityBrief>,
-    displayId: String?, displayDomain: String?,
-    actionId: String?, actionDomain: String?,
-    action: String?, showValue: Boolean?, confirmAction: Boolean?,
-    displayPrecision: Int?, datetimeFormat: String?, rangeInputMode: String?,
-): SecondarySlotDraft? {
-    if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
+/** Én sekundær-plads (kolonner) → draft, eller null hvis pladsen er tom. */
+private fun SecondaryColumns.toDraft(allEntities: List<HaApiClient.EntityBrief>): SecondarySlotDraft? {
+    if (displayEntityId == null || displayDomain == null || actionEntityId == null || actionDomain == null || action == null) return null
     return SecondarySlotDraft(
-        displayEntity = entityOrPlaceholder(allEntities, displayId, displayDomain),
-        actionEntity = entityOrPlaceholder(allEntities, actionId, actionDomain),
+        displayEntity = entityOrPlaceholder(allEntities, displayEntityId, displayDomain),
+        actionEntity = entityOrPlaceholder(allEntities, actionEntityId, actionDomain),
         action = action,
         showValue = showValue ?: defaultShowValueFor(action),
         confirmAction = confirmAction ?: false,
         displayPrecision = displayPrecision,
         datetimeFormat = datetimeFormat,
         rangeInputMode = rangeInputMode,
+        label = label ?: "",
     )
 }
+
+/** Draft → sekundær-plads (kolonner) til persistering. */
+private fun SecondarySlotDraft.toColumns(): SecondaryColumns = SecondaryColumns(
+    displayEntityId = displayEntity.entityId,
+    displayDomain = displayEntity.domain,
+    actionEntityId = actionEntity.entityId,
+    actionDomain = actionEntity.domain,
+    action = action,
+    showValue = showValue,
+    confirmAction = confirmAction,
+    displayPrecision = displayPrecision,
+    datetimeFormat = datetimeFormat,
+    rangeInputMode = rangeInputMode,
+    label = label.trim().ifEmpty { null },
+)
 
 internal fun draftFromSlot(
     slot: MultiWidgetSlotEntity,
@@ -94,29 +170,7 @@ internal fun draftFromSlot(
     } else {
         slot.action
     }
-    val secondaries = listOfNotNull(
-        secondaryDraftFrom(
-            allEntities,
-            slot.secondary1DisplayEntityId, slot.secondary1DisplayDomain,
-            slot.secondary1ActionEntityId, slot.secondary1ActionDomain, slot.secondary1Action,
-            slot.secondary1ShowValue, slot.secondary1ConfirmAction,
-            slot.secondary1DisplayPrecision, slot.secondary1DatetimeFormat, slot.secondary1RangeInputMode,
-        ),
-        secondaryDraftFrom(
-            allEntities,
-            slot.secondary2DisplayEntityId, slot.secondary2DisplayDomain,
-            slot.secondary2ActionEntityId, slot.secondary2ActionDomain, slot.secondary2Action,
-            slot.secondary2ShowValue, slot.secondary2ConfirmAction,
-            slot.secondary2DisplayPrecision, slot.secondary2DatetimeFormat, slot.secondary2RangeInputMode,
-        ),
-        secondaryDraftFrom(
-            allEntities,
-            slot.secondary3DisplayEntityId, slot.secondary3DisplayDomain,
-            slot.secondary3ActionEntityId, slot.secondary3ActionDomain, slot.secondary3Action,
-            slot.secondary3ShowValue, slot.secondary3ConfirmAction,
-            slot.secondary3DisplayPrecision, slot.secondary3DatetimeFormat, slot.secondary3RangeInputMode,
-        ),
-    )
+    val secondaries = slot.secondaryColumns().mapNotNull { it.toDraft(allEntities) }
     return SlotDraft(
         display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction,
         slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode,
@@ -128,7 +182,6 @@ internal fun draftFromSlot(
 internal fun SlotDraft.toSlotEntity(appWidgetId: Int, slotIndex: Int): MultiWidgetSlotEntity? {
     val display = displayEntity ?: return null
     val action = actionEntity ?: display
-    val sec = secondaryEntities
     return MultiWidgetSlotEntity(
         appWidgetId = appWidgetId,
         slotIndex = slotIndex,
@@ -142,35 +195,5 @@ internal fun SlotDraft.toSlotEntity(appWidgetId: Int, slotIndex: Int): MultiWidg
         displayPrecision = displayPrecision,
         datetimeFormat = datetimeFormat,
         rangeInputMode = rangeInputMode,
-        secondary1DisplayEntityId = sec.getOrNull(0)?.displayEntity?.entityId,
-        secondary1DisplayDomain = sec.getOrNull(0)?.displayEntity?.domain,
-        secondary1ActionEntityId = sec.getOrNull(0)?.actionEntity?.entityId,
-        secondary1ActionDomain = sec.getOrNull(0)?.actionEntity?.domain,
-        secondary1Action = sec.getOrNull(0)?.action,
-        secondary1ShowValue = sec.getOrNull(0)?.showValue,
-        secondary1ConfirmAction = sec.getOrNull(0)?.confirmAction,
-        secondary1DisplayPrecision = sec.getOrNull(0)?.displayPrecision,
-        secondary1DatetimeFormat = sec.getOrNull(0)?.datetimeFormat,
-        secondary1RangeInputMode = sec.getOrNull(0)?.rangeInputMode,
-        secondary2DisplayEntityId = sec.getOrNull(1)?.displayEntity?.entityId,
-        secondary2DisplayDomain = sec.getOrNull(1)?.displayEntity?.domain,
-        secondary2ActionEntityId = sec.getOrNull(1)?.actionEntity?.entityId,
-        secondary2ActionDomain = sec.getOrNull(1)?.actionEntity?.domain,
-        secondary2Action = sec.getOrNull(1)?.action,
-        secondary2ShowValue = sec.getOrNull(1)?.showValue,
-        secondary2ConfirmAction = sec.getOrNull(1)?.confirmAction,
-        secondary2DisplayPrecision = sec.getOrNull(1)?.displayPrecision,
-        secondary2DatetimeFormat = sec.getOrNull(1)?.datetimeFormat,
-        secondary2RangeInputMode = sec.getOrNull(1)?.rangeInputMode,
-        secondary3DisplayEntityId = sec.getOrNull(2)?.displayEntity?.entityId,
-        secondary3DisplayDomain = sec.getOrNull(2)?.displayEntity?.domain,
-        secondary3ActionEntityId = sec.getOrNull(2)?.actionEntity?.entityId,
-        secondary3ActionDomain = sec.getOrNull(2)?.actionEntity?.domain,
-        secondary3Action = sec.getOrNull(2)?.action,
-        secondary3ShowValue = sec.getOrNull(2)?.showValue,
-        secondary3ConfirmAction = sec.getOrNull(2)?.confirmAction,
-        secondary3DisplayPrecision = sec.getOrNull(2)?.displayPrecision,
-        secondary3DatetimeFormat = sec.getOrNull(2)?.datetimeFormat,
-        secondary3RangeInputMode = sec.getOrNull(2)?.rangeInputMode,
-    )
+    ).withSecondaryColumns(secondaryEntities.map { it.toColumns() })
 }

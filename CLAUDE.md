@@ -603,6 +603,36 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     + widget opdaterede uden stale-markør. De øvrige 4 dialoger deler samme verificerede
     mønster men blev ikke selv live-testet denne session (emulator gik ned midtvejs i
     forsøg på at placere en test-widget) — bruger fortsætter selv QA på emulator + S23.
+- ✅ **v0.2.42 — MultiEntityWidget: DRY-oprydning + chip/række-styling + custom chip-label
+  (2026-07-07, efter brugerønske, 5 punkter):**
+  - **DRY (pragmatisk, ingen skema-ændring):** den 3×-gentagne `secondary1/2/3…`-udrulning
+    samlet ét sted via ny `SecondaryColumns`-datatype + `MultiWidgetSlotEntity.secondaryColumns()`
+    (læs) / `withSecondaryColumns()` (skriv) i `MultiEntityDrafts.kt`. `secondaryChips()`,
+    `draftFromSlot` og `toSlotEntity` itererer nu over en liste i stedet for at kopiere ~11
+    felter tre gange. De flade Room-kolonner bevaret bevidst (brugervalg).
+  - **Række/chip-styling (`MultiEntityRendering.kt`, ny `surfaceFor`-helper):** on/off-domæner
+    viser nu **kun outline når slukket** (primary-ring + neutralt fyld) og **fuld primary-farve
+    når tændt**. Glance har ingen border-modifier → "outline" laves med to lag (ydre ring-Box +
+    indre fyld-Box). Aktiv **chip** får en **mørk kant** (`DARK_RING`) så dens omrids ses når den
+    sidder på en tændt (primary-farvet) række (brugerønske). Info-agtige domæner (sensor/number/
+    scene/script) uændret neutralt fyld.
+  - **Bug rettet:** chippens tændt/slukket fulgte før VISNINGS-entiteten; følger nu ACTION-målet
+    (`isActiveState(chip.actionDomain, actionState)`) — en toggle-chip der viste en anden entitet
+    blev aldrig fuld-farvet.
+  - **Rækkehøjde −4dp:** rækkens padding 8→6dp pr. side (chippen selv forbliver 48dp a11y-min).
+  - **Custom chip-label (Room v7→v8, `secondaryNLabel`):** ny "Chip-label"-felt pr. sekundær-chip
+    i config. Chippen kan vise ikon + label + værdi (label/værdi på 2 linjer, som hovedrækken) —
+    label og "vis værdi" er uafhængige valg.
+  - **"Bekræft ved tryk" default TIL:** `SlotDraft`/`SecondarySlotDraft.confirmAction = true` for
+    NYE slots/chips (eksisterende beholder deres gemte værdi).
+  - **QA:** build grøn (kun præeksisterende coroutines-warning). Emulator (`pixel_test`, ægte HA):
+    migration v7→v8 verificeret (`user_version=8`, 3 `secondaryNLabel`-kolonner, 11 eksisterende
+    slots intakte, ingen crash); config-flow (chip-label-felt, vis-værdi, confirm-default TIL for
+    ny toggle-chip, Opdater→Gem→SyncWorker SUCCESS); frisk widget placeret og renderet — aktiv
+    række = fuld farve, aktiv chip = mørk-kant-outline (per nuance), slukket chip = gråt fyld
+    (brugervalg — ægte hul-outline fravalgt), sensor = neutralt fyld, 2-linje label+værdi. **Ikke
+    set:** slukket hovedrække (begge test-lys var tændt; samme kodesti som verificeret slukket
+    chip) og præcis højde-delta. Device-QA på S23 afventer bruger.
 
 ## Næste skridt
 

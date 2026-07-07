@@ -2,6 +2,7 @@ package dk.akait.hawidgets.widget.multientity
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceModifier
@@ -21,6 +22,7 @@ import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -30,16 +32,18 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.EntityStateEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
-import dk.akait.hawidgets.widget.common.defaultShowValueFor
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.WidgetColors
+import dk.akait.hawidgets.widget.common.defaultShowValueFor
 import dk.akait.hawidgets.widget.common.domainIconResId
 import dk.akait.hawidgets.widget.common.formatDisplayValue
 import dk.akait.hawidgets.widget.common.formatEntityState
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
+import dk.akait.hawidgets.widget.common.hasOnOffState
 import dk.akait.hawidgets.widget.common.isRawValueDomain
 import dk.akait.hawidgets.widget.common.unitFromJson
 import dk.akait.hawidgets.widget.common.isActiveState
@@ -55,6 +59,41 @@ internal const val ROW_GAP_DP = 4
 internal const val CHIP_GAP_DP = 4
 internal const val REFRESH_STRIP_HEIGHT_DP = 24
 
+// v0.2.42 række/chip-styling: tændt = fuld primary-farve, slukket (on/off-domæner) = kun outline.
+// Glance har ingen border-modifier, så en "outline" laves med to lag: en ydre Box med ring-farve
+// + lille padding, og en indre Box med fyld-farven → ringen ses som en kant. SURFACE_BORDER_DP er
+// ringens tykkelse; de indre paddinger er skåret så den samlede kant+padding matcher det tidligere
+// 8dp minus 4dp (brugervalgt lavere rækkehøjde) = 6dp pr. side.
+private const val SURFACE_BORDER_DP = 2
+private const val ROW_INNER_PAD_DP = 4      // + 2dp ring = 6dp pr. side (outline-tilstand)
+private const val ROW_SINGLE_PAD_DP = 6     // fyldt/uden ring: 6dp pr. side
+private const val CHIP_INNER_H_PAD_DP = 4   // + 2dp ring
+private const val CHIP_SINGLE_H_PAD_DP = 6
+private const val ROW_CORNER_DP = 12
+private const val CHIP_CORNER_DP = 10
+
+// Mørk ring om en TÆNDT chip, så dens omrids stadig ses når den sidder på en tændt (primary-farvet)
+// række — ellers ville primary-chip på primary-række smelte sammen (brugerønske v0.2.42).
+private val DARK_RING: ColorProvider = ColorProvider(Color(0x8A000000))
+
+/** Farvelag for en række/chip: [outer] = ring-farve (null = ingen ring, ét enkelt lag),
+ * [inner] = fyld-farve, [content] = ikon/tekst-farve. */
+private class Surface(val outer: ColorProvider?, val inner: ColorProvider, val content: ColorProvider)
+
+@Composable
+private fun surfaceFor(stateful: Boolean, active: Boolean, unavailable: Boolean, isChip: Boolean): Surface {
+    val c = GlanceTheme.colors
+    return when {
+        unavailable -> Surface(null, c.errorContainer, c.onErrorContainer)
+        // Info-agtige (sensor/number/scene/script + rene visnings-slots): neutralt fyld, ingen on/off.
+        !stateful -> Surface(null, c.surfaceVariant, c.onSurfaceVariant)
+        // Tændt: fuld primary. Chips får en mørk ring (se DARK_RING); rækker står frit og behøver ingen.
+        active -> if (isChip) Surface(DARK_RING, c.primary, c.onPrimary) else Surface(null, c.primary, c.onPrimary)
+        // Slukket on/off: kun outline (primary ring + neutralt indre).
+        else -> Surface(c.primary, c.surfaceVariant, c.onSurfaceVariant)
+    }
+}
+
 /** En konfigureret sekundær-chip klar til rendering — null hvis den slot-plads er tom. */
 private data class SecondaryChipData(
     val displayEntityId: String,
@@ -67,39 +106,20 @@ private data class SecondaryChipData(
     val displayPrecision: Int?,
     val datetimeFormat: String?,
     val rangeInputMode: String?,
+    val label: String,
 )
 
-private fun secondaryChipData(
-    displayId: String?, displayDomain: String?,
-    actionId: String?, actionDomain: String?,
-    action: String?, showValue: Boolean?, confirmAction: Boolean?,
-    displayPrecision: Int?, datetimeFormat: String?, rangeInputMode: String?,
-): SecondaryChipData? {
-    if (displayId == null || displayDomain == null || actionId == null || actionDomain == null || action == null) return null
+private fun SecondaryColumns.toChipData(): SecondaryChipData? {
+    if (displayEntityId == null || displayDomain == null || actionEntityId == null || actionDomain == null || action == null) return null
     return SecondaryChipData(
-        displayId, displayDomain, actionId, actionDomain, action,
+        displayEntityId, displayDomain, actionEntityId, actionDomain, action,
         showValue ?: defaultShowValueFor(action), confirmAction ?: false,
-        displayPrecision, datetimeFormat, rangeInputMode,
+        displayPrecision, datetimeFormat, rangeInputMode, label?.trim() ?: "",
     )
 }
 
-private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> = listOfNotNull(
-    secondaryChipData(
-        secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain,
-        secondary1Action, secondary1ShowValue, secondary1ConfirmAction, secondary1DisplayPrecision, secondary1DatetimeFormat,
-        secondary1RangeInputMode,
-    ),
-    secondaryChipData(
-        secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain,
-        secondary2Action, secondary2ShowValue, secondary2ConfirmAction, secondary2DisplayPrecision, secondary2DatetimeFormat,
-        secondary2RangeInputMode,
-    ),
-    secondaryChipData(
-        secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain,
-        secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision, secondary3DatetimeFormat,
-        secondary3RangeInputMode,
-    ),
-)
+private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> =
+    secondaryColumns().mapNotNull { it.toChipData() }
 
 /** Domain-aware visningsværdi: rå/enheds-bærende domæner (sensor/number/input_* m.fl.) bruger
  * [formatDisplayValue] (precision/datetime-format-override, v0.3.0 C2); øvrige domæner (der har
@@ -207,17 +227,12 @@ private fun SlotRow(
     val actionState = states[slot.actionEntityId]
     val isUnavailable = displayState?.state == "unavailable"
     val isActive = displayState != null && isActiveState(slot.displayDomain, displayState.state)
-
-    val bgColor = when {
-        isUnavailable -> GlanceTheme.colors.errorContainer
-        isActive -> GlanceTheme.colors.primary
-        else -> GlanceTheme.colors.surfaceVariant
-    }
-    val contentColor = when {
-        isUnavailable -> GlanceTheme.colors.onErrorContainer
-        isActive -> GlanceTheme.colors.onPrimary
-        else -> GlanceTheme.colors.onSurfaceVariant
-    }
+    val surface = surfaceFor(
+        stateful = hasOnOffState(slot.displayDomain),
+        active = isActive,
+        unavailable = isUnavailable,
+        isChip = false,
+    )
 
     val label = slot.label.ifEmpty {
         friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: slot.displayEntityId
@@ -225,9 +240,35 @@ private fun SlotRow(
     val statusBase = displayValueFor(context, slot.displayDomain, displayState, slot.displayPrecision, slot.datetimeFormat)
     val statusText = if (displayState != null && displayState.isStale()) "$statusBase ~" else statusBase
 
-    val rowModifier = clickModifier(
+    val chips = slot.secondaryChips()
+    val rowContent: @Composable () -> Unit = {
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                provider = ImageProvider(domainIconResId(slot.displayDomain)),
+                contentDescription = label,
+                modifier = GlanceModifier.size(24.dp),
+                colorFilter = ColorFilter.tint(surface.content),
+            )
+            Spacer(modifier = GlanceModifier.width(10.dp))
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(label, style = TextStyle(color = surface.content, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                Text(statusText, style = TextStyle(color = surface.content, fontSize = 11.sp), maxLines = 1)
+            }
+            if (chips.isNotEmpty()) {
+                Spacer(modifier = GlanceModifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    chips.forEachIndexed { index, chip ->
+                        if (index > 0) Spacer(modifier = GlanceModifier.width(CHIP_GAP_DP.dp))
+                        SecondaryChip(context, chip, states)
+                    }
+                }
+            }
+        }
+    }
+
+    fun withClick(base: GlanceModifier) = clickModifier(
         context = context,
-        base = GlanceModifier.fillMaxWidth().background(bgColor).cornerRadius(12.dp).padding(8.dp),
+        base = base,
         action = slot.action,
         actionEntityId = slot.actionEntityId,
         actionDomain = slot.actionDomain,
@@ -238,28 +279,23 @@ private fun SlotRow(
         rangeInputMode = slot.rangeInputMode,
     )
 
-    Row(modifier = rowModifier, verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            provider = ImageProvider(domainIconResId(slot.displayDomain)),
-            contentDescription = label,
-            modifier = GlanceModifier.size(24.dp),
-            colorFilter = ColorFilter.tint(contentColor),
-        )
-        Spacer(modifier = GlanceModifier.width(10.dp))
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(label, style = TextStyle(color = contentColor, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-            Text(statusText, style = TextStyle(color = contentColor, fontSize = 11.sp), maxLines = 1)
+    if (surface.outer != null) {
+        Box(
+            modifier = withClick(
+                GlanceModifier.fillMaxWidth().background(surface.outer).cornerRadius(ROW_CORNER_DP.dp).padding(SURFACE_BORDER_DP.dp),
+            ),
+        ) {
+            Box(
+                modifier = GlanceModifier.fillMaxWidth().background(surface.inner)
+                    .cornerRadius((ROW_CORNER_DP - SURFACE_BORDER_DP).dp).padding(ROW_INNER_PAD_DP.dp),
+            ) { rowContent() }
         }
-        val chips = slot.secondaryChips()
-        if (chips.isNotEmpty()) {
-            Spacer(modifier = GlanceModifier.width(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                chips.forEachIndexed { index, chip ->
-                    if (index > 0) Spacer(modifier = GlanceModifier.width(CHIP_GAP_DP.dp))
-                    SecondaryChip(context, chip, states)
-                }
-            }
-        }
+    } else {
+        Box(
+            modifier = withClick(
+                GlanceModifier.fillMaxWidth().background(surface.inner).cornerRadius(ROW_CORNER_DP.dp).padding(ROW_SINGLE_PAD_DP.dp),
+            ),
+        ) { rowContent() }
     }
 }
 
@@ -272,56 +308,74 @@ private fun SecondaryChip(
     val displayState = states[chip.displayEntityId]
     val actionState = states[chip.actionEntityId]
     val isUnavailable = displayState?.state == "unavailable"
-    val isActive = displayState != null && isActiveState(chip.displayDomain, displayState.state)
-    val isInfo = chip.action == "NONE"
-    // Brugervalgt i config-UI'en (default via defaultShowValueFor, se secondaryChipData) —
-    // ikke hardcodet til handlingstypen, så brugeren selv kan vise/skjule værditeksten pr. chip.
-    val showsValueText = chip.showValue
+    // "Tændt" følger ACTION-målet (ikke visningen) for on/off-domæner — retter fejlen hvor en
+    // toggle-chip der viste en anden entitet aldrig blev fuld-farvet.
+    val stateful = chip.action != "NONE" && hasOnOffState(chip.actionDomain)
+    val isActive = stateful && actionState != null && isActiveState(chip.actionDomain, actionState.state)
+    val surface = surfaceFor(stateful = stateful, active = isActive, unavailable = isUnavailable, isChip = true)
 
-    val bgColor = when {
-        isUnavailable -> GlanceTheme.colors.errorContainer
-        isInfo -> GlanceTheme.colors.surfaceVariant
-        isActive -> GlanceTheme.colors.primary
-        else -> GlanceTheme.colors.surfaceVariant
-    }
-    val contentColor = when {
-        isUnavailable -> GlanceTheme.colors.onErrorContainer
-        isInfo -> GlanceTheme.colors.onSurfaceVariant
-        isActive -> GlanceTheme.colors.onPrimary
-        else -> GlanceTheme.colors.onSurfaceVariant
-    }
-    val label = friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: chip.displayEntityId
+    val labelText = chip.label
+    // Ikon + (custom label og/eller værdi på 2 linjer). Bruger kan vise label, værdi, begge eller
+    // ingen af delene — uafhængige config-valg (v0.2.42).
+    val valueText = if (chip.showValue) {
+        displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat)
+    } else null
 
-    // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum. Uden dette var
-    // chippens reelle klik-areal kun icon+padding høj (~22dp), da den (i modsætning til
-    // hoved-rækken) ikke får sin højde "gratis" fra en flerlinjet label-kolonne ved siden af.
-    val chipModifier = clickModifier(
+    val chipContent: @Composable () -> Unit = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                provider = ImageProvider(domainIconResId(chip.displayDomain)),
+                contentDescription = labelText.ifEmpty { chip.displayEntityId },
+                modifier = GlanceModifier.size(14.dp),
+                colorFilter = ColorFilter.tint(surface.content),
+            )
+            if (labelText.isNotEmpty() || valueText != null) {
+                Spacer(modifier = GlanceModifier.width(4.dp))
+                Column {
+                    if (labelText.isNotEmpty()) {
+                        Text(labelText, style = TextStyle(color = surface.content, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                    }
+                    if (valueText != null) {
+                        Text(valueText, style = TextStyle(color = surface.content, fontSize = 11.sp), maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+
+    fun withClick(base: GlanceModifier) = clickModifier(
         context = context,
-        base = GlanceModifier.background(bgColor).cornerRadius(10.dp).height(48.dp).padding(horizontal = 6.dp),
+        base = base,
         action = chip.action,
         actionEntityId = chip.actionEntityId,
         actionDomain = chip.actionDomain,
         refreshEntityId = chip.displayEntityId,
-        rangeLabel = label,
+        rangeLabel = labelText.ifEmpty { chip.displayEntityId },
         actionState = actionState,
         confirmAction = chip.confirmAction,
         rangeInputMode = chip.rangeInputMode,
     )
 
-    Row(modifier = chipModifier, verticalAlignment = Alignment.CenterVertically) {
-        Image(
-            provider = ImageProvider(domainIconResId(chip.displayDomain)),
-            contentDescription = label,
-            modifier = GlanceModifier.size(14.dp),
-            colorFilter = ColorFilter.tint(contentColor),
-        )
-        if (showsValueText) {
-            Spacer(modifier = GlanceModifier.width(4.dp))
-            Text(
-                text = displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat),
-                style = TextStyle(color = contentColor, fontSize = 11.sp),
-                maxLines = 1,
-            )
+    // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum.
+    if (surface.outer != null) {
+        Box(
+            modifier = withClick(
+                GlanceModifier.background(surface.outer).cornerRadius(CHIP_CORNER_DP.dp).height(48.dp).padding(SURFACE_BORDER_DP.dp),
+            ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = GlanceModifier.fillMaxHeight().background(surface.inner)
+                    .cornerRadius((CHIP_CORNER_DP - SURFACE_BORDER_DP).dp).padding(horizontal = CHIP_INNER_H_PAD_DP.dp),
+                contentAlignment = Alignment.Center,
+            ) { chipContent() }
         }
+    } else {
+        Box(
+            modifier = withClick(
+                GlanceModifier.background(surface.inner).cornerRadius(CHIP_CORNER_DP.dp).height(48.dp).padding(horizontal = CHIP_SINGLE_H_PAD_DP.dp),
+            ),
+            contentAlignment = Alignment.Center,
+        ) { chipContent() }
     }
 }

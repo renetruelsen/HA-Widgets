@@ -71,6 +71,15 @@ fun isActiveState(domain: String, state: String?): Boolean = when (domain) {
     else -> false // sensor, number, scene, script, øvrige inputs: intet vedvarende on/off-udseende
 }
 
+/** Har domænet et vedvarende tændt/slukket-udseende (og dermed en meningsfuld "outline når slukket /
+ * fuld farve når tændt"-styling)? Præcis de domæner hvor [isActiveState] kan blive true. Rene
+ * værdi-/udløs-domæner (sensor/number/scene/script/…) er info-agtige og bruger et neutralt fyld. */
+fun hasOnOffState(domain: String): Boolean = when (domain) {
+    "light", "switch", "automation", "climate", "binary_sensor", "input_boolean",
+    "lock", "cover", "device_tracker" -> true
+    else -> false
+}
+
 /**
  * Action-typer der giver mening for et givent domæne SOM ACTION-MÅL. Ikke filtreret på
  * live kapabilitet (fx dimmable/positionable) — brugeren vælger selv, ligesom resten af

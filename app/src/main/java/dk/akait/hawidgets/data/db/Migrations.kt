@@ -86,3 +86,12 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         }
     }
 }
+
+/** v7 → v8: custom chip-label pr. sekundær-chip (v0.2.42). null = ingen label = uændret adfærd. */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        for (n in 1..3) {
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}Label TEXT")
+        }
+    }
+}
