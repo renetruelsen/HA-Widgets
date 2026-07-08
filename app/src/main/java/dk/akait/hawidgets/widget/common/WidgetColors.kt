@@ -37,10 +37,12 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsDarkColorScheme
 object WidgetColors {
 
     /** Fyld-/indhold-farve for en climate-række/chip der FAKTISK varmer (hvac_action == "heating",
-     * brugerønske v0.2.48) — rød i stedet for climate's normale blå. Fast (tema-uafhængig): en
-     * dæmpet rose-rød der harmonerer med den lavendel-blå tændt-farve; hvidt indhold har god
-     * kontrast i begge temaer. Nuance valgt af bruger (v0.2.50): #CF6679 (dæmpet rose). */
-    val heatingFill: ColorProvider = ColorProvider(Color(0xFFCF6679))
+     * brugerønske v0.2.48) — rød i stedet for climate's normale blå. Fast (tema-uafhængig); hvidt
+     * indhold har god kontrast i begge temaer. Nuance v0.2.57: #FF6D00 — matcher Home Assistants
+     * egen orange varme-farve (brugerønske, sammenlignet direkte mod et HA-dashboard-skærmbillede
+     * med en climate-kortets "Aktuel temp"-badge). Erstatter den tidligere dæmpede rose (#CF6679,
+     * v0.2.50). */
+    val heatingFill: ColorProvider = ColorProvider(Color(0xFFFF6D00))
     val onHeating: ColorProvider = ColorProvider(Color(0xFFFFFFFF))
 
     // Faste providers bygget af app'ens brand-color-schemes. Begge sider (day/night) er ens,

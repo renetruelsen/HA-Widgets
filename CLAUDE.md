@@ -812,6 +812,18 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (v0.2.50) bruger-bekræftet OK på S23. Emulator (`pixel_test`) brugt til at verificere
     entity-attributter og DB-cache undervejs (direkte SQL-injektion af testtilstand i
     `entity_state`-tabellen for at fremtvinge visning uden at skulle vente på spaen varmede rigtigt).
+- **v0.2.51 og v0.2.56** blev lavet i en anden session (sekundær-chip-sortering/tættere config-UI
+  hhv. "Vis historik"-handling + chip-fix + chip-border — se `git log` for detaljer) og blev ikke
+  logget her dengang; nævnt for at forklare hvorfor versionsnummeret springer fra v0.2.50 til v0.2.57
+  nedenfor.
+- ✅ **v0.2.57 — MultiEntityWidget: climate-varme-farve skiftet til HA's egen orange (2026-07-08,
+  brugerønske):** `WidgetColors.heatingFill` ændret fra den dæmpede rose `#CF6679` (v0.2.50) til
+  `#FF6D00` — brugeren sammenlignede direkte mod et skærmbillede af sit eget HA-dashboard (en
+  climate-korts "Aktuel temp"-badge i orange) og ville have samme farve i widgetten. Fire
+  HA-inspirerede orange-nuancer blev stillet op visuelt (A `#FF9800` HA-standard/gul-orange, B
+  `#FF6D00` dybere orange, C `#FF5722` orange-rød, D `#FF3D00` mest mættet) — brugeren valgte B som
+  bedste match til det rødlige/mættede udtryk i sit skærmbillede. `onHeating` (hvid tekst) uændret.
+  **QA:** build grøn, installeret + bruger-bekræftet OK på Galaxy S23.
 
 ## Næste skridt
 
