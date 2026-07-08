@@ -1,5 +1,6 @@
 package dk.akait.hawidgets.widget.multientity
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -16,16 +17,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -79,6 +81,8 @@ internal fun SlotEditorScreen(
     onDatetimeFormatChange: (String?) -> Unit,
     onAddSecondary: () -> Unit,
     onRemoveSecondary: (Int) -> Unit,
+    onMoveSecondaryUp: (Int) -> Unit,
+    onMoveSecondaryDown: (Int) -> Unit,
     onSecondaryChangeTarget: (Int) -> Unit,
     onSecondaryActionChange: (Int, String) -> Unit,
     onSecondaryRangeInputModeChange: (Int, String?) -> Unit,
@@ -164,11 +168,11 @@ internal fun SlotEditorScreen(
                         // handling altid underforstået, så kontakten (og dermed NONE) findes ikke.
                         if (!targetDiffers) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Switch(
+                                Checkbox(
                                     checked = reactsToTap,
                                     onCheckedChange = { on ->
                                         onActionChange(
@@ -196,8 +200,7 @@ internal fun SlotEditorScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable(onClick = pick)
-                                            .padding(vertical = 6.dp),
+                                            .clickable(onClick = pick),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         RadioButton(selected = draft.action == actionType, onClick = pick)
@@ -219,11 +222,11 @@ internal fun SlotEditorScreen(
                 }
                 if (draft.action == "TOGGLE" || draft.action == "TRIGGER") {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(stringResource(R.string.confirm_action_switch), modifier = Modifier.weight(1f))
-                        Switch(checked = draft.confirmAction, onCheckedChange = onConfirmActionChange)
+                        Checkbox(checked = draft.confirmAction, onCheckedChange = onConfirmActionChange)
                     }
                 }
                 if (draft.action == "RANGE") {
@@ -251,7 +254,11 @@ internal fun SlotEditorScreen(
                     SecondaryEntityRow(
                         secondary = secondary,
                         attrsByEntityId = attrsByEntityId,
+                        canMoveUp = index > 0,
+                        canMoveDown = index < draft.secondaryEntities.size - 1,
                         onRemove = { onRemoveSecondary(index) },
+                        onMoveUp = { onMoveSecondaryUp(index) },
+                        onMoveDown = { onMoveSecondaryDown(index) },
                         onChangeTarget = { onSecondaryChangeTarget(index) },
                         onActionChange = { newAction -> onSecondaryActionChange(index, newAction) },
                         onRangeInputModeChange = { mode -> onSecondaryRangeInputModeChange(index, mode) },
@@ -261,7 +268,7 @@ internal fun SlotEditorScreen(
                         onDisplayPrecisionChange = { precision -> onSecondaryDisplayPrecisionChange(index, precision) },
                         onDatetimeFormatChange = { pattern -> onSecondaryDatetimeFormatChange(index, pattern) },
                     )
-                    if (index < draft.secondaryEntities.size - 1) HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    if (index < draft.secondaryEntities.size - 1) Spacer(Modifier.padding(vertical = 4.dp))
                 }
                 if (draft.secondaryEntities.size in 1 until MAX_SECONDARY_ENTITIES) {
                     Text(
@@ -299,7 +306,11 @@ internal fun SlotEditorScreen(
 private fun SecondaryEntityRow(
     secondary: SecondarySlotDraft,
     attrsByEntityId: Map<String, String>,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
     onRemove: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
     onChangeTarget: () -> Unit,
     onActionChange: (String) -> Unit,
     onRangeInputModeChange: (String?) -> Unit,
@@ -315,7 +326,13 @@ private fun SecondaryEntityRow(
     val opts = actionOptionsFor(action.domain)
     val readOnly = opts.isEmpty()
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+            .padding(10.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 painter = painterResource(domainIconResId(display.domain)),
@@ -327,8 +344,24 @@ private fun SecondaryEntityRow(
                 Text(stringResource(R.string.section_view), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 Text(display.friendlyName, style = MaterialTheme.typography.bodyMedium)
             }
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_remove), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+            IconButton(onClick = onMoveUp, enabled = canMoveUp, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Filled.KeyboardArrowUp,
+                    contentDescription = stringResource(R.string.cd_move_up, display.friendlyName),
+                    tint = if (canMoveUp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            IconButton(onClick = onMoveDown, enabled = canMoveDown, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Filled.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.cd_move_down, display.friendlyName),
+                    tint = if (canMoveDown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_remove, display.friendlyName), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
             }
         }
         OutlinedTextField(
@@ -373,7 +406,7 @@ private fun SecondaryEntityRow(
             opts.forEach { actionType ->
                 val pick = { onActionChange(actionType) }
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = pick).padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = pick),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     RadioButton(selected = secondary.action == actionType, onClick = pick)
@@ -398,7 +431,7 @@ private fun SecondaryEntityRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            Switch(checked = secondary.showValue, onCheckedChange = onShowValueChange)
+            Checkbox(checked = secondary.showValue, onCheckedChange = onShowValueChange)
         }
         if (!readOnly && (secondary.action == "TOGGLE" || secondary.action == "TRIGGER")) {
             Row(
@@ -411,7 +444,7 @@ private fun SecondaryEntityRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                Switch(checked = secondary.confirmAction, onCheckedChange = onConfirmActionChange)
+                Checkbox(checked = secondary.confirmAction, onCheckedChange = onConfirmActionChange)
             }
         }
     }

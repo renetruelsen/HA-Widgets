@@ -206,6 +206,16 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 val updated = s.draft.secondaryEntities.filterIndexed { i, _ -> i != index }
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
+            onMoveSecondaryUp = { index ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index - 1].also { updated[index - 1] = updated[index] }
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onMoveSecondaryDown = { index ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index + 1].also { updated[index + 1] = updated[index] }
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
             onSecondaryChangeTarget = { index ->
                 step = Step.EntityPicker(PickerTarget.SecondaryAction(index), s.editIndex, s.draft)
             },
