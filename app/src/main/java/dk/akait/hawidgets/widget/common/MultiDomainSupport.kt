@@ -30,42 +30,42 @@ private class DomainCapability(
 private val DEFAULT_CAPABILITY = DomainCapability(
     iconResId = R.drawable.ic_sensor,
     hasOnOffState = false,
-    compatibleActions = listOf("NONE"),
+    compatibleActions = listOf("NONE", "HISTORY"),
 )
 
 private val DOMAIN_CAPABILITIES: Map<String, DomainCapability> = mapOf(
     "light" to DomainCapability(
         iconResId = R.drawable.ic_lightbulb,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE", "TOGGLE", "RANGE"),
+        compatibleActions = listOf("NONE", "TOGGLE", "RANGE", "HISTORY"),
         isActive = { it == "on" },
         stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_on else R.string.state_off) },
     ),
     "switch" to DomainCapability(
         iconResId = R.drawable.ic_switch,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE", "TOGGLE"),
+        compatibleActions = listOf("NONE", "TOGGLE", "HISTORY"),
         isActive = { it == "on" },
         stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_on else R.string.state_off) },
     ),
     "input_boolean" to DomainCapability(
         iconResId = R.drawable.ic_switch,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE", "TOGGLE"),
+        compatibleActions = listOf("NONE", "TOGGLE", "HISTORY"),
         isActive = { it == "on" },
         stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_on else R.string.state_off) },
     ),
     "lock" to DomainCapability(
         iconResId = R.drawable.ic_lock,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE", "TOGGLE"),
+        compatibleActions = listOf("NONE", "TOGGLE", "HISTORY"),
         isActive = { it == "locked" },
         stateText = { c, state, _ -> c.getString(if (state == "locked") R.string.state_locked else R.string.state_unlocked) },
     ),
     "cover" to DomainCapability(
         iconResId = R.drawable.ic_cover,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE", "TOGGLE", "RANGE"),
+        compatibleActions = listOf("NONE", "TOGGLE", "RANGE", "HISTORY"),
         isActive = { it == "open" || it == "opening" },
         stateText = { c, state, _ ->
             when (state) {
@@ -80,7 +80,7 @@ private val DOMAIN_CAPABILITIES: Map<String, DomainCapability> = mapOf(
     "climate" to DomainCapability(
         iconResId = R.drawable.ic_climate,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE", "TOGGLE", "RANGE"),
+        compatibleActions = listOf("NONE", "TOGGLE", "RANGE", "HISTORY"),
         isActive = { it == "on" },
         stateText = { c, state, _ ->
             when (state) {
@@ -97,70 +97,70 @@ private val DOMAIN_CAPABILITIES: Map<String, DomainCapability> = mapOf(
     "automation" to DomainCapability(
         iconResId = R.drawable.ic_automation,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE", "TOGGLE", "TRIGGER"),
+        compatibleActions = listOf("NONE", "TOGGLE", "TRIGGER", "HISTORY"),
         isActive = { it == "on" },
         stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_active else R.string.state_deactivated) },
     ),
     "binary_sensor" to DomainCapability(
         iconResId = R.drawable.ic_binary_sensor,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE"),
+        compatibleActions = listOf("NONE", "HISTORY"),
         isActive = { it == "on" },
         stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_active else R.string.state_inactive) },
     ),
     "device_tracker" to DomainCapability(
         iconResId = R.drawable.ic_device_tracker,
         hasOnOffState = true,
-        compatibleActions = listOf("NONE"),
+        compatibleActions = listOf("NONE", "HISTORY"),
         isActive = { it == "home" },
         stateText = { c, state, _ -> c.getString(if (state == "home") R.string.state_home else R.string.state_away) },
     ),
     "scene" to DomainCapability(
         iconResId = R.drawable.ic_scene,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE", "TRIGGER"),
+        compatibleActions = listOf("NONE", "TRIGGER", "HISTORY"),
         stateText = { c, _, _ -> c.getString(R.string.state_scene_activate) },
     ),
     "script" to DomainCapability(
         iconResId = R.drawable.ic_script,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE", "TRIGGER"),
+        compatibleActions = listOf("NONE", "TRIGGER", "HISTORY"),
         stateText = { c, state, _ -> c.getString(if (state == "on") R.string.state_running else R.string.state_ready) },
     ),
     "sensor" to DomainCapability(
         iconResId = R.drawable.ic_sensor,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE"),
+        compatibleActions = listOf("NONE", "HISTORY"),
     ),
     "number" to DomainCapability(
         iconResId = R.drawable.ic_number,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE", "RANGE"),
+        compatibleActions = listOf("NONE", "RANGE", "HISTORY"),
     ),
     "input_number" to DomainCapability(
         iconResId = R.drawable.ic_number,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE", "RANGE"),
+        compatibleActions = listOf("NONE", "RANGE", "HISTORY"),
     ),
     "input_text" to DomainCapability(
         iconResId = R.drawable.ic_sensor,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE", "TEXT"),
+        compatibleActions = listOf("NONE", "TEXT", "HISTORY"),
     ),
     "input_datetime" to DomainCapability(
         iconResId = R.drawable.ic_sensor,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE", "DATETIME"),
+        compatibleActions = listOf("NONE", "DATETIME", "HISTORY"),
     ),
     "input_select" to DomainCapability(
         iconResId = R.drawable.ic_script,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE"),
+        compatibleActions = listOf("NONE", "HISTORY"),
     ),
     "input_button" to DomainCapability(
         iconResId = R.drawable.ic_script,
         hasOnOffState = false,
-        compatibleActions = listOf("NONE", "TRIGGER"),
+        compatibleActions = listOf("NONE", "TRIGGER", "HISTORY"),
     ),
 )
 

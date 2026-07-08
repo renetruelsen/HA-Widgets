@@ -7,7 +7,9 @@ import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
+import dk.akait.hawidgets.data.DisplayMode
 import dk.akait.hawidgets.data.db.EntityStateEntity
+import dk.akait.hawidgets.web.WebViewActivity
 import dk.akait.hawidgets.widget.common.ConfirmActionActivity
 import dk.akait.hawidgets.widget.common.DateTimeControlActivity
 import dk.akait.hawidgets.widget.common.NumberInputActivity
@@ -41,6 +43,17 @@ internal fun clickModifier(
                 actionParametersOf(RefreshEntityAction.entityIdKey to refreshEntityId)
             )
         )
+    }
+    // Rent visnings-kald, ingen HA-kommando afsendes → virker uanset actionState (også en
+    // aktuelt utilgængelig entitet, hvor historikken ofte er præcis det man vil se).
+    if (action == "HISTORY") {
+        val intent = Intent(context, WebViewActivity::class.java).apply {
+            putExtra(WebViewActivity.EXTRA_DASHBOARD_PATH, "")
+            putExtra(WebViewActivity.EXTRA_NAVIGATE_PATH, "/history?entity_id=$actionEntityId")
+            putExtra(WebViewActivity.EXTRA_DISPLAY_MODE, DisplayMode.OVERLAY.name)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return base.clickable(actionStartActivity(intent))
     }
     if (actionState == null || actionState.state == "unavailable") return base
     // "Bekræft ved tryk" (B1): kun meningsfuldt for TOGGLE/TRIGGER (RANGE/TEXT/DATETIME åbner

@@ -75,6 +75,7 @@ class WebViewActivity : ComponentActivity() {
         }
 
         val url = buildUrl(baseUrl, config.dashboardPath)
+        val navigateToPath = intent.getStringExtra(EXTRA_NAVIGATE_PATH)
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -104,7 +105,23 @@ class WebViewActivity : ComponentActivity() {
             }
             addJavascriptInterface(object {
                 @JavascriptInterface
-                fun onDashboardReady() = runOnUiThread { hideLoadingOverlay() }
+                fun onDashboardReady() = runOnUiThread {
+                    hideLoadingOverlay()
+                    // Klient-side SPA-navigation til f.eks. /history i stedet for en frisk
+                    // top-level sidenavigation dertil — HA's service worker precacher kun
+                    // kendte ruter (fx /lovelace), og en direkte navigation til en ikke-
+                    // precachet rute (som /history) hænger uendeligt i SW'ens fallback-fetch.
+                    // Samme mekanisme HA's egen frontend bruger internt (history.pushState +
+                    // 'location-changed'), så det er reelt identisk med et sidebar-klik.
+                    navigateToPath?.let { path ->
+                        val escaped = path.replace("\\", "\\\\").replace("'", "\\'")
+                        webView.evaluateJavascript(
+                            "history.pushState(null,'','$escaped');" +
+                                "window.dispatchEvent(new CustomEvent('location-changed',{detail:{replace:false}}));",
+                            null,
+                        )
+                    }
+                }
             }, "haWidgetsNative")
         }
 
@@ -266,11 +283,15 @@ class WebViewActivity : ComponentActivity() {
         const val EXTRA_DASHBOARD_PATH = "dashboard_path"
         const val EXTRA_DISPLAY_MODE = "display_mode"
         const val EXTRA_APPWIDGET_ID = "appwidget_id"
+        /** Klient-side SPA-sti (fx "/history?entity_id=X") at navigere til, EFTER
+         * [EXTRA_DASHBOARD_PATH] er loadet og klar — se [onDashboardReady]-kommentaren. */
+        const val EXTRA_NAVIGATE_PATH = "navigate_path"
 
         private fun buildUrl(baseUrl: String, path: String): String {
             val base = baseUrl.trimEnd('/')
             val target = path.trim('/').ifBlank { "lovelace" }
-            return "$base/$target?external_auth=1&kiosk"
+            val separator = if ('?' in target) '&' else '?'
+            return "$base/$target${separator}external_auth=1&kiosk"
         }
     }
 }

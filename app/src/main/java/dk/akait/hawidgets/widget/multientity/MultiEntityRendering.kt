@@ -86,9 +86,10 @@ private fun surfaceFor(stateful: Boolean, active: Boolean, unavailable: Boolean,
         heating -> Surface(null, WidgetColors.heatingFill, WidgetColors.onHeating)
         // Info-agtige (sensor/number/scene/script + rene visnings-slots): neutralt fyld, ingen on/off.
         !stateful -> Surface(null, c.surfaceVariant, c.onSurfaceVariant)
-        // Tændt: fuld primary — både chip og række, uden ring (v0.2.50: den tidligere mørke
-        // chip-ring fjernet efter brugerønske; en aktiv chip er nu bare solidt blå som rækken).
-        active -> Surface(null, c.primary, c.onPrimary)
+        // Tændt: fuld primary. Rækken har ingen ring (v0.2.50); chips fik deres ring tilbage
+        // (brugerønske) — men nu grå i stedet for den tidligere mørke ring, så en blå (tændt)
+        // chip altid har en grå kant, symmetrisk med at en grå (slukket) chip altid har en blå kant.
+        active -> if (isChip) Surface(c.surfaceVariant, c.primary, c.onPrimary) else Surface(null, c.primary, c.onPrimary)
         // Slukket on/off: chips beholder outline (primary ring), men hoved-rækken har KUN neutralt
         // gråt fyld uden ring (brugerønske v0.2.48) — kun det fyldte lag skiller tændt fra slukket.
         else -> if (isChip) Surface(c.primary, c.surfaceVariant, c.onSurfaceVariant) else Surface(null, c.surfaceVariant, c.onSurfaceVariant)

@@ -45,7 +45,10 @@ object KioskScript {
                 if (host === 'hui-root') { inject(sr, HEADER_CSS, 'haw-k-hui'); hui++; }
                 if (host === 'home-assistant-main') { inject(sr, SIDEBAR_CSS, 'haw-k-main'); main++; }
               });
-              if (hui > 0 && main > 0 && !notified) {
+              // Kun home-assistant-main kræves for "klar"-signalet — findes på ALLE paneler
+              // (inkl. /history, som ikke har hui-root, da det ikke er et Lovelace-dashboard).
+              // hui-root-CSS'en injiceres stadig når den findes, den blokerer bare ikke signalet.
+              if (main > 0 && !notified) {
                 notified = true;
                 try { window.haWidgetsNative.onDashboardReady(); } catch(e) {}
               }

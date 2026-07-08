@@ -182,6 +182,8 @@
     <string name="action_trigger_short">Trigger</string>
     <string name="action_text">Edit text</string>
     <string name="action_datetime">Edit date/time</string>
+    <string name="action_history">Show history</string>
+    <string name="action_history_short">History</string>
     <string name="action_view_only">View only</string>
     <string name="action_view_only_short">Show status only</string>
     <!-- Task 13: RANGE −/+ step buttons (all widgets) -->

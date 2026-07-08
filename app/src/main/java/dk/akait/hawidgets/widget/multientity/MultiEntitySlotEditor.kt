@@ -51,6 +51,7 @@ internal fun actionLabel(action: String): String = when (action) {
     "TRIGGER" -> stringResource(R.string.action_trigger_long)
     "TEXT" -> stringResource(R.string.action_text)
     "DATETIME" -> stringResource(R.string.action_datetime)
+    "HISTORY" -> stringResource(R.string.action_history)
     else -> stringResource(R.string.action_view_only)
 }
 
@@ -62,6 +63,7 @@ internal fun actionShortLabel(action: String): String = when (action) {
     "TRIGGER" -> stringResource(R.string.action_trigger_short)
     "TEXT" -> stringResource(R.string.action_text)
     "DATETIME" -> stringResource(R.string.action_datetime)
+    "HISTORY" -> stringResource(R.string.action_history_short)
     else -> stringResource(R.string.action_view_only_short)
 }
 
@@ -383,35 +385,70 @@ private fun SecondaryEntityRow(
         )
         Spacer(Modifier.padding(top = 6.dp))
         Text(stringResource(R.string.section_action), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-            Column(modifier = Modifier.weight(1f)) {
-                if (readOnly) {
-                    Text(
-                        stringResource(R.string.action_read_only),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    if (targetDiffers) {
-                        Text(stringResource(R.string.target_label, action.friendlyName), style = MaterialTheme.typography.bodySmall)
-                    }
-                    if (opts.size == 1) {
-                        Text(stringResource(R.string.on_tap_label, actionShortLabel(opts[0])), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+        val reactsToTap = secondary.action != "NONE"
+        if (readOnly) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                Text(
+                    stringResource(R.string.action_read_only),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change)) }
             }
-            TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change)) }
-        }
-        if (!readOnly && opts.size > 1) {
-            opts.forEach { actionType ->
-                val pick = { onActionChange(actionType) }
+        } else {
+            // "Reagérer på tryk"-kontakt for chippen — samme mønster som hoved-entiteten
+            // (kun når mål == visning; targetDiffers indebærer altid en handling). Uden denne
+            // kontakt var en chips gemte action="NONE" (fra FØR domænet fik nogen handling,
+            // fx device_tracker/sensor før HISTORY) umuligt at opgradere: opts.size==1-grenen
+            // viste kun en informativ auto-tekst uden forbindelse til den faktisk gemte værdi.
+            if (!targetDiffers) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = pick),
+                    modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = secondary.action == actionType, onClick = pick)
-                    Spacer(Modifier.width(6.dp))
-                    Text(actionShortLabel(actionType), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                    Checkbox(
+                        checked = reactsToTap,
+                        onCheckedChange = { on -> onActionChange(if (on) opts.first() else "NONE") },
+                    )
+                }
+            }
+            val showActionChoice = targetDiffers || reactsToTap
+            if (showActionChoice) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        if (targetDiffers) {
+                            Text(stringResource(R.string.target_label, action.friendlyName), style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (opts.size == 1) {
+                            Text(stringResource(R.string.on_tap_label, actionShortLabel(opts[0])), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change)) }
+                }
+                if (opts.size > 1) {
+                    opts.forEach { actionType ->
+                        val pick = { onActionChange(actionType) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable(onClick = pick),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = secondary.action == actionType, onClick = pick)
+                            Spacer(Modifier.width(6.dp))
+                            Text(actionShortLabel(actionType), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.slot_view_only_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change)) }
                 }
             }
         }
