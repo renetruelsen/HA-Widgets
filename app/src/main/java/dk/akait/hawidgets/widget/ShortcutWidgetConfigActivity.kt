@@ -8,7 +8,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.lifecycle.lifecycleScope
@@ -53,11 +51,13 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.DashboardInfo
 import dk.akait.hawidgets.data.DisplayMode
-import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.HaWebSocketClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.WidgetConfig
 import dk.akait.hawidgets.data.WidgetConfigStore
+import dk.akait.hawidgets.widget.common.AppSettingsHint
+import dk.akait.hawidgets.widget.common.NotConnectedGate
+import dk.akait.hawidgets.widget.common.rememberResumeTick
 import kotlinx.coroutines.launch
 
 class ShortcutWidgetConfigActivity : ComponentActivity() {
@@ -120,19 +120,7 @@ private fun ConfigScreen(
         WidgetConfigStore.get(context).get(appWidgetId)
     }
 
-    // Step 1: HA connection (skipped if already configured)
-    var haConfigured by remember { mutableStateOf(store.isConfigured) }
-    var haUrl by remember {
-        mutableStateOf(store.baseUrl ?: "http://homeassistant.local:8123")
-    }
-    var haToken by remember {
-        mutableStateOf(store.token ?: "")
-    }
-    var connecting by remember { mutableStateOf(false) }
-    var connectError by remember { mutableStateOf<String?>(null) }
-    val connectScope = rememberCoroutineScope()
-
-    // Step 2: Widget config — initialise from existing config when reconfiguring
+    // Widget config — initialise from existing config when reconfiguring
     var loading by remember { mutableStateOf(false) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var dashboards by remember { mutableStateOf<List<DashboardInfo>>(emptyList()) }
@@ -142,9 +130,21 @@ private fun ConfigScreen(
     var widthPct by remember { mutableStateOf((existingConfig?.widthPct ?: 90).toFloat()) }
     var heightPct by remember { mutableStateOf((existingConfig?.heightPct ?: 80).toFloat()) }
 
-    // Load dashboards once HA is configured; restore previously selected dashboard if reconfiguring
-    androidx.compose.runtime.LaunchedEffect(haConfigured) {
-        if (!haConfigured) return@LaunchedEffect
+    var notConnected by remember { mutableStateOf(false) }
+    var loaded by remember { mutableStateOf(false) }
+
+    // Load dashboards once HA is configured; restore previously selected dashboard if reconfiguring.
+    // Re-checks connection state on every resume (rememberResumeTick) so returning from MainActivity
+    // after connecting there picks the gate back down without re-adding the widget.
+    val resumeTick = rememberResumeTick()
+    androidx.compose.runtime.LaunchedEffect(resumeTick) {
+        if (!store.isConfigured) {
+            notConnected = true
+            loading = false
+            return@LaunchedEffect
+        }
+        notConnected = false
+        if (loaded) return@LaunchedEffect
         loading = true
         HaWebSocketClient(store.baseUrl!!, store.token!!).listDashboards()
             .onSuccess { list ->
@@ -156,7 +156,15 @@ private fun ConfigScreen(
                 }
             }
             .onFailure { loadError = context.getString(R.string.load_dashboards_error, it.message ?: "") }
+        loaded = true
         loading = false
+    }
+
+    if (notConnected) {
+        NotConnectedGate(onOpenApp = {
+            context.startActivity(Intent(context, dk.akait.hawidgets.MainActivity::class.java))
+        })
+        return
     }
 
     Scaffold(
@@ -171,28 +179,36 @@ private fun ConfigScreen(
             )
         },
         bottomBar = {
-            if (haConfigured && !loading && loadError == null) {
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
-                        .navigationBarsPadding()
-                ) {
-                    Button(
-                        enabled = selected != null,
-                        onClick = {
-                            val d = selected!!
-                            onSave(
-                                WidgetConfig(
-                                    dashboardPath = d.urlPath,
-                                    title = d.title,
-                                    displayMode = mode,
-                                    widthPct = widthPct.toInt(),
-                                    heightPct = heightPct.toInt(),
+            Column {
+                AppSettingsHint(onOpenSettings = {
+                    context.startActivity(
+                        Intent(context, dk.akait.hawidgets.MainActivity::class.java)
+                            .putExtra(dk.akait.hawidgets.MainActivity.EXTRA_OPEN_SETTINGS, true)
+                    )
+                })
+                if (!loading && loadError == null) {
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                            .navigationBarsPadding()
+                    ) {
+                        Button(
+                            enabled = selected != null,
+                            onClick = {
+                                val d = selected!!
+                                onSave(
+                                    WidgetConfig(
+                                        dashboardPath = d.urlPath,
+                                        title = d.title,
+                                        displayMode = mode,
+                                        widthPct = widthPct.toInt(),
+                                        heightPct = heightPct.toInt(),
+                                    )
                                 )
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text(stringResource(R.string.save_widget)) }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(stringResource(R.string.save_widget)) }
+                    }
                 }
             }
         }
@@ -205,103 +221,52 @@ private fun ConfigScreen(
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (!haConfigured) {
-                // ── Step 1: Connect to HA ───────────────────────────────────
-                Text(stringResource(R.string.connect_to_ha_title), style = MaterialTheme.typography.titleMedium)
-                Text(
-                    stringResource(R.string.connect_to_ha_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = haUrl,
-                    onValueChange = { haUrl = it; connectError = null },
-                    label = { Text(stringResource(R.string.ha_url_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = haToken,
-                    onValueChange = { haToken = it; connectError = null },
-                    label = { Text(stringResource(R.string.token_label)) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                connectError?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-                Button(
-                    enabled = !connecting && haUrl.isNotBlank() && haToken.isNotBlank(),
-                    onClick = {
-                        connecting = true
-                        connectError = null
-                        val url = haUrl.trim()
-                        val tok = haToken.trim()
-                        connectScope.launch {
-                            when (val r = HaApiClient(url, tok).checkConnection()) {
-                                is HaApiClient.Result.Ok -> {
-                                    store.baseUrl = url
-                                    store.token = tok
-                                    haConfigured = true
-                                }
-                                is HaApiClient.Result.Error -> connectError = r.message
-                            }
-                            connecting = false
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(if (connecting) stringResource(R.string.connecting) else stringResource(R.string.connect)) }
-            } else {
-                // ── Step 2: Select dashboard and settings ───────────────────
-                when {
-                    loading -> CircularProgressIndicator()
-                    loadError != null -> Text(loadError!!, color = MaterialTheme.colorScheme.error)
-                    else -> {
-                        // Dashboard dropdown
-                        SectionLabel(stringResource(R.string.section_dashboard))
-                        ExposedDropdownMenuBox(
+            // ── Select dashboard and settings ───────────────────────────────
+            when {
+                loading -> CircularProgressIndicator()
+                loadError != null -> Text(loadError!!, color = MaterialTheme.colorScheme.error)
+                else -> {
+                    // Dashboard dropdown
+                    SectionLabel(stringResource(R.string.section_dashboard))
+                    ExposedDropdownMenuBox(
+                        expanded = dashMenuOpen,
+                        onExpandedChange = { dashMenuOpen = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selected?.title ?: stringResource(R.string.select_dashboard),
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dashMenuOpen) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        )
+                        ExposedDropdownMenu(
                             expanded = dashMenuOpen,
-                            onExpandedChange = { dashMenuOpen = it }
+                            onDismissRequest = { dashMenuOpen = false }
                         ) {
-                            OutlinedTextField(
-                                value = selected?.title ?: stringResource(R.string.select_dashboard),
-                                onValueChange = {},
-                                readOnly = true,
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dashMenuOpen) },
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                            )
-                            ExposedDropdownMenu(
-                                expanded = dashMenuOpen,
-                                onDismissRequest = { dashMenuOpen = false }
-                            ) {
-                                dashboards.forEach { d ->
-                                    DropdownMenuItem(
-                                        text = { Text(d.title) },
-                                        onClick = { selected = d; dashMenuOpen = false }
-                                    )
-                                }
+                            dashboards.forEach { d ->
+                                DropdownMenuItem(
+                                    text = { Text(d.title) },
+                                    onClick = { selected = d; dashMenuOpen = false }
+                                )
                             }
                         }
+                    }
 
-                        // Display mode
-                        SectionLabel(stringResource(R.string.section_display))
-                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                            OptionRow(stringResource(R.string.display_fullscreen), mode == DisplayMode.FULLSCREEN) { mode = DisplayMode.FULLSCREEN }
-                            OptionRow(stringResource(R.string.display_overlay), mode == DisplayMode.OVERLAY) { mode = DisplayMode.OVERLAY }
-                        }
+                    // Display mode
+                    SectionLabel(stringResource(R.string.section_display))
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        OptionRow(stringResource(R.string.display_fullscreen), mode == DisplayMode.FULLSCREEN) { mode = DisplayMode.FULLSCREEN }
+                        OptionRow(stringResource(R.string.display_overlay), mode == DisplayMode.OVERLAY) { mode = DisplayMode.OVERLAY }
+                    }
 
-                        if (mode == DisplayMode.OVERLAY) {
-                            Text(stringResource(R.string.overlay_width, widthPct.toInt()), style = MaterialTheme.typography.bodySmall)
-                            Slider(value = widthPct, onValueChange = { widthPct = it }, valueRange = 40f..100f)
-                            Text(stringResource(R.string.overlay_height, heightPct.toInt()), style = MaterialTheme.typography.bodySmall)
-                            Slider(value = heightPct, onValueChange = { heightPct = it }, valueRange = 40f..100f)
-                        }
-
-
+                    if (mode == DisplayMode.OVERLAY) {
+                        Text(stringResource(R.string.overlay_width, widthPct.toInt()), style = MaterialTheme.typography.bodySmall)
+                        Slider(value = widthPct, onValueChange = { widthPct = it }, valueRange = 40f..100f)
+                        Text(stringResource(R.string.overlay_height, heightPct.toInt()), style = MaterialTheme.typography.bodySmall)
+                        Slider(value = heightPct, onValueChange = { heightPct = it }, valueRange = 40f..100f)
                     }
                 }
             }
