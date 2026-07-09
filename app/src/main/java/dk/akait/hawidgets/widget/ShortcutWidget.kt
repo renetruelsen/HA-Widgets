@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
@@ -52,18 +54,26 @@ class ShortcutWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val config = WidgetConfigStore.get(context).get(appWidgetId)
+        val store = WidgetConfigStore.get(context)
+        val initialConfig = store.get(appWidgetId)
 
         provideContent {
+            // Reaktivt: observe() holder Glance-sessionen i live og rekomponerer når config-
+            // activity'en gemmer (saveAndFinish). Uden dette viste en frisk-placeret genvej "Opsæt",
+            // fordi provideGlance kørte med null config under placeringen og WidgetConfigStore
+            // (SharedPreferences) ikke er reaktiv — samme fix-mønster som entity-widgets' Room-Flow.
+            val config by store.observe(appWidgetId).collectAsState(initial = initialConfig)
+
             // Både den ukonfigurerede "Opsæt"-visning og den konfigurerede genvej-tile bruger
             // det globale widget-farvetema (GlanceTheme.colors via WidgetGlanceTheme) — genvejen
             // er altid "tændt" og bruger derfor primary/onPrimary som entity-widgetsenes aktive look.
             WidgetGlanceTheme(context) {
                 val isWide = LocalSize.current.width >= 110.dp
-                if (config == null) {
+                val cfg = config
+                if (cfg == null) {
                     UnconfiguredWidgetContent(context, appWidgetId, ShortcutWidgetConfigActivity::class.java, R.drawable.ic_dashboard)
                 } else {
-                    ShortcutContent(context, appWidgetId, config, isWide)
+                    ShortcutContent(context, appWidgetId, cfg, isWide)
                 }
             }
         }

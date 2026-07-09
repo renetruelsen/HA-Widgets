@@ -1,6 +1,10 @@
 package dk.akait.hawidgets.data
 
 import android.content.Context
+import android.content.SharedPreferences
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import org.json.JSONObject
 
 enum class DisplayMode { FULLSCREEN, OVERLAY }
@@ -46,6 +50,24 @@ class WidgetConfigStore private constructor(
 
     fun get(appWidgetId: Int): WidgetConfig? =
         prefs.getString(key(appWidgetId), null)?.let { runCatching { WidgetConfig.fromJson(it) }.getOrNull() }
+
+    /**
+     * Reaktiv strøm af config for [appWidgetId]: emitterer nuværende værdi straks, og igen hver gang
+     * dens nøgle ændres i prefs. Bruges af [dk.akait.hawidgets.widget.ShortcutWidget]s `provideGlance`
+     * så Glance-sessionen rekomponerer når config-activity'en gemmer — uden dette viste en frisk-
+     * placeret genvej "Opsæt", fordi `provideGlance` kørte med null config under placeringen og
+     * SharedPreferences (modsat Room) ikke er reaktiv. Samme fix-mønster som entity-widgets' Room-Flow.
+     */
+    fun observe(appWidgetId: Int): Flow<WidgetConfig?> = callbackFlow {
+        val watchedKey = key(appWidgetId)
+        trySend(get(appWidgetId))
+        // changedKey er null når prefs ryddes (API 30+) — genlæs også der.
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
+            if (changedKey == watchedKey || changedKey == null) trySend(get(appWidgetId))
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     fun remove(appWidgetId: Int) {
         prefs.edit().remove(key(appWidgetId)).apply()
