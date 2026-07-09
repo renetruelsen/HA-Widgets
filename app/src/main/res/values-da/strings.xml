@@ -111,7 +111,6 @@
     <string name="color_theme_teal">Teal</string>
 
     <!-- Widget UX pack: i18n-regressionsfix — flyttet fra hardcodet UI-tekst -->
-    <string name="ha_not_connected_error">HA ikke forbundet. Åbn HA Widgets og forbind først.</string>
     <string name="customize_widget_title">Tilpas widget</string>
     <string name="short_label_field">Kort label (valgfrit)</string>
     <string name="short_label_placeholder">f.eks. Bad 1</string>

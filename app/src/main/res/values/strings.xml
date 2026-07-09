@@ -111,7 +111,6 @@
     <string name="color_theme_teal">Teal</string>
 
     <!-- Widget UX pack: i18n regression fix — moved from hardcoded UI text -->
-    <string name="ha_not_connected_error">HA not connected. Open HA Widgets and connect first.</string>
     <string name="customize_widget_title">Customize widget</string>
     <string name="short_label_field">Short label (optional)</string>
     <string name="short_label_placeholder">e.g. Bathroom 1</string>

@@ -111,7 +111,6 @@
     <string name="color_theme_teal">Turkos</string>
 
     <!-- Widget UX pack: i18n-regressionsfix — flyttat från hårdkodad UI-text -->
-    <string name="ha_not_connected_error">HA inte ansluten. Öppna HA Widgets och anslut först.</string>
     <string name="customize_widget_title">Anpassa widget</string>
     <string name="short_label_field">Kort etikett (valfritt)</string>
     <string name="short_label_placeholder">t.ex. Badrum 1</string>
