@@ -15,6 +15,7 @@ import androidx.glance.appwidget.updateAll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryFull
@@ -93,6 +94,7 @@ import dk.akait.hawidgets.widget.scene.SceneWidget
 import dk.akait.hawidgets.widget.script.ScriptWidget
 import dk.akait.hawidgets.widget.sensor.SensorWidget
 import dk.akait.hawidgets.widget.switchwidget.SwitchWidget
+import dk.akait.hawidgets.widget.common.WIDGET_COLOR_THEMES
 import dk.akait.hawidgets.widget.common.presetFor
 import kotlinx.coroutines.launch
 
@@ -523,169 +525,128 @@ private fun setAppLocale(context: android.content.Context, languageTag: String?)
         if (languageTag == null) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(languageTag)
 }
 
+/**
+ * Delt indstillings-dropdown-række (ikon + label + valgt-værdi + menu). Bruges af [ThemeRow],
+ * [LanguageRow] og [ColorThemeRow] — al præsentation/ekspansion bor ét sted, så padding/typografi/
+ * a11y ikke kan drive fra hinanden. Nøgletypen [T] er generisk (sprog-rækken bruger `String?`).
+ * [leadingIcon] tegner en valgfri prik/ikon foran hvert menupunkt (kun farvetema bruger det).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> SettingsDropdownRow(
+    icon: ImageVector,
+    label: String,
+    options: List<Pair<T, String>>,
+    selectedKey: T,
+    fallbackLabel: String,
+    onSelect: (T) -> Unit,
+    leadingIcon: (@Composable (T) -> Unit)? = null,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedKey }?.second ?: fallbackLabel
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                selectedLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (key, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    leadingIcon = if (leadingIcon != null) {
+                        { leadingIcon(key) }
+                    } else null,
+                    onClick = {
+                        onSelect(key)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun LanguageRow(currentTag: String?, onSelect: (String?) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = listOf(
-        null to stringResource(R.string.language_follow_system),
-        "da" to stringResource(R.string.language_danish),
-        "en" to stringResource(R.string.language_english),
-        "sv" to stringResource(R.string.language_swedish)
+    SettingsDropdownRow(
+        icon = Icons.Default.Language,
+        label = stringResource(R.string.section_language),
+        options = listOf(
+            null to stringResource(R.string.language_follow_system),
+            "da" to stringResource(R.string.language_danish),
+            "en" to stringResource(R.string.language_english),
+            "sv" to stringResource(R.string.language_swedish),
+        ),
+        selectedKey = currentTag,
+        fallbackLabel = stringResource(R.string.language_follow_system),
+        onSelect = onSelect,
     )
-    val selectedLabel = options.firstOrNull { it.first == currentTag }?.second
-        ?: stringResource(R.string.language_follow_system)
-
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
-                .padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                stringResource(R.string.section_language),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                selectedLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { (tag, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        onSelect(tag)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ThemeRow(currentMode: String, onSelect: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = listOf(
-        SecureStore.THEME_SYSTEM to stringResource(R.string.theme_system),
-        SecureStore.THEME_LIGHT to stringResource(R.string.theme_light),
-        SecureStore.THEME_DARK to stringResource(R.string.theme_dark),
+    SettingsDropdownRow(
+        icon = Icons.Default.Palette,
+        label = stringResource(R.string.theme_label),
+        options = listOf(
+            SecureStore.THEME_SYSTEM to stringResource(R.string.theme_system),
+            SecureStore.THEME_LIGHT to stringResource(R.string.theme_light),
+            SecureStore.THEME_DARK to stringResource(R.string.theme_dark),
+        ),
+        selectedKey = currentMode,
+        fallbackLabel = stringResource(R.string.theme_system),
+        onSelect = onSelect,
     )
-    val selectedLabel = options.firstOrNull { it.first == currentMode }?.second
-        ?: stringResource(R.string.theme_system)
-
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
-                .padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                stringResource(R.string.theme_label),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                selectedLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { (mode, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        onSelect(mode)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColorThemeRow(currentTheme: String, onSelect: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = listOf(
-        SecureStore.COLOR_BLUE to stringResource(R.string.color_theme_blue),
-        SecureStore.COLOR_GREEN to stringResource(R.string.color_theme_green),
-        SecureStore.COLOR_PURPLE to stringResource(R.string.color_theme_purple),
-        SecureStore.COLOR_ORANGE to stringResource(R.string.color_theme_orange),
-        SecureStore.COLOR_RED to stringResource(R.string.color_theme_red),
-        SecureStore.COLOR_TEAL to stringResource(R.string.color_theme_teal),
-    )
-    val selectedLabel = options.firstOrNull { it.first == currentTheme }?.second
-        ?: stringResource(R.string.color_theme_blue)
-
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = true }
-                .padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Icon(Icons.Default.ColorLens, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                stringResource(R.string.widget_color_theme_label),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                selectedLabel,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { (colorTheme, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    leadingIcon = {
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(presetFor(colorTheme).light.primary)
-                        )
-                    },
-                    onClick = {
-                        onSelect(colorTheme)
-                        expanded = false
-                    }
-                )
-            }
-        }
+    val context = LocalContext.current
+    // Swatch-prikken skal vise DEN farve widgetten faktisk render­er i det aktive tema — så beregnes
+    // dark/light samme sted som HaWidgetsTheme/WidgetColors gør (themeMode → dark? ellers OS-natvalg).
+    val dark = when (SecureStore.get(context).themeMode) {
+        SecureStore.THEME_DARK -> true
+        SecureStore.THEME_LIGHT -> false
+        else -> isSystemInDarkTheme()
     }
+    SettingsDropdownRow(
+        icon = Icons.Default.ColorLens,
+        label = stringResource(R.string.widget_color_theme_label),
+        options = WIDGET_COLOR_THEMES.map { it.key to stringResource(it.labelRes) },
+        selectedKey = currentTheme,
+        fallbackLabel = stringResource(R.string.color_theme_blue),
+        onSelect = onSelect,
+        leadingIcon = { key ->
+            val preset = presetFor(key)
+            Box(
+                modifier = Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(if (dark) preset.dark.primary else preset.light.primary)
+            )
+        },
+    )
 }
 
 /** Tving alle placerede Glance-widgets til at gen-tegne efter et tema-skift. Én linje pr.

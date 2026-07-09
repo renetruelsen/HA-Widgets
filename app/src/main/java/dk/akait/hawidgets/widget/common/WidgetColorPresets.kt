@@ -1,9 +1,11 @@
 package dk.akait.hawidgets.widget.common
 
+import androidx.annotation.StringRes
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.ui.theme.HaBlueDarkBackground
 import dk.akait.hawidgets.ui.theme.HaBlueDarkError
@@ -57,6 +59,10 @@ private fun sharedDark(primary: Color, onPrimary: Color): ColorScheme = darkColo
     onErrorContainer = HaBlueDarkOnErrorContainer,
 )
 
+// Blå genbruger app-UI'ets eksisterende (historiske, eneste) skema uændret — ingen sharedLight/Dark,
+// så farve-parity med tiden før farvetema-featuren er bit-for-bit garanteret.
+internal val BluePreset = WidgetColorPreset(HaWidgetsColorScheme, HaWidgetsDarkColorScheme)
+
 internal val GreenPreset = WidgetColorPreset(
     light = sharedLight(Color(0xFF1E8E3E), Color(0xFFFFFFFF)),
     dark = sharedDark(Color(0xFF8FDB94), Color(0xFF00390D)),
@@ -78,13 +84,29 @@ internal val TealPreset = WidgetColorPreset(
     dark = sharedDark(Color(0xFF4FD8DA), Color(0xFF00373A)),
 )
 
+/** Ét valgbart widget-farvetema: nøgle (persisteret i [SecureStore.widgetColorTheme]),
+ * label-ressource (til pickeren) og farve-preset. */
+internal data class WidgetColorTheme(
+    val key: String,
+    @StringRes val labelRes: Int,
+    val preset: WidgetColorPreset,
+)
+
+/**
+ * ÉN kilde til sandhed for de valgbare farvetemaer — læst af BÅDE settings-pickeren
+ * (`MainActivity.ColorThemeRow`) og [presetFor]. Tilføj/fjern et tema ét sted her, så picker og
+ * resolver aldrig kan divergere. Rækkefølgen er visningsrækkefølgen i dropdown'en (Blå først).
+ */
+internal val WIDGET_COLOR_THEMES: List<WidgetColorTheme> = listOf(
+    WidgetColorTheme(SecureStore.COLOR_BLUE, R.string.color_theme_blue, BluePreset),
+    WidgetColorTheme(SecureStore.COLOR_GREEN, R.string.color_theme_green, GreenPreset),
+    WidgetColorTheme(SecureStore.COLOR_PURPLE, R.string.color_theme_purple, PurplePreset),
+    WidgetColorTheme(SecureStore.COLOR_ORANGE, R.string.color_theme_orange, OrangePreset),
+    WidgetColorTheme(SecureStore.COLOR_RED, R.string.color_theme_red, RedPreset),
+    WidgetColorTheme(SecureStore.COLOR_TEAL, R.string.color_theme_teal, TealPreset),
+)
+
 /** [colorTheme] → dets [WidgetColorPreset]. Ukendt/uventet værdi falder sikkert tilbage til Blå
  * (samme defensive mønster som v0.2.13's sprog-dropdown-fix — undgår en kastet exception). */
-internal fun presetFor(colorTheme: String): WidgetColorPreset = when (colorTheme) {
-    SecureStore.COLOR_GREEN -> GreenPreset
-    SecureStore.COLOR_PURPLE -> PurplePreset
-    SecureStore.COLOR_ORANGE -> OrangePreset
-    SecureStore.COLOR_RED -> RedPreset
-    SecureStore.COLOR_TEAL -> TealPreset
-    else -> WidgetColorPreset(HaWidgetsColorScheme, HaWidgetsDarkColorScheme)
-}
+internal fun presetFor(colorTheme: String): WidgetColorPreset =
+    WIDGET_COLOR_THEMES.firstOrNull { it.key == colorTheme }?.preset ?: BluePreset
