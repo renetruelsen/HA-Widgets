@@ -138,6 +138,13 @@
     <string name="theme_light">Lys</string>
     <string name="theme_dark">Mørk</string>
     <string name="theme_system">Følg system</string>
+    <string name="widget_color_theme_label">Farvetema</string>
+    <string name="color_theme_blue">Blå</string>
+    <string name="color_theme_green">Grøn</string>
+    <string name="color_theme_purple">Lilla</string>
+    <string name="color_theme_orange">Orange</string>
+    <string name="color_theme_red">Rød</string>
+    <string name="color_theme_teal">Teal</string>
 
     <!-- Widget UX pack: i18n-regressionsfix — flyttet fra hardcodet UI-tekst -->
     <string name="ha_not_connected_error">HA ikke forbundet. Åbn HA Widgets og forbind først.</string>
