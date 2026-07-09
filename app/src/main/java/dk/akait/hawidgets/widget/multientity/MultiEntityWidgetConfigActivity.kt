@@ -22,7 +22,10 @@ import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.MultiWidgetEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.widget.common.AppSettingsHint
 import dk.akait.hawidgets.widget.common.MULTI_ENTITY_DOMAINS
+import dk.akait.hawidgets.widget.common.NotConnectedGate
+import dk.akait.hawidgets.widget.common.rememberResumeTick
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.launch
 
@@ -82,15 +85,19 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     var attrsByEntityId by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var step by remember { mutableStateOf<Step>(Step.ListScreen) }
-    val haNotConnectedError = stringResource(R.string.ha_not_connected_error)
+    var notConnected by remember { mutableStateOf(false) }
+    var loaded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    val resumeTick = rememberResumeTick()
+    LaunchedEffect(resumeTick) {
         val store = SecureStore.get(context)
         if (!store.isConfigured) {
-            loadError = haNotConnectedError
+            notConnected = true
             isLoading = false
             return@LaunchedEffect
         }
+        notConnected = false
+        if (loaded) return@LaunchedEffect
         val client = HaApiClient(store.baseUrl!!, store.token!!)
         allEntities = client.listStatesByDomains(MULTI_ENTITY_DOMAINS.toSet()).sortedBy { it.friendlyName }
         val db = AppDatabase.get(context)
@@ -99,6 +106,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         attrsByEntityId = allEntities.mapNotNull { entity ->
             db.entityStateDao().get(entity.entityId)?.attributesJson?.let { entity.entityId to it }
         }.toMap()
+        loaded = true
         isLoading = false
     }
 
@@ -107,6 +115,13 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         slots = if (editIndex == null) slots + newSlot
         else slots.toMutableList().also { it[editIndex] = newSlot }
         step = Step.ListScreen
+    }
+
+    if (notConnected) {
+        NotConnectedGate(onOpenApp = {
+            context.startActivity(Intent(context, dk.akait.hawidgets.MainActivity::class.java))
+        })
+        return
     }
 
     when (val s = step) {
@@ -140,6 +155,12 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                     SyncWorker.schedule(context)
                     onSaved()
                 }
+            },
+            onOpenAppSettings = {
+                context.startActivity(
+                    Intent(context, dk.akait.hawidgets.MainActivity::class.java)
+                        .putExtra(dk.akait.hawidgets.MainActivity.EXTRA_OPEN_SETTINGS, true)
+                )
             },
         )
 

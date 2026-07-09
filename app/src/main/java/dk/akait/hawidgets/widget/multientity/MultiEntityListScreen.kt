@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.widget.common.AppSettingsHint
 import dk.akait.hawidgets.widget.common.domainIconResId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,8 +54,12 @@ internal fun ListScreen(
     onRemoveSlot: (Int) -> Unit,
     onMoveSlot: (Int, Int) -> Unit,
     onSave: () -> Unit,
+    onOpenAppSettings: () -> Unit,
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.multi_entity_config_title)) }) }) { padding ->
+    Scaffold(
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.multi_entity_config_title)) }) },
+        bottomBar = { AppSettingsHint(onOpenSettings = onOpenAppSettings) },
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
