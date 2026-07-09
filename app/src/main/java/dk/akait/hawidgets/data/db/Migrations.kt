@@ -130,3 +130,11 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         }
     }
 }
+
+/** v10 → v11: fjerner den nu-ubrugte entity_widget-tabel (single-widgets slettet). Rører IKKE
+ * entity_state/multi_widget/multi_widget_slot. */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS entity_widget")
+    }
+}
