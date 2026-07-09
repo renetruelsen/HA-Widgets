@@ -9,8 +9,21 @@ import androidx.glance.color.DynamicThemeColorProviders
 import androidx.glance.material3.ColorProviders as material3ColorProviders
 import androidx.glance.unit.ColorProvider
 import dk.akait.hawidgets.data.SecureStore
-import dk.akait.hawidgets.ui.theme.HaWidgetsColorScheme
-import dk.akait.hawidgets.ui.theme.HaWidgetsDarkColorScheme
+
+/** Hvilken [ColorProviders]-konstruktion et (farvetema, tema-tilstand)-par resulterer i. */
+internal enum class ColorMode { DYNAMIC, FORCED_LIGHT, FORCED_DARK, SYSTEM_PAIR }
+
+/**
+ * Ren beslutningsfunktion (ingen Context/Android-afhængighed, unit-testbar): kun Blå+System bevarer
+ * den historiske Android-dynamiske Material You-farve. Enhver anden kombination bruger presettets
+ * faste lys/mørk-par — farvetema-valget vinder altid over systemets dynamiske farve, jf. spec.
+ */
+internal fun resolveColorMode(colorTheme: String, themeMode: String): ColorMode = when {
+    colorTheme == SecureStore.COLOR_BLUE && themeMode == SecureStore.THEME_SYSTEM -> ColorMode.DYNAMIC
+    themeMode == SecureStore.THEME_LIGHT -> ColorMode.FORCED_LIGHT
+    themeMode == SecureStore.THEME_DARK -> ColorMode.FORCED_DARK
+    else -> ColorMode.SYSTEM_PAIR
+}
 
 /**
  * Central kilde til tema-bevidste farver for ALLE Glance-widgets.
@@ -45,19 +58,17 @@ object WidgetColors {
     val heatingFill: ColorProvider = ColorProvider(Color(0xFFFF6D00))
     val onHeating: ColorProvider = ColorProvider(Color(0xFFFFFFFF))
 
-    // Faste providers bygget af app'ens brand-color-schemes. Begge sider (day/night) er ens,
-    // så et tvunget tema aldrig følger systemets nattilstand.
-    private val lightProviders: ColorProviders =
-        material3ColorProviders(light = HaWidgetsColorScheme, dark = HaWidgetsColorScheme)
-    private val darkProviders: ColorProviders =
-        material3ColorProviders(light = HaWidgetsDarkColorScheme, dark = HaWidgetsDarkColorScheme)
-
-    /** [ColorProviders] svarende til det aktive tema-valg. system → dynamiske day/night
-     * (uændret adfærd); light/dark → faste providers. */
-    fun providers(context: Context): ColorProviders = when (SecureStore.get(context).themeMode) {
-        SecureStore.THEME_LIGHT -> lightProviders
-        SecureStore.THEME_DARK -> darkProviders
-        else -> DynamicThemeColorProviders
+    /** [ColorProviders] svarende til det aktive farvetema + tema-tilstand. Se [resolveColorMode]
+     * for selve beslutningslogikken (testet separat uden Context). */
+    fun providers(context: Context): ColorProviders {
+        val store = SecureStore.get(context)
+        val preset = presetFor(store.widgetColorTheme)
+        return when (resolveColorMode(store.widgetColorTheme, store.themeMode)) {
+            ColorMode.DYNAMIC -> DynamicThemeColorProviders
+            ColorMode.FORCED_LIGHT -> material3ColorProviders(light = preset.light, dark = preset.light)
+            ColorMode.FORCED_DARK -> material3ColorProviders(light = preset.dark, dark = preset.dark)
+            ColorMode.SYSTEM_PAIR -> material3ColorProviders(light = preset.light, dark = preset.dark)
+        }
     }
 
     /**
