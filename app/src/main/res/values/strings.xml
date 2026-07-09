@@ -172,6 +172,7 @@
     <string name="extra_info_room_for_more">Room for %1$d more</string>
     <string name="add_extra_entity">+ Add extra entity</string>
     <string name="show_value_on_chip">Show value on chip</string>
+    <string name="show_icon">Show icon</string>
     <string name="chip_label_field">Chip label (optional)</string>
     <string name="chip_label_supporting">Shown on the chip. Max 22 characters.</string>
     <string name="picker_target_display_title">Choose entity to display</string>

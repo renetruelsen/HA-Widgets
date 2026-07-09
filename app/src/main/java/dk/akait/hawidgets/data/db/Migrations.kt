@@ -118,3 +118,15 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         db.execSQL("ALTER TABLE `multi_widget_new` RENAME TO `multi_widget`")
     }
 }
+
+/** v9 → v10: brugervalgt "skjul ikon" pr. hoved-slot + sekundær-chip. `showIcon` er ikke-nullable
+ * med DEFAULT 1 (vist) — eksisterende rækker viser ikonet uændret. `secondaryNShowIcon` er nullable,
+ * samme mønster som `secondaryNShowValue` (null = default = vist). */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN showIcon INTEGER NOT NULL DEFAULT 1")
+        for (n in 1..3) {
+            db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary${n}ShowIcon INTEGER")
+        }
+    }
+}

@@ -172,6 +172,7 @@
     <string name="extra_info_room_for_more">Plats för %1$d till</string>
     <string name="add_extra_entity">+ Lägg till extra enhet</string>
     <string name="show_value_on_chip">Visa värde på chippen</string>
+    <string name="show_icon">Visa ikon</string>
     <string name="chip_label_field">Chip-etikett (valfri)</string>
     <string name="chip_label_supporting">Visas på chippen. Max 22 tecken.</string>
     <string name="picker_target_display_title">Välj enhet som ska visas</string>

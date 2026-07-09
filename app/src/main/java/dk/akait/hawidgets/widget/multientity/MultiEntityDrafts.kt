@@ -23,6 +23,8 @@ internal data class SecondarySlotDraft(
     val rangeInputMode: String? = null,
     /** Custom chip-label (v0.2.42) — vises på chippen over evt. værdi. Tom = ingen label. */
     val label: String = "",
+    /** Skjul domæne-ikonet på chippen — brugervalgt, default vist. */
+    val showIcon: Boolean = true,
 )
 
 internal data class SlotDraft(
@@ -38,6 +40,8 @@ internal data class SlotDraft(
     val datetimeFormat: String? = null,
     /** RANGE input-tilstand (Task 13) — "SLIDER"/"FIELD". null = "SLIDER". Kun relevant for RANGE. */
     val rangeInputMode: String? = null,
+    /** Skjul domæne-ikonet på hoved-rækken — brugervalgt, default vist. */
+    val showIcon: Boolean = true,
 )
 
 /**
@@ -58,6 +62,7 @@ internal data class SecondaryColumns(
     val datetimeFormat: String?,
     val rangeInputMode: String?,
     val label: String?,
+    val showIcon: Boolean?,
 )
 
 /** Fælles udlednings-regler for "uset kolonne"-defaults, delt af render-siden ([toChipData]) og
@@ -66,23 +71,24 @@ internal data class SecondaryColumns(
 internal fun SecondaryColumns.showValueOrDefault(): Boolean = showValue ?: defaultShowValueFor(action ?: "NONE")
 internal fun SecondaryColumns.confirmActionOrDefault(): Boolean = confirmAction ?: false
 internal fun SecondaryColumns.labelOrEmpty(): String = label?.trim() ?: ""
+internal fun SecondaryColumns.showIconOrDefault(): Boolean = showIcon ?: true
 
 /** De 3 sekundær-pladser som liste (i rækkefølge) — tomme pladser har null-felter. */
 internal fun MultiWidgetSlotEntity.secondaryColumns(): List<SecondaryColumns> = listOf(
     SecondaryColumns(
         secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain,
         secondary1Action, secondary1ShowValue, secondary1ConfirmAction, secondary1DisplayPrecision,
-        secondary1DatetimeFormat, secondary1RangeInputMode, secondary1Label,
+        secondary1DatetimeFormat, secondary1RangeInputMode, secondary1Label, secondary1ShowIcon,
     ),
     SecondaryColumns(
         secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain,
         secondary2Action, secondary2ShowValue, secondary2ConfirmAction, secondary2DisplayPrecision,
-        secondary2DatetimeFormat, secondary2RangeInputMode, secondary2Label,
+        secondary2DatetimeFormat, secondary2RangeInputMode, secondary2Label, secondary2ShowIcon,
     ),
     SecondaryColumns(
         secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain,
         secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision,
-        secondary3DatetimeFormat, secondary3RangeInputMode, secondary3Label,
+        secondary3DatetimeFormat, secondary3RangeInputMode, secondary3Label, secondary3ShowIcon,
     ),
 )
 
@@ -96,17 +102,17 @@ internal fun MultiWidgetSlotEntity.withSecondaryColumns(cols: List<SecondaryColu
         secondary1ActionEntityId = c0?.actionEntityId, secondary1ActionDomain = c0?.actionDomain,
         secondary1Action = c0?.action, secondary1ShowValue = c0?.showValue, secondary1ConfirmAction = c0?.confirmAction,
         secondary1DisplayPrecision = c0?.displayPrecision, secondary1DatetimeFormat = c0?.datetimeFormat,
-        secondary1RangeInputMode = c0?.rangeInputMode, secondary1Label = c0?.label,
+        secondary1RangeInputMode = c0?.rangeInputMode, secondary1Label = c0?.label, secondary1ShowIcon = c0?.showIcon,
         secondary2DisplayEntityId = c1?.displayEntityId, secondary2DisplayDomain = c1?.displayDomain,
         secondary2ActionEntityId = c1?.actionEntityId, secondary2ActionDomain = c1?.actionDomain,
         secondary2Action = c1?.action, secondary2ShowValue = c1?.showValue, secondary2ConfirmAction = c1?.confirmAction,
         secondary2DisplayPrecision = c1?.displayPrecision, secondary2DatetimeFormat = c1?.datetimeFormat,
-        secondary2RangeInputMode = c1?.rangeInputMode, secondary2Label = c1?.label,
+        secondary2RangeInputMode = c1?.rangeInputMode, secondary2Label = c1?.label, secondary2ShowIcon = c1?.showIcon,
         secondary3DisplayEntityId = c2?.displayEntityId, secondary3DisplayDomain = c2?.displayDomain,
         secondary3ActionEntityId = c2?.actionEntityId, secondary3ActionDomain = c2?.actionDomain,
         secondary3Action = c2?.action, secondary3ShowValue = c2?.showValue, secondary3ConfirmAction = c2?.confirmAction,
         secondary3DisplayPrecision = c2?.displayPrecision, secondary3DatetimeFormat = c2?.datetimeFormat,
-        secondary3RangeInputMode = c2?.rangeInputMode, secondary3Label = c2?.label,
+        secondary3RangeInputMode = c2?.rangeInputMode, secondary3Label = c2?.label, secondary3ShowIcon = c2?.showIcon,
     )
 }
 
@@ -143,6 +149,7 @@ private fun SecondaryColumns.toDraft(allEntities: List<HaApiClient.EntityBrief>)
         datetimeFormat = datetimeFormat,
         rangeInputMode = rangeInputMode,
         label = labelOrEmpty(),
+        showIcon = showIconOrDefault(),
     )
 }
 
@@ -159,6 +166,7 @@ private fun SecondarySlotDraft.toColumns(): SecondaryColumns = SecondaryColumns(
     datetimeFormat = datetimeFormat,
     rangeInputMode = rangeInputMode,
     label = label.trim().ifEmpty { null },
+    showIcon = showIcon,
 )
 
 internal fun draftFromSlot(
@@ -180,7 +188,7 @@ internal fun draftFromSlot(
     val secondaries = slot.secondaryColumns().mapNotNull { it.toDraft(allEntities) }
     return SlotDraft(
         display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction,
-        slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode,
+        slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode, slot.showIcon,
     )
 }
 
@@ -202,5 +210,6 @@ internal fun SlotDraft.toSlotEntity(appWidgetId: Int, slotIndex: Int): MultiWidg
         displayPrecision = displayPrecision,
         datetimeFormat = datetimeFormat,
         rangeInputMode = rangeInputMode,
+        showIcon = showIcon,
     ).withSecondaryColumns(secondaryEntities.map { it.toColumns() })
 }

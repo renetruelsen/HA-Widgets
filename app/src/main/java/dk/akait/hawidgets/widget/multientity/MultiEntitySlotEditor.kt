@@ -81,6 +81,7 @@ internal fun SlotEditorScreen(
     onConfirmActionChange: (Boolean) -> Unit,
     onDisplayPrecisionChange: (Int?) -> Unit,
     onDatetimeFormatChange: (String?) -> Unit,
+    onShowIconChange: (Boolean) -> Unit,
     onAddSecondary: () -> Unit,
     onRemoveSecondary: (Int) -> Unit,
     onMoveSecondaryUp: (Int) -> Unit,
@@ -93,6 +94,7 @@ internal fun SlotEditorScreen(
     onSecondaryConfirmActionChange: (Int, Boolean) -> Unit,
     onSecondaryDisplayPrecisionChange: (Int, Int?) -> Unit,
     onSecondaryDatetimeFormatChange: (Int, String?) -> Unit,
+    onSecondaryShowIconChange: (Int, Boolean) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -136,6 +138,13 @@ internal fun SlotEditorScreen(
                 Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
                 Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change_entity)) }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.show_icon), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Checkbox(checked = draft.showIcon, onCheckedChange = onShowIconChange)
+                }
                 ValueFormattingControls(
                     domain = display.domain,
                     attributesJson = attrsByEntityId[display.entityId],
@@ -269,6 +278,7 @@ internal fun SlotEditorScreen(
                         onConfirmActionChange = { confirm -> onSecondaryConfirmActionChange(index, confirm) },
                         onDisplayPrecisionChange = { precision -> onSecondaryDisplayPrecisionChange(index, precision) },
                         onDatetimeFormatChange = { pattern -> onSecondaryDatetimeFormatChange(index, pattern) },
+                        onShowIconChange = { showIcon -> onSecondaryShowIconChange(index, showIcon) },
                     )
                     if (index < draft.secondaryEntities.size - 1) Spacer(Modifier.padding(vertical = 4.dp))
                 }
@@ -321,6 +331,7 @@ private fun SecondaryEntityRow(
     onConfirmActionChange: (Boolean) -> Unit,
     onDisplayPrecisionChange: (Int?) -> Unit,
     onDatetimeFormatChange: (String?) -> Unit,
+    onShowIconChange: (Boolean) -> Unit,
 ) {
     val display = secondary.displayEntity
     val action = secondary.actionEntity
@@ -457,6 +468,18 @@ private fun SecondaryEntityRow(
                 selected = secondary.rangeInputMode,
                 onSelected = onRangeInputModeChange,
             )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.show_icon),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Checkbox(checked = secondary.showIcon, onCheckedChange = onShowIconChange)
         }
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),

@@ -824,6 +824,40 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   `#FF6D00` dybere orange, C `#FF5722` orange-rød, D `#FF3D00` mest mættet) — brugeren valgte B som
   bedste match til det rødlige/mættede udtryk i sit skærmbillede. `onHeating` (hvid tekst) uændret.
   **QA:** build grøn, installeret + bruger-bekræftet OK på Galaxy S23.
+- ✅ **v0.2.58 — MultiEntityWidget: "skjul ikon" pr. hoved-slot + pr. sekundær-chip (2026-07-09,
+  brugerønske):**
+  - **Data (Room v9→v10):** ny `showIcon: Boolean = true` på hoved-slotten (ikke-nullable, DEFAULT 1
+    i migrationen — eksisterende rækker uændrede) + ny nullable `secondaryNShowIcon` × 3, samme
+    mønster som `secondaryNShowValue` (`showIconOrDefault() = showIcon ?: true`).
+  - **Config-UI:** ny "Vis ikon"-switch i hoved-entitetens **Visning**-sektion
+    (`MultiEntitySlotEditor.kt`) og en tilsvarende switch pr. sekundær-chip (ved siden af det
+    eksisterende "Vis værdi på chippen").
+  - **Rendering (`MultiEntityRendering.kt`):** når hoved-rækkens ikon skjules, fylder navn/status-
+    kolonnen hele rækkens bredde (intet tomrum efterladt — brugervalg). For chips: skjules ikonet,
+    springes kun den indledende ikon-spacer over; har chippen hverken label eller værdi, bliver den
+    bevidst helt tom (tilladt, intet automatisk ikon-fallback — brugervalg).
+  - **Chip-padding-skævhed (bruger-rapporteret, uafklaret):** bruger observerede mere luft i venstre
+    end højre side af sekundær-chips på S23 (skærmbillede). Al padding/ring-logik i
+    `StatefulSurface`/`SecondaryChip` er verificeret symmetrisk i koden (samme dp-værdi begge sider
+    på hvert lag) — årsagen er ikke fundet ved kodegennemgang alene og kan være en RemoteViews/One
+    UI-specifik rendering-kvirk (fx ripple/foreground-drawable fra `clickable()`). **Ikke rettet i
+    denne omgang** — afventer en tættere beskåret skærmbillede af én enkelt chip fra bruger for at
+    kunne diagnosticere præcist.
+  - **QA:** build grøn, installeret på emulator (`pixel_test`) og Galaxy S23 (`adb install -r`,
+    reinstall). App verificeret cold-start uden crash på emulator (logcat, ingen FATAL). **Bruger
+    tester selv funktionsflowet** (config-switches, rendering med/uden ikon, migration af
+    eksisterende widgets) — ikke gennemført af Claude denne session efter eksplicit brugerønske.
+  - **Bruger-bekræftet OK på S23 (2026-07-09).**
+- ✅ **v0.2.59 — MultiEntityWidget: bredere chip-padding uden ikon (2026-07-09, opfølgning på
+  v0.2.58):** bruger observerede at fjernet chip-ikon "afslørede" en meget stram 6dp kant-padding
+  (før virkede 6dp proportionalt fin fordi ikonets 14dp+4dp-spacer gav en ekstra visuel buffer foran
+  teksten). Al padding er verificeret matematisk symmetrisk i koden (samme dp begge sider, uafhængigt
+  af `showIcon` — `StatefulSurface` wrapper indholdet udefra og ved ikke om der er ikon inde i det).
+  Nye konstanter `CHIP_INNER_H_PAD_NO_ICON_DP=6`/`CHIP_SINGLE_H_PAD_NO_ICON_DP=8` (`MultiEntity
+  Rendering.kt`) — `SecondaryChip` vælger nu 8dp total padding (var 6dp) når `chip.showIcon==false`,
+  uændret 6dp når ikonet vises. Kun chips ramt (bekræftet med bruger at kun chips var relevante, ikke
+  hoved-rækken). **QA:** build grøn, installeret på emulator + S23 (`adb install -r`). Visuel
+  bekræftelse på device afventer bruger.
 
 ## Næste skridt
 

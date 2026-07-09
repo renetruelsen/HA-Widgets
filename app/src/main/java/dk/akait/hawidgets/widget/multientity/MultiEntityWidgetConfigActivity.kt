@@ -199,6 +199,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onConfirmActionChange = { confirm -> step = Step.SlotEditor(s.editIndex, s.draft.copy(confirmAction = confirm)) },
             onDisplayPrecisionChange = { precision -> step = Step.SlotEditor(s.editIndex, s.draft.copy(displayPrecision = precision)) },
             onDatetimeFormatChange = { pattern -> step = Step.SlotEditor(s.editIndex, s.draft.copy(datetimeFormat = pattern)) },
+            onShowIconChange = { showIcon -> step = Step.SlotEditor(s.editIndex, s.draft.copy(showIcon = showIcon)) },
             onAddSecondary = {
                 step = Step.EntityPicker(PickerTarget.SecondaryDisplay(s.draft.secondaryEntities.size), s.editIndex, s.draft)
             },
@@ -252,6 +253,11 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onSecondaryDatetimeFormatChange = { index, pattern ->
                 val updated = s.draft.secondaryEntities.toMutableList()
                 updated[index] = updated[index].copy(datetimeFormat = pattern)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
+            onSecondaryShowIconChange = { index, showIcon ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(showIcon = showIcon)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
             onSave = { saveSlot(s.editIndex, s.draft) },

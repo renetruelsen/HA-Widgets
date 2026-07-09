@@ -29,6 +29,8 @@ data class MultiWidgetSlotEntity(
     // Task 13 (del A): RANGE input-tilstand — "SLIDER" (skyder) eller "FIELD" (indtast værdi).
     // null = "SLIDER" = uændret adfærd. Kun meningsfuld når action == "RANGE".
     val rangeInputMode: String? = null,
+    // Skjul domæne-ikonet på hoved-rækken — default true (vist), uændret adfærd for eksisterende rækker.
+    val showIcon: Boolean = true,
     // Sekundære info/handlings-chips (v0.2.28) — op til 3 pr. slot, hver med samme
     // visning/handling-uafhængighed som hoved-entiteten selv. Null = chip ikke i brug.
     val secondary1DisplayEntityId: String? = null,
@@ -44,6 +46,8 @@ data class MultiWidgetSlotEntity(
     val secondary1RangeInputMode: String? = null,
     // Custom chip-label (v0.2.42) — vises på chippen (linje over evt. værdi). Null/tom = ingen label.
     val secondary1Label: String? = null,
+    // Skjul domæne-ikonet på chippen — null = vist (samme default som ShowValue-mønsteret).
+    val secondary1ShowIcon: Boolean? = null,
     val secondary2DisplayEntityId: String? = null,
     val secondary2DisplayDomain: String? = null,
     val secondary2ActionEntityId: String? = null,
@@ -55,6 +59,7 @@ data class MultiWidgetSlotEntity(
     val secondary2DatetimeFormat: String? = null,
     val secondary2RangeInputMode: String? = null,
     val secondary2Label: String? = null,
+    val secondary2ShowIcon: Boolean? = null,
     val secondary3DisplayEntityId: String? = null,
     val secondary3DisplayDomain: String? = null,
     val secondary3ActionEntityId: String? = null,
@@ -66,4 +71,5 @@ data class MultiWidgetSlotEntity(
     val secondary3DatetimeFormat: String? = null,
     val secondary3RangeInputMode: String? = null,
     val secondary3Label: String? = null,
+    val secondary3ShowIcon: Boolean? = null,
 )

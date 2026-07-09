@@ -172,6 +172,7 @@
     <string name="extra_info_room_for_more">Plads til %1$d mere</string>
     <string name="add_extra_entity">+ Tilføj ekstra entitet</string>
     <string name="show_value_on_chip">Vis værdi på chippen</string>
+    <string name="show_icon">Vis ikon</string>
     <string name="chip_label_field">Chip-label (valgfri)</string>
     <string name="chip_label_supporting">Vises på chippen. Maks 22 tegn.</string>
     <string name="picker_target_display_title">Vælg entitet der skal vises</string>

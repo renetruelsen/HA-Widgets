@@ -68,6 +68,10 @@ private const val ROW_INNER_PAD_DP = 4      // + 2dp ring = 6dp pr. side (outlin
 private const val ROW_SINGLE_PAD_DP = 6     // fyldt/uden ring: 6dp pr. side
 private const val CHIP_INNER_H_PAD_DP = 4   // + 2dp ring
 private const val CHIP_SINGLE_H_PAD_DP = 6
+// Uden ikon mistes ikonets 14dp+4dp-spacer "buffer" foran teksten, så den stramme 6dp-kant bliver
+// synlig/følelig (brugerfeedback) — bump til 8dp total pr. side når chip.showIcon == false.
+private const val CHIP_INNER_H_PAD_NO_ICON_DP = 6   // + 2dp ring = 8dp pr. side
+private const val CHIP_SINGLE_H_PAD_NO_ICON_DP = 8
 private const val ROW_CORNER_DP = 12
 private const val CHIP_CORNER_DP = 10
 
@@ -157,6 +161,7 @@ private data class SecondaryChipData(
     val datetimeFormat: String?,
     val rangeInputMode: String?,
     val label: String,
+    val showIcon: Boolean,
 )
 
 private fun SecondaryColumns.toChipData(): SecondaryChipData? {
@@ -164,7 +169,7 @@ private fun SecondaryColumns.toChipData(): SecondaryChipData? {
     return SecondaryChipData(
         displayEntityId, displayDomain, actionEntityId, actionDomain, action,
         showValueOrDefault(), confirmActionOrDefault(),
-        displayPrecision, datetimeFormat, rangeInputMode, labelOrEmpty(),
+        displayPrecision, datetimeFormat, rangeInputMode, labelOrEmpty(), showIconOrDefault(),
     )
 }
 
@@ -301,13 +306,15 @@ private fun SlotRow(
     val chips = slot.secondaryChips()
     val rowContent: @Composable () -> Unit = {
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                provider = ImageProvider(domainIconResId(slot.displayDomain)),
-                contentDescription = label,
-                modifier = GlanceModifier.size(24.dp),
-                colorFilter = ColorFilter.tint(surface.content),
-            )
-            Spacer(modifier = GlanceModifier.width(10.dp))
+            if (slot.showIcon) {
+                Image(
+                    provider = ImageProvider(domainIconResId(slot.displayDomain)),
+                    contentDescription = label,
+                    modifier = GlanceModifier.size(24.dp),
+                    colorFilter = ColorFilter.tint(surface.content),
+                )
+                Spacer(modifier = GlanceModifier.width(10.dp))
+            }
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(label, style = TextStyle(color = surface.content, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                 Text(statusText, style = TextStyle(color = surface.content, fontSize = 11.sp), maxLines = 1)
@@ -378,16 +385,19 @@ private fun SecondaryChip(
         displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat)
     } else null
 
+    val hasText = labelText.isNotEmpty() || valueText != null
     val chipContent: @Composable () -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                provider = ImageProvider(domainIconResId(chip.displayDomain)),
-                contentDescription = labelText.ifEmpty { chip.displayEntityId },
-                modifier = GlanceModifier.size(14.dp),
-                colorFilter = ColorFilter.tint(surface.content),
-            )
-            if (labelText.isNotEmpty() || valueText != null) {
-                Spacer(modifier = GlanceModifier.width(4.dp))
+            if (chip.showIcon) {
+                Image(
+                    provider = ImageProvider(domainIconResId(chip.displayDomain)),
+                    contentDescription = labelText.ifEmpty { chip.displayEntityId },
+                    modifier = GlanceModifier.size(14.dp),
+                    colorFilter = ColorFilter.tint(surface.content),
+                )
+                if (hasText) Spacer(modifier = GlanceModifier.width(4.dp))
+            }
+            if (hasText) {
                 Column {
                     if (labelText.isNotEmpty()) {
                         Text(labelText, style = TextStyle(color = surface.content, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
@@ -414,13 +424,15 @@ private fun SecondaryChip(
     )
 
     // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum.
+    val chipRingPadDp = if (chip.showIcon) CHIP_INNER_H_PAD_DP else CHIP_INNER_H_PAD_NO_ICON_DP
+    val chipSinglePadDp = if (chip.showIcon) CHIP_SINGLE_H_PAD_DP else CHIP_SINGLE_H_PAD_NO_ICON_DP
     StatefulSurface(
         surface = surface,
         cornerDp = CHIP_CORNER_DP,
         outerBase = GlanceModifier.height(48.dp),
         innerBase = GlanceModifier.fillMaxHeight(),
-        ringInnerPad = GlanceModifier.padding(horizontal = CHIP_INNER_H_PAD_DP.dp),
-        singlePad = GlanceModifier.padding(horizontal = CHIP_SINGLE_H_PAD_DP.dp),
+        ringInnerPad = GlanceModifier.padding(horizontal = chipRingPadDp.dp),
+        singlePad = GlanceModifier.padding(horizontal = chipSinglePadDp.dp),
         makeClickable = { withClick(it) },
         content = chipContent,
     )
