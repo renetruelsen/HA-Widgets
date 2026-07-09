@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
@@ -92,6 +93,7 @@ import dk.akait.hawidgets.widget.scene.SceneWidget
 import dk.akait.hawidgets.widget.script.ScriptWidget
 import dk.akait.hawidgets.widget.sensor.SensorWidget
 import dk.akait.hawidgets.widget.switchwidget.SwitchWidget
+import dk.akait.hawidgets.widget.common.presetFor
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -456,6 +458,16 @@ private fun SettingsSheet(
                 (context as? android.app.Activity)?.recreate()
             }
 
+            var colorTheme by remember { mutableStateOf(store.widgetColorTheme) }
+            ColorThemeRow(currentTheme = colorTheme) { theme ->
+                store.widgetColorTheme = theme
+                colorTheme = theme
+                // Samme begrundelse som ThemeRow/LanguageRow (ADR-5): widgets observerer ikke
+                // SecureStore reaktivt, så en eksplicit updateAll() er nødvendig. Ingen recreate()
+                // her — farvetemaet påvirker KUN widgets, ikke app-UI'et (jf. spec).
+                scope.launch { updateAllWidgets(context) }
+            }
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -606,6 +618,68 @@ private fun ThemeRow(currentMode: String, onSelect: (String) -> Unit) {
                     text = { Text(label) },
                     onClick = {
                         onSelect(mode)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ColorThemeRow(currentTheme: String, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        SecureStore.COLOR_BLUE to stringResource(R.string.color_theme_blue),
+        SecureStore.COLOR_GREEN to stringResource(R.string.color_theme_green),
+        SecureStore.COLOR_PURPLE to stringResource(R.string.color_theme_purple),
+        SecureStore.COLOR_ORANGE to stringResource(R.string.color_theme_orange),
+        SecureStore.COLOR_RED to stringResource(R.string.color_theme_red),
+        SecureStore.COLOR_TEAL to stringResource(R.string.color_theme_teal),
+    )
+    val selectedLabel = options.firstOrNull { it.first == currentTheme }?.second
+        ?: stringResource(R.string.color_theme_blue)
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Default.ColorLens, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.widget_color_theme_label),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                selectedLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (colorTheme, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(presetFor(colorTheme).light.primary)
+                        )
+                    },
+                    onClick = {
+                        onSelect(colorTheme)
                         expanded = false
                     }
                 )
