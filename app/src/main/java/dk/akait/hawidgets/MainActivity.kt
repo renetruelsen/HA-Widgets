@@ -90,12 +90,17 @@ import dk.akait.hawidgets.widget.common.presetFor
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        const val EXTRA_OPEN_SETTINGS = "open_settings"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val openSettings = intent.getBooleanExtra(EXTRA_OPEN_SETTINGS, false)
         setContent {
             HaWidgetsTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    OnboardingScreen()
+                    OnboardingScreen(openSettingsInitially = openSettings)
                 }
             }
         }
@@ -104,7 +109,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OnboardingScreen() {
+private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
     val context = LocalContext.current
     val store = remember { SecureStore.get(context) }
     val scope = rememberCoroutineScope()
@@ -116,7 +121,7 @@ private fun OnboardingScreen() {
     var busy by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
     var showBatteryDialog by remember { mutableStateOf(false) }
-    var showSettings by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(openSettingsInitially) }
     var showTokenHelp by remember { mutableStateOf(false) }
 
     val pm = remember { context.getSystemService(PowerManager::class.java) }
