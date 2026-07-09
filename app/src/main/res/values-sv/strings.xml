@@ -183,8 +183,8 @@
     <string name="action_trigger_short">Utlös</string>
     <string name="action_text">Redigera text</string>
     <string name="action_datetime">Redigera datum/tid</string>
-    <string name="action_history">Visa historik</string>
-    <string name="action_history_short">Historik</string>
+    <string name="action_history">Visa aktivitet</string>
+    <string name="action_history_short">Aktivitet</string>
     <string name="action_view_only">Endast visning</string>
     <string name="action_view_only_short">Visa endast status</string>
     <!-- Task 13: RANGE −/+ steg-knappar (alla widgetar) -->

@@ -21,6 +21,8 @@ import dk.akait.hawidgets.widget.common.TriggerEntityAction
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
 import dk.akait.hawidgets.widget.common.isActiveState
 import org.json.JSONObject
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /** Fælles klik-håndtering for både hoved-rækken og sekundær-chips: NONE → opdatér kun
  * [refreshEntityId]; ellers TOGGLE/RANGE/TRIGGER på ([actionEntityId], [actionDomain]) — kan
@@ -45,11 +47,30 @@ internal fun clickModifier(
         )
     }
     // Rent visnings-kald, ingen HA-kommando afsendes → virker uanset actionState (også en
-    // aktuelt utilgængelig entitet, hvor historikken ofte er præcis det man vil se).
+    // aktuelt utilgængelig entitet, hvor historikken ofte er præcis det man vil se). Åbner
+    // det indbyggede /logbook-panel ("Aktivitet" på dansk) direkte i ét skud — ikke det
+    // formodede standard-dashboard "lovelace" (findes ikke på alle HA-instanser, se v0.2.62-
+    // root-cause) og ikke /history (viser kun grafen, ingen aktivitet — HA har intet indbygget
+    // panel med begge dele uden en gyldig Lovelace-dashboard-kontekst, se v0.2.62). entity_id
+    // sendes med i selve dashboard-stien (ikke som separat SPA-pushState bagefter) — HA's
+    // url-sync-mixin reagerer kun på entity_id ved en RIGTIG sideindlæsning, ikke en
+    // efterfølgende pushState (forsøgt og forkastet i v0.2.62).
     if (action == "HISTORY") {
+        // Kontinuerte, numeriske domæner logger normalt intet i HA's logbog (HA's egen
+        // logbook-filtrering ekskluderer dem) — /logbook viser derfor altid "ingen aktivitet"
+        // for dem, mens /history's graf rent faktisk er brugbar. HA's egen more-info-dialog gør
+        // det samme (viser kun graf for disse domæner). Alle andre domæner (light/switch/lock/
+        // binary_sensor/automation osv.) har diskrete tilstandsskift der VISES fint i logbogen
+        // (v0.2.62/63, brugerbekræftet), så de beholder /logbook (v0.2.63, bruger-ønske).
+        val panel = if (actionDomain in setOf("sensor", "number", "input_number")) "history" else "logbook"
+        // 36-timers vindue (i stedet for panelets eget ~3-timers standard-interval) — begge
+        // paneler læser start_date/end_date (ISO 8601, ms-præcision) fra URL'en ved selve
+        // sideindlæsningen, samme mekanisme som entity_id.
+        val now = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+        val start = now.minus(36, ChronoUnit.HOURS)
+        val path = "$panel?entity_id=$actionEntityId&start_date=$start&end_date=$now"
         val intent = Intent(context, WebViewActivity::class.java).apply {
-            putExtra(WebViewActivity.EXTRA_DASHBOARD_PATH, "")
-            putExtra(WebViewActivity.EXTRA_NAVIGATE_PATH, "/history?entity_id=$actionEntityId")
+            putExtra(WebViewActivity.EXTRA_DASHBOARD_PATH, path)
             putExtra(WebViewActivity.EXTRA_DISPLAY_MODE, DisplayMode.OVERLAY.name)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }

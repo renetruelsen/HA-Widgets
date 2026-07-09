@@ -183,8 +183,8 @@
     <string name="action_trigger_short">Udløs</string>
     <string name="action_text">Rediger tekst</string>
     <string name="action_datetime">Rediger dato/tid</string>
-    <string name="action_history">Vis historik</string>
-    <string name="action_history_short">Historik</string>
+    <string name="action_history">Vis aktivitet</string>
+    <string name="action_history_short">Aktivitet</string>
     <string name="action_view_only">Kun visning</string>
     <string name="action_view_only_short">Vis kun status</string>
     <!-- Task 13: RANGE −/+ trin-knapper (alle widgets) -->
