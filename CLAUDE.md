@@ -869,6 +869,131 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   (v0.2.59, symmetrisk 8dp/8dp) er uændret. **Scope bekræftet med bruger: kun chips** — hoved-
   rækken (`SlotRow`) er ikke rørt. **QA:** build grøn, installeret på emulator + S23
   (`adb install -r`). Visuel bekræftelse afventer bruger.
+- ✅ **v0.2.61 — MultiEntityWidget: "Vis historik" åbner nu more-info-dialogen (2026-07-09,
+  brugerønske):** bruger ønskede at "Aktiviteter" (HA's logbog) skal være tilgængelig i det
+  vindue der åbnes ved HISTORY-handlingen, ikke kun historik-grafen. Afklaret med bruger
+  (spørgsmål med 3 valgmuligheder): skift fra den rene `/history`-side til entitetens
+  more-info-dialog, som samler historik-graf OG logbog/aktivitet i én dialog med faner
+  (samme dialog man får ved at klikke en entitet på et rigtigt HA-dashboard).
+  - **Fix (`MultiEntityClickModifier.kt`):** `EXTRA_NAVIGATE_PATH` ændret fra
+    `"/history?entity_id=$actionEntityId"` til `"/lovelace?entity_id=$actionEntityId"`.
+    HA's frontend synker more-info-dialogens åben/lukket-state med URL'ens `?entity_id=`-
+    query (`url-sync-mixin`) — samme mekanisme som når man selv klikker en entitet på et
+    dashboard. Uændret client-side SPA-navigation (pushState + `location-changed`-event,
+    samme mønster som den oprindelige HISTORY-handling fra v0.2.56).
+  - Gælder BÅDE hoved-slottet og sekundær-chips (fælles `clickModifier`-funktion, ingen
+    separat kode for de to).
+  - **QA:** build grøn. Emulator (`pixel_test`, ægte HA mod `home.rtr.dk`): tap på en
+    HISTORY-konfigureret sensor-række (`sensor.termometer_temperature`, appWidgetId 15)
+    udløser korrekt `WebViewActivity`-overlayet og WebSocket forbinder (`connection-status:
+    connected` + `theme-update` i logcat) — men selve HA-dashboardet blev aldrig færdigt
+    (den native loading-spinner forsvandt ikke, `onDashboardReady` blev aldrig kaldt,
+    reproduceret identisk 4×, inkl. efter `am force-stop` for frisk proces). Da
+    `EXTRA_NAVIGATE_PATH` kun bruges INDE i `onDashboardReady`-callbacket, sker stoppet
+    FØR denne ændrings kode overhovedet eksekverer — samme hæng ville opstå for ALLE
+    WebViewActivity-åbninger (fx også ShortcutWidget) på denne emulator lige nu, uafhængigt
+    af denne ændring. **Ikke** visuelt bekræftet at more-info-dialogen rent faktisk viser
+    Historik+Logbog-faner. Device-QA (S23) og/eller undersøgelse af hvorfor dashboard-
+    loading hænger på emulatoren afventer bruger. **Superseret af v0.2.62 — se dér, root
+    cause fundet.**
+- ✅ **v0.2.62 — MultiEntityWidget: HISTORY-hæng løst (root cause fundet); more-info-dialog
+  droppet, "Aktiviteter" kræver bruger-beslutning (2026-07-09, systematisk debugging efter
+  brugerrapport "samme resultat på S23 — åbner aldrig Aktiviteter/Logbogen"):**
+  - **Root cause (bekræftet via Home Assistant MCP):** `WebViewActivity`s INDLEDENDE side-load
+    for HISTORY-handlingen brugte (både før og efter v0.2.61) `EXTRA_DASHBOARD_PATH=""`, som i
+    `buildUrl()` falder tilbage til det hardcodede antagne standard-dashboard `"lovelace"`.
+    Denne HA-instans (`home.rtr.dk`) har INGEN dashboard på url_path `lovelace` — alle 4
+    dashboards er custom-navngivne (`lovelace-hjem`, `dashboard-f4`, `dashboard-stue`,
+    `linus_dashboard`); `ha_config_get_dashboard(url_path="default")` returnerer eksplicit
+    "No config found". Navigation til den ikke-eksisterende rute fik HA's frontend til aldrig
+    at nå den tilstand `KioskScript` venter på (`home-assistant-main`s shadow-root) — og
+    `KioskScript`s klar-poll giver kun 40×300ms=12s, hvorefter den permanent stopper
+    (`clearInterval`) uden nogensinde at kalde `onDashboardReady()`. Det er derfor IKKE en
+    engangs-emulator-flaky-hed: reproduceret identisk på BÅDE emulator og S23 (bruger-
+    bekræftet), og var reelt en PRE-EKSISTERENDE fejl i HISTORY-handlingen siden v0.2.56 —
+    aldrig faktisk verificeret end-to-end før nu, uafhængigt af v0.2.61-ændringen.
+  - **Fix (`MultiEntityClickModifier.kt`):** `EXTRA_DASHBOARD_PATH` ændret fra `""` til det
+    indbyggede `"history"`-panel (findes ALTID, uafhængigt af brugerens Lovelace-dashboards —
+    modsat det formodede `"lovelace"`-standarddashboard). **Verificeret virkende** på emulator:
+    historik-grafen for `sensor.termometer_temperature` renderer nu korrekt med det samme.
+  - **More-info-dialog-forsøget (v0.2.61) droppet igen efter empirisk test:** afprøvede at
+    pushState'e til en af de FAKTISKE dashboards (`/lovelace-hjem?entity_id=X`, ikke den
+    ikke-eksisterende `lovelace`) for at teste om `?entity_id=`-query'en overhovedet kan
+    udløse more-info-dialogen via denne apps client-side SPA-navigation (pushState +
+    `location-changed`-event). Resultat: dashboardet loader, men INGEN dialog åbner — kun det
+    rå dashboard-indhold vises. HA's `url-sync-mixin`-mekanisme reagerer tilsyneladende ikke
+    på en programmatisk `pushState` efter appen allerede er bootet (kun på en RIGTIG
+    sidenavigation/deep-link), så tricket er ikke brugbart i denne apps arkitektur uden en
+    fuld sideindlæsning (langsom, ~10s+, pr. tryk — dårlig UX, fravalgt).
+  - **`/logbook?entity_id=X` afprøvet og VIRKER** (panelet hedder bogstaveligt "Aktivitet" på
+    dansk — matcher brugerens eget ord) — men ERSTATTER historik-grafen, viser den ikke ved
+    siden af (HA har intet indbygget panel der viser begge dele uden en gyldig Lovelace-
+    dashboard-kontekst). For `sensor.termometer_temperature` viste den "Der blev ikke fundet
+    nogen aktivitet" — forventet HA-adfærd (kontinuerte numeriske sensorer logges typisk ikke
+    i logbogen), ikke en fejl i vores kode; entity_id-filter-chippen viste korrekt den rigtige
+    entitet, så selve mekanismen er bekræftet virkende.
+  - **Bruger-beslutning (spørgsmål med 3 valgmuligheder):** skift HISTORY-handlingen helt til
+    `/logbook` — dropper historik-grafen til fordel for aktivitetsloggen, fremfor at bygge et
+    "kendt dashboard"-fallback for at redde more-info-dialog-tricket (mere arbejde, ekstra
+    ventetid pr. tryk) eller beholde kun grafen uden aktivitet.
+  - **Endelig fix (`MultiEntityClickModifier.kt`):** `EXTRA_DASHBOARD_PATH` sat direkte til
+    `"logbook?entity_id=$actionEntityId"` (ingen separat `EXTRA_NAVIGATE_PATH`/SPA-pushState-
+    trin nødvendigt — `buildUrl()` håndterer et allerede-forekommende `?` i stien korrekt,
+    entity_id-filteret er derfor med fra selve den indledende sideindlæsning). Handlingens
+    UI-label ændret fra "Vis historik"/"Historik" til "Vis aktivitet"/"Aktivitet" i alle 3
+    sprogfiler (`action_history`/`action_history_short`) — teksten skal matche den faktiske
+    nye adfærd. Handlingens interne id (`"HISTORY"` i DB'en) er UÆNDRET — ren UI-tekst- og
+    navigations-ændring, ingen migration nødvendig.
+  - **QA:** build grøn. Emulator (ægte HA mod `home.rtr.dk`): tap på
+    `sensor.termometer_temperature`-raden (appWidgetId 15, slot 2) åbner nu korrekt
+    "Aktivitet"-panelet med det samme (ingen hæng), korrekt entity-filter-chip, forventet tomt
+    resultat for denne sensor-type. Midlertidigt testet med en lys-entitet
+    (`light.hue_stuelampe`, direkte DB-mutation af samme slot, reverteret bagefter til
+    `sensor.termometer_temperature` — INGEN permanent ændring af brugerens rigtige
+    widget-config) for at bekræfte panelet også kan vise ikke-tomme resultater; selve
+    tomheds-verifikationen ovenfor er den der blev kørt på den RIGTIGE, permanente
+    slot-konfiguration. Installeret på emulator + S23 (`adb install -r`). Visuel
+    device-bekræftelse på S23 afventer bruger.
+- ✅ **v0.2.63 — Aktivitet-panelet: HA-header skjult + 36-timers standardvindue (2026-07-09,
+  brugerønske efter v0.2.62):**
+  - **Ønske 1 — fjern HA's egen header (hamburger/titel/filter-ikon) fra vinduet:** root cause
+    fundet via diagnostisk `console.log` af `KioskScript`s shadow-root-scan (midlertidig,
+    fjernet igen efter brug): `/history`/`/logbook`-panelernes toolbar sidder i
+    `ha-top-app-bar-fixed`s EGEN shadow-root som `<header class="top-app-bar">` — hverken det
+    gamle `host==='hui-root'`-filter (kun Lovelace-dashboards) eller CSS-selectorlisten
+    (`.header,.toolbar,ha-app-toolbar,app-header,.mdc-top-app-bar`) ramte denne kombination
+    (klassen er `top-app-bar`, ikke `header`). To uafhængige fixes i `KioskScript.kt`:
+    (1) `HEADER_CSS` injiceres nu i ALLE shadow roots (ikke kun `hui-root`) — selectoren er
+    scoped, så injektion i en shadow root uden de elementer er en no-op; (2) selector-listen
+    udvidet med `.top-app-bar`. Diagnosticeret ved midlertidigt at logge alle shadow-root-
+    hosts + innerHTML for paneler matchende /panel|tabs|toolbar|app-bar/i via
+    `webChromeClient.onConsoleMessage` → logcat, IKKE ved at gætte.
+  - **Ønske 2 — 36 timers logs i stedet for panelets eget ~3-timers standardvindue:**
+    `MultiEntityClickModifier.kt` beregner nu `start_date`/`end_date` (ISO 8601, ms-præcision,
+    `Instant.now()`/`.minus(36, HOURS)`) og sender dem med i selve `/logbook`-dashboard-stien.
+    HA's logbook-panel læser begge fra URL'en ved selve sideindlæsningen (samme mekanisme som
+    `entity_id`, se v0.2.62).
+  - **QA:** build grøn. Emulator (ægte HA mod `home.rtr.dk`), tap på
+    `sensor.termometer_temperature`-raden (appWidgetId 15, slot 2): header (hamburger/"Aktivitet"
+    -titel/filter-ikon) er væk — kun appens egen X-luk-knap øverst; dato-feltet viser korrekt et
+    36-timers vindue ("8. jul. 03.18 - 9. jul. 15.18" ved test kl. 15.19). Installeret på
+    emulator + S23 (`adb install -r`). Visuel device-bekræftelse på S23 afventer bruger.
+- ✅ **v0.2.64 — Aktivitet-handling: domænebaseret graf/liste-valg (2026-07-09, brugerrapport
+  efter v0.2.63 — "Udestue Temperaturen" viste tom aktivitetsliste, hvor rigtig HA viser graf):**
+  - **Bekræftet med bruger:** ikke en fejl i entity_id/tidsvindue-mekanikken — HA's egen logbog
+    ekskluderer som forventet kontinuerte numeriske sensor-tilstandsskift, så `/logbook` er
+    reelt altid tom for den slags entiteter (matcher hvad rigtig HA selv viser: kun graf).
+    Andre domæner (light/switch/lock osv.) virker allerede fint med logbog-listen.
+  - **Fix (`MultiEntityClickModifier.kt`):** HISTORY-handlingen vælger nu panel ud fra
+    `actionDomain` — `sensor`/`number`/`input_number` (kontinuerte værdi-domæner) → `/history`
+    (grafen, som rigtig HA også bruger for disse); alle andre domæner → `/logbook` (uændret fra
+    v0.2.63). 36-timers `start_date`/`end_date`-vinduet gælder nu begge paneler ens (samme
+    URL-forgrening, kun panel-navnet skifter).
+  - **QA:** build grøn. Emulator (ægte HA mod `home.rtr.dk`): tap på
+    `sensor.termometer_temperature`-raden viser nu korrekt en 36-timers temperaturgraf (ingen
+    HA-header, "8. jul. 03.34 - 9. jul. 15.34" i dato-feltet) i stedet for den tomme
+    aktivitetsliste fra v0.2.63. Installeret på emulator; S23 var ikke tilsluttet ved
+    session-slut — installation og bekræftelse dér afventer bruger.
 
 ## Næste skridt
 
