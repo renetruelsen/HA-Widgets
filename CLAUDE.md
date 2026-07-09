@@ -1047,6 +1047,41 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     grøn konfigureret flise straks) på emulator. Præeksisterende bug (ikke fra farvetema-arbejdet),
     men merged sammen med serien. Device-QA på S23 (Nova rammes hårdest) afventer bruger.
   - **Merged til `main` (fast-forward) 2026-07-09.** IKKE pushed endnu.
+- ✅ **v0.2.68 — Widget-konvergering: slettet alle 9 single-entity-widgets (2026-07-09,
+  brugerbeslutning, subagent-driven-development):**
+  - **Baggrund:** appen har ingen udgivne brugere, så vi er frie til at slette widget-providers
+    uden bagudkompatibilitets-hensyn. Multi-widgetten dækker allerede alt de 9 singles kunne
+    (toggle/trigger/range/sensor-værdi/domæne-ikoner/enheder) og har desuden visning/handling-
+    opdeling, bekræft-ved-tryk, sekundær-chips og værdi-formatering — mens de 9 singles kostede
+    10× vedligehold. Appen har fremover kun **to** widgets: `ShortcutWidget` (dashboard-genvej)
+    og `MultiEntityWidget`. Proces: brainstorm → spec → plan (7 tasks) → subagent-driven
+    implementering (frisk implementer + task-reviewer pr. task) → opus whole-branch-review.
+    Spec: `docs/superpowers/specs/2026-07-09-widget-convergence-design.md`, plan:
+    `docs/superpowers/plans/2026-07-09-widget-convergence.md`.
+  - **Slettet:** 9 widget-pakker (light/switch/scene/script/automation/sensor/binary_sensor/
+    cover/climate — hver `*Widget.kt` + `*WidgetConfigActivity.kt`), `BaseEntityPickerActivity`,
+    18 manifest-komponenter (9 receivers + 9 config-activities), 9 `*_widget_info.xml`, 9
+    `preview_*`-drawables, og de forældreløse single-strenge (9 `*_widget_description`, 9
+    `picker_title_*`, 18 `binary_*`, 9 `*_widget_label`) + 3 forældreløse drawables
+    (`ic_power`/`ic_thermometer`/`ic_humidity`).
+  - **Bevaret:** al delt `widget/common/`-infra (GlanceWidgetCommon, EntityActions,
+    MultiDomainSupport, kontrol-aktiviteterne, ValueFormatting, RangeStepping, WidgetColors/
+    Presets, ActionFeedback), ALLE `ic_*`-domæne-ikoner (multi bruger dem via `MultiDomainSupport`),
+    og delte strenge (`state_*`/`climate_*`).
+  - **Data-lag gjort multi-only:** `EntityRepository.refreshAll` samler kun entiteter fra
+    multi-slots; `WidgetUpdater.updateForEntity` opdaterer kun `MultiEntityWidget`;
+    `updateAllWidgets` 11→2 kald. **Room-migration `MIGRATION_10_11`** (v10→11) dropper
+    `entity_widget`-tabellen + `EntityWidgetEntity`/`Dao` fjernet fra `AppDatabase`;
+    `entity_state`/`multi_widget`/`multi_widget_slot` uændrede.
+  - **Kompakt 1×1-flise droppet bevidst** (brugerbeslutning): vil man vise én entitet, laver man
+    en 1-slot multi-widget (fuld-bredde række, resizable). Intet kompakt layout tilføjet.
+  - **QA (emulator `pixel_test`, ægte HA):** clean build + 55 unit-tests grønne; migration
+    v10→11 verificeret oven på eksisterende data (`user_version=11`, `entity_widget`-tabel væk,
+    5 multi_widget/14 slots/21 entity_state bevaret, ingen crash); widget-picker viser præcis 2
+    widgets (ikke 11); placeret multi-widget re-renderer med live data; `SyncWorker` SUCCESS
+    (multi-only sync). Whole-branch-review (opus): READY TO MERGE, 2 minor orphan-fund fixet.
+    Device-QA på S23 afventer bruger.
+  - **Merged til `main` (fast-forward) + pushed 2026-07-09.**
 
 ## Næste skridt
 
