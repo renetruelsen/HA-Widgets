@@ -62,8 +62,6 @@
     <string name="display_overlay">Overlay (vindue)</string>
     <string name="overlay_width">Bredde: %1$d %%</string>
     <string name="overlay_height">Højde: %1$d %%</string>
-    <string name="connect_to_ha_title">Forbind til Home Assistant</string>
-    <string name="connect_to_ha_body">Indtast din HA-adresse og et long-lived access token (HA → Profil → Long-Lived Access Tokens).</string>
     <string name="load_dashboards_error">Kunne ikke hente dashboards: %1$s</string>
 
     <!-- Battery optimization dialog -->

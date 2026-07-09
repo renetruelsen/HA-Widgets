@@ -62,8 +62,6 @@
     <string name="display_overlay">Overlay (window)</string>
     <string name="overlay_width">Width: %1$d %%</string>
     <string name="overlay_height">Height: %1$d %%</string>
-    <string name="connect_to_ha_title">Connect to Home Assistant</string>
-    <string name="connect_to_ha_body">Enter your HA address and a long-lived access token (HA → Profile → Long-Lived Access Tokens).</string>
     <string name="load_dashboards_error">Could not fetch dashboards: %1$s</string>
 
     <!-- Battery optimization dialog -->
