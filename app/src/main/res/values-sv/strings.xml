@@ -77,39 +77,30 @@
 
     <!-- LightWidget -->
     <string name="light_widget_label">HA Ljus</string>
-    <string name="light_widget_description">Styr ljuskällor</string>
 
     <!-- SwitchWidget -->
     <string name="switch_widget_label">HA Strömbrytare</string>
-    <string name="switch_widget_description">Slå på/av strömbrytare</string>
 
     <!-- SceneWidget -->
     <string name="scene_widget_label">HA Scen</string>
-    <string name="scene_widget_description">Aktivera scener</string>
 
     <!-- ScriptWidget -->
     <string name="script_widget_label">HA Skript</string>
-    <string name="script_widget_description">Kör skript</string>
 
     <!-- AutomationWidget -->
     <string name="automation_widget_label">HA Automatisering</string>
-    <string name="automation_widget_description">Utlös automatiseringar</string>
 
     <!-- SensorWidget -->
     <string name="sensor_widget_label">HA Sensor</string>
-    <string name="sensor_widget_description">Visa sensorvärden</string>
 
     <!-- BinarySensorWidget -->
     <string name="binary_sensor_widget_label">HA Binär sensor</string>
-    <string name="binary_sensor_widget_description">Visa binära sensorer</string>
 
     <!-- CoverWidget -->
     <string name="cover_widget_label">HA Cover</string>
-    <string name="cover_widget_description">Styr persienner och rullgardiner</string>
 
     <!-- ClimateWidget -->
     <string name="climate_widget_label">HA Klimat</string>
-    <string name="climate_widget_description">Visa och styr temperatur (2×1)</string>
 
     <!-- MultiEntityWidget: en variant, fast 4-slot standardfootprint (se
          docs/widget-settings-spec.md §8) -->
@@ -216,17 +207,6 @@
     <string name="range_label_value">Värde</string>
     <string name="range_label_brightness">Ljusstyrka</string>
     <string name="range_current_temp">Aktuell temperatur: %1$d°C</string>
-    <!-- Entitetsväljarens skärmtitlar -->
-    <string name="picker_title_light">Välj ljuskälla</string>
-    <string name="picker_title_switch">Välj strömbrytare</string>
-    <string name="picker_title_scene">Välj scen</string>
-    <string name="picker_title_script">Välj skript</string>
-    <string name="picker_title_automation">Välj automatisering</string>
-    <string name="picker_title_sensor">Välj sensor</string>
-    <string name="picker_title_binary_sensor">Välj binär sensor</string>
-    <string name="picker_title_cover">Välj cover / persienn</string>
-    <string name="picker_title_climate">Välj klimatstyrning</string>
-
     <!-- Widget-statustext (live widget-rendering + entitetsväljarens förhandsvisning) -->
     <string name="widget_setup_placeholder">Konfigurera</string>
     <string name="state_loading">Hämtar…</string>
@@ -255,23 +235,4 @@
     <string name="climate_auto">Auto</string>
     <string name="climate_dry">Avfuktning</string>
     <string name="climate_fan_only">Fläkt</string>
-    <!-- Binär sensor device-class-text -->
-    <string name="binary_motion">Rörelse</string>
-    <string name="binary_clear">Klart</string>
-    <string name="binary_low_battery">Lågt batteri</string>
-    <string name="binary_ok">OK</string>
-    <string name="binary_charging">Laddar</string>
-    <string name="binary_not_charging">Laddar inte</string>
-    <string name="binary_cold">Kallt</string>
-    <string name="binary_connected">Ansluten</string>
-    <string name="binary_not_connected">Ej ansluten</string>
-    <string name="binary_hot">Varmt</string>
-    <string name="binary_light">Ljust</string>
-    <string name="binary_dark">Mörkt</string>
-    <string name="binary_wet">Vått</string>
-    <string name="binary_dry">Torrt</string>
-    <string name="binary_alarm">Alarm!</string>
-    <string name="binary_detected">Upptäckt</string>
-    <string name="binary_problem">Problem</string>
-    <string name="binary_stopped">Stoppad</string>
 </resources>

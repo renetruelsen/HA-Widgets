@@ -77,39 +77,30 @@
 
     <!-- LightWidget -->
     <string name="light_widget_label">HA Light</string>
-    <string name="light_widget_description">Control light sources</string>
 
     <!-- SwitchWidget -->
     <string name="switch_widget_label">HA Switch</string>
-    <string name="switch_widget_description">Turn switches on/off</string>
 
     <!-- SceneWidget -->
     <string name="scene_widget_label">HA Scene</string>
-    <string name="scene_widget_description">Activate scenes</string>
 
     <!-- ScriptWidget -->
     <string name="script_widget_label">HA Script</string>
-    <string name="script_widget_description">Run scripts</string>
 
     <!-- AutomationWidget -->
     <string name="automation_widget_label">HA Automation</string>
-    <string name="automation_widget_description">Trigger automations</string>
 
     <!-- SensorWidget -->
     <string name="sensor_widget_label">HA Sensor</string>
-    <string name="sensor_widget_description">Show sensor values</string>
 
     <!-- BinarySensorWidget -->
     <string name="binary_sensor_widget_label">HA Binary sensor</string>
-    <string name="binary_sensor_widget_description">Show binary sensors</string>
 
     <!-- CoverWidget -->
     <string name="cover_widget_label">HA Cover</string>
-    <string name="cover_widget_description">Control blinds and shades</string>
 
     <!-- ClimateWidget -->
     <string name="climate_widget_label">HA Climate</string>
-    <string name="climate_widget_description">Show and control temperature (2×1)</string>
 
     <!-- MultiEntityWidget: single variant, fixed 4-slot default footprint (see
          docs/widget-settings-spec.md §8) -->
@@ -216,17 +207,6 @@
     <string name="range_label_value">Value</string>
     <string name="range_label_brightness">Brightness</string>
     <string name="range_current_temp">Current temperature: %1$d°C</string>
-    <!-- Entity-picker screen titles -->
-    <string name="picker_title_light">Choose light source</string>
-    <string name="picker_title_switch">Choose switch</string>
-    <string name="picker_title_scene">Choose scene</string>
-    <string name="picker_title_script">Choose script</string>
-    <string name="picker_title_automation">Choose automation</string>
-    <string name="picker_title_sensor">Choose sensor</string>
-    <string name="picker_title_binary_sensor">Choose binary sensor</string>
-    <string name="picker_title_cover">Choose cover / blind</string>
-    <string name="picker_title_climate">Choose climate control</string>
-
     <!-- Widget state text (live widget rendering + entity-picker previews) -->
     <string name="widget_setup_placeholder">Set up</string>
     <string name="state_loading">Loading…</string>
@@ -255,23 +235,4 @@
     <string name="climate_auto">Auto</string>
     <string name="climate_dry">Drying</string>
     <string name="climate_fan_only">Fan</string>
-    <!-- Binary sensor device-class text -->
-    <string name="binary_motion">Motion</string>
-    <string name="binary_clear">Clear</string>
-    <string name="binary_low_battery">Low battery</string>
-    <string name="binary_ok">OK</string>
-    <string name="binary_charging">Charging</string>
-    <string name="binary_not_charging">Not charging</string>
-    <string name="binary_cold">Cold</string>
-    <string name="binary_connected">Connected</string>
-    <string name="binary_not_connected">Not connected</string>
-    <string name="binary_hot">Hot</string>
-    <string name="binary_light">Light</string>
-    <string name="binary_dark">Dark</string>
-    <string name="binary_wet">Wet</string>
-    <string name="binary_dry">Dry</string>
-    <string name="binary_alarm">Alarm!</string>
-    <string name="binary_detected">Detected</string>
-    <string name="binary_problem">Problem</string>
-    <string name="binary_stopped">Stopped</string>
 </resources>
