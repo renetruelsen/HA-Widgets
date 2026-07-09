@@ -994,6 +994,59 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     HA-header, "8. jul. 03.34 - 9. jul. 15.34" i dato-feltet) i stedet for den tomme
     aktivitetsliste fra v0.2.63. Installeret på emulator; S23 var ikke tilsluttet ved
     session-slut — installation og bekræftelse dér afventer bruger.
+- ✅ **v0.2.65 — Widget-farvetemaer: 6 globale, valgbare farver (2026-07-09, brugerønske via
+  dev-pipeline):**
+  - **Baggrund:** genoptaget fra en parallel session (`feature/widget-color-themes`-worktree,
+    startet under en anden Claude-login på samme maskine). Featuren tilføjer 6 globale
+    farvetemaer (Blå/Grøn/Lilla/Orange/Rød/Teal) til ALLE Glance-widgets, uafhængigt af
+    app-UI'et (som forbliver fast blå). Proces: brainstorm → spec → plan →
+    subagent-implementering → code-review → QA. Spec:
+    `docs/specs/2026-07-09-widget-color-themes-design.md`, plan:
+    `docs/superpowers/plans/2026-07-09-widget-color-themes.md`.
+  - **Arkitektur:** nyt `SecureStore.widgetColorTheme` (samme mønster som `themeMode`). Ny
+    `WidgetColorPresets.kt` med `WidgetColorPreset(light, dark)` + `presetFor()` + én kilde til
+    sandhed `WIDGET_COLOR_THEMES` (læst af BÅDE pickeren og `presetFor`). Kun `primary`/`onPrimary`
+    er hue-specifikke; de neutrale roller (surfaceVariant/error/background/surface) genbruges fra
+    de eksisterende `HaBlue*`-konstanter (verificeret farve-neutrale) på tværs af alle presets.
+    `WidgetColors.providers(context)` kombinerer farvetema + `themeMode` via ren, unit-testet
+    `resolveColorMode()` (`DYNAMIC`/`FORCED_LIGHT`/`FORCED_DARK`/`SYSTEM_PAIR`) — **Blå+system
+    bevarer den historiske `DynamicThemeColorProviders` (nul regression)**; alt andet bruger faste
+    presets. 15 nye unit-tests (8 presets + 7 color-mode).
+  - **UI:** ny "Farvetema"-dropdown i `MainActivity`s indstillinger (ved Tema/Sprog), med en
+    farveprik pr. valg. Kalder `updateAllWidgets()` ved skift (widgets observerer ikke SecureStore
+    reaktivt — ADR-5). Ingen `recreate()` (påvirker kun widgets, ikke app-UI'et).
+  - **Merge:** `main` v0.2.64 flettet rent ind i branchen (kun additive `strings.xml`-overlap,
+    auto-merged) → v0.2.65 = supersæt (farvetemaer + Aktivitet-panel fra v0.2.61-64).
+  - **Code-review-fixes (samme serie):** (1) dropdown-swatch bruger nu `dark.primary` i mørkt tema
+    (matcher den farve widgetten faktisk renderer) i stedet for altid `light.primary`; (2)
+    `ThemeRow`/`LanguageRow`/`ColorThemeRow` samlet i én generisk `SettingsDropdownRow<T>` (de tre
+    var near-dubletter); (3) `WIDGET_COLOR_THEMES` som eneste kilde til farvesættet.
+  - **QA:** build + 40 unit-tests grønne. Emulator (`pixel_test`, ægte HA): ny Farvetema-række +
+    6 korrekte swatches, valg af Grøn → placeret multi-widget blev grøn uden manuel opdatering,
+    revert til Blå, swatch-nuancer korrekte i mørkt tema efter fix. Ingen crashes.
+- ✅ **v0.2.66 — dashboard-genvej (ShortcutWidget) følger nu farvetemaet (2026-07-09,
+  brugerønske):** genvejens konfigurerede tile brugte hardcodet `Color(0xFF03A9F4)` (app-ikon-blå)
+  + hvid — den ENESTE widget der ikke fulgte det globale farvetema. Bruger nu
+  `GlanceTheme.colors.primary`/`onPrimary` (genvejen er altid "tændt" → samme aktive look som
+  entity-widgets). **QA:** verificeret på S23 (Nova) — placerede genveje "Hjem"/"Linus Dashbo…"
+  vises i temaets farve (rød/lyserød ved test) og konfigureret.
+- ✅ **v0.2.67 — frisk-placeret dashboard-genvej registrerer config med det samme (2026-07-09,
+  brugerrapport + systematic-debugging):**
+  - **Root cause (reproduceret på emulator):** `ShortcutWidget.provideGlance` læste config ÉN gang
+    fra ikke-reaktiv `WidgetConfigStore` (SharedPreferences). Ved placering kørte `provideGlance`
+    med `null` config, og `saveAndFinish`'s fire-and-forget `update()` genfremkaldte den ikke
+    pålideligt → en frisk-placeret genvej viste "Opsæt"/"Konfigurera" SELVOM config VAR gemt
+    (bekræftet: `widget_20` i prefs, men flisen renderede "Konfigurera"); man måtte konfigurere
+    igen. **Identisk med v0.2.2-bugten for entity-widgets, som blev løst med reaktiv Room Flow —
+    genvejen blev bare aldrig migreret.**
+  - **Fix:** ny `WidgetConfigStore.observe(appWidgetId)` (callbackFlow på
+    `OnSharedPreferenceChangeListener`) + `ShortcutWidget.provideGlance` collecter den via
+    `collectAsState`, præcis som entity-widgets' Room-Flow. Glance-sessionen holdes i live og
+    rekomponerer straks når config-activity'en gemmer.
+  - **QA:** reproduceret FØR (frisk genvej = "Konfigurera") og verificeret EFTER (frisk genvej =
+    grøn konfigureret flise straks) på emulator. Præeksisterende bug (ikke fra farvetema-arbejdet),
+    men merged sammen med serien. Device-QA på S23 (Nova rammes hårdest) afventer bruger.
+  - **Merged til `main` (fast-forward) 2026-07-09.** IKKE pushed endnu.
 
 ## Næste skridt
 
