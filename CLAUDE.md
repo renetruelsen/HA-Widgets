@@ -858,6 +858,17 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   uændret 6dp når ikonet vises. Kun chips ramt (bekræftet med bruger at kun chips var relevante, ikke
   hoved-rækken). **QA:** build grøn, installeret på emulator + S23 (`adb install -r`). Visuel
   bekræftelse på device afventer bruger.
+- ✅ **v0.2.60 — MultiEntityWidget: asymmetrisk chip-padding når ikon vises (2026-07-09,
+  opfølgning på v0.2.58-59):** bruger identificerede den reelle årsag til skævheden fra
+  screenshot-diskussionen: selve ikon-asset'et har sin egen indre "luft" i sit 14dp-felt, hvilket
+  gør at teksten i den anden ende visuelt sidder skævt selv med matematisk symmetrisk 6dp/6dp
+  container-padding. Rettelse: når `chip.showIcon == true`, er venstre side (før ikon) fortsat 6dp,
+  højre side (efter tekst) bumpet til 8dp — nye `CHIP_INNER_H_PAD_END_DP=6`/
+  `CHIP_SINGLE_H_PAD_END_DP=8` (ring: +2dp = 8dp), brugt via `GlanceModifier.padding(start=…,
+  end=…)` i stedet for det tidligere symmetriske `padding(horizontal=…)`. Ikon-skjult-tilstanden
+  (v0.2.59, symmetrisk 8dp/8dp) er uændret. **Scope bekræftet med bruger: kun chips** — hoved-
+  rækken (`SlotRow`) er ikke rørt. **QA:** build grøn, installeret på emulator + S23
+  (`adb install -r`). Visuel bekræftelse afventer bruger.
 
 ## Næste skridt
 

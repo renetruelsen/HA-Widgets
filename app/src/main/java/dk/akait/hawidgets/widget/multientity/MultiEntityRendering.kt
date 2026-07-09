@@ -66,12 +66,17 @@ internal const val REFRESH_STRIP_HEIGHT_DP = 24
 private const val SURFACE_BORDER_DP = 2
 private const val ROW_INNER_PAD_DP = 4      // + 2dp ring = 6dp pr. side (outline-tilstand)
 private const val ROW_SINGLE_PAD_DP = 6     // fyldt/uden ring: 6dp pr. side
-private const val CHIP_INNER_H_PAD_DP = 4   // + 2dp ring
-private const val CHIP_SINGLE_H_PAD_DP = 6
+private const val CHIP_INNER_H_PAD_DP = 4   // + 2dp ring = 6dp (venstre side, ikon vist)
+private const val CHIP_SINGLE_H_PAD_DP = 6  // venstre side, ikon vist
 // Uden ikon mistes ikonets 14dp+4dp-spacer "buffer" foran teksten, så den stramme 6dp-kant bliver
 // synlig/følelig (brugerfeedback) — bump til 8dp total pr. side når chip.showIcon == false.
 private const val CHIP_INNER_H_PAD_NO_ICON_DP = 6   // + 2dp ring = 8dp pr. side
 private const val CHIP_SINGLE_H_PAD_NO_ICON_DP = 8
+// Ikonets eget indre "luft" i sit 14dp-felt (v0.2.60-fund) gør teksten visuelt skæv når ikonet ER
+// vist — højre side (efter teksten) bumpes til 8dp for at kompensere, venstre side (før ikonet)
+// forbliver 6dp (CHIP_INNER_H_PAD_DP/CHIP_SINGLE_H_PAD_DP ovenfor).
+private const val CHIP_INNER_H_PAD_END_DP = 6   // + 2dp ring = 8dp (højre side, ikon vist)
+private const val CHIP_SINGLE_H_PAD_END_DP = 8  // højre side, ikon vist
 private const val ROW_CORNER_DP = 12
 private const val CHIP_CORNER_DP = 10
 
@@ -423,16 +428,26 @@ private fun SecondaryChip(
         rangeInputMode = chip.rangeInputMode,
     )
 
-    // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum.
-    val chipRingPadDp = if (chip.showIcon) CHIP_INNER_H_PAD_DP else CHIP_INNER_H_PAD_NO_ICON_DP
-    val chipSinglePadDp = if (chip.showIcon) CHIP_SINGLE_H_PAD_DP else CHIP_SINGLE_H_PAD_NO_ICON_DP
+    // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum. Ikon vist: asymmetrisk
+    // 6dp venstre / 8dp højre (v0.2.60, kompenserer ikonets egen indre "luft"). Ikon skjult:
+    // symmetrisk 8dp begge sider (v0.2.59).
+    val chipRingPad = if (chip.showIcon) {
+        GlanceModifier.padding(start = CHIP_INNER_H_PAD_DP.dp, end = CHIP_INNER_H_PAD_END_DP.dp)
+    } else {
+        GlanceModifier.padding(horizontal = CHIP_INNER_H_PAD_NO_ICON_DP.dp)
+    }
+    val chipSinglePad = if (chip.showIcon) {
+        GlanceModifier.padding(start = CHIP_SINGLE_H_PAD_DP.dp, end = CHIP_SINGLE_H_PAD_END_DP.dp)
+    } else {
+        GlanceModifier.padding(horizontal = CHIP_SINGLE_H_PAD_NO_ICON_DP.dp)
+    }
     StatefulSurface(
         surface = surface,
         cornerDp = CHIP_CORNER_DP,
         outerBase = GlanceModifier.height(48.dp),
         innerBase = GlanceModifier.fillMaxHeight(),
-        ringInnerPad = GlanceModifier.padding(horizontal = chipRingPadDp.dp),
-        singlePad = GlanceModifier.padding(horizontal = chipSinglePadDp.dp),
+        ringInnerPad = chipRingPad,
+        singlePad = chipSinglePad,
         makeClickable = { withClick(it) },
         content = chipContent,
     )
