@@ -33,6 +33,15 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_THEME_MODE, THEME_SYSTEM) ?: THEME_SYSTEM
         set(value) = prefs.edit().putString(KEY_THEME_MODE, value).apply()
 
+    /**
+     * Globalt farvetema for ALLE Glance-widgets (IKKE app-UI'et — det forbliver fast blå).
+     * Gyldige værdier: "blue" | "green" | "purple" | "orange" | "red" | "teal". Default
+     * "blue" → identisk med den historiske (eneste) farve.
+     */
+    var widgetColorTheme: String
+        get() = prefs.getString(KEY_WIDGET_COLOR_THEME, COLOR_BLUE) ?: COLOR_BLUE
+        set(value) = prefs.edit().putString(KEY_WIDGET_COLOR_THEME, value).apply()
+
     val isConfigured: Boolean
         get() = !baseUrl.isNullOrBlank() && !token.isNullOrBlank()
 
@@ -56,11 +65,19 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         private const val KEY_BASE_URL = "base_url"
         private const val KEY_TOKEN = "token"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_WIDGET_COLOR_THEME = "widget_color_theme"
         private fun keyDashboard(id: Int) = "dashboard_path_$id"
 
         const val THEME_LIGHT = "light"
         const val THEME_DARK = "dark"
         const val THEME_SYSTEM = "system"
+
+        const val COLOR_BLUE = "blue"
+        const val COLOR_GREEN = "green"
+        const val COLOR_PURPLE = "purple"
+        const val COLOR_ORANGE = "orange"
+        const val COLOR_RED = "red"
+        const val COLOR_TEAL = "teal"
 
         @Volatile
         private var instance: SecureStore? = null
