@@ -84,16 +84,7 @@ import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.widget.ShortcutWidget
 import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
-import dk.akait.hawidgets.widget.automation.AutomationWidget
-import dk.akait.hawidgets.widget.binarysensor.BinarySensorWidget
-import dk.akait.hawidgets.widget.climate.ClimateWidget
-import dk.akait.hawidgets.widget.cover.CoverWidget
-import dk.akait.hawidgets.widget.light.LightWidget
 import dk.akait.hawidgets.widget.multientity.MultiEntityWidget
-import dk.akait.hawidgets.widget.scene.SceneWidget
-import dk.akait.hawidgets.widget.script.ScriptWidget
-import dk.akait.hawidgets.widget.sensor.SensorWidget
-import dk.akait.hawidgets.widget.switchwidget.SwitchWidget
 import dk.akait.hawidgets.widget.common.WIDGET_COLOR_THEMES
 import dk.akait.hawidgets.widget.common.presetFor
 import kotlinx.coroutines.launch
@@ -653,15 +644,6 @@ private fun ColorThemeRow(currentTheme: String, onSelect: (String) -> Unit) {
  * GlanceAppWidget-klasse (jf. AndroidManifest's <receiver>-liste). */
 private suspend fun updateAllWidgets(context: android.content.Context) {
     val app = context.applicationContext
-    LightWidget().updateAll(app)
-    SwitchWidget().updateAll(app)
-    SceneWidget().updateAll(app)
-    ScriptWidget().updateAll(app)
-    AutomationWidget().updateAll(app)
-    SensorWidget().updateAll(app)
-    BinarySensorWidget().updateAll(app)
-    CoverWidget().updateAll(app)
-    ClimateWidget().updateAll(app)
     MultiEntityWidget().updateAll(app)
     ShortcutWidget().updateAll(app)
 }

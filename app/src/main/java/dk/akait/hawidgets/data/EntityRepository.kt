@@ -9,7 +9,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Eneste ejer af al HA-synkronisering (pull + push) og widget-fan-out.
  *
  * Vigtigt om udførelseskontekst:
- * - **Tryk-handleren** ([dk.akait.hawidgets.widget.light.ToggleLightAction]) kører i en
+ * - **Tryk-handleren** (multi-widgettens `clickModifier`) kører i en
  *   BroadcastReceiver med hård ~10s ANR-grænse, MEN et tryk vækker appen straks (pålideligt,
  *   modsat baggrunds-WorkManager der udskydes i timevis på fx Samsung One UI). Derfor kører
  *   [command] netværket dér — men med kort-timeout-klient + hård [COMMAND_TIMEOUT_MS]-grænse.
@@ -48,8 +48,7 @@ object EntityRepository {
         val db = AppDatabase.get(context)
         val multiDao = db.multiWidgetDao()
         val ids = (
-            db.entityWidgetDao().allEntityIds() +
-                multiDao.allDisplayEntityIds() +
+            multiDao.allDisplayEntityIds() +
                 multiDao.allActionEntityIds() +
                 multiDao.allSecondaryEntityIds()
             ).distinct()
