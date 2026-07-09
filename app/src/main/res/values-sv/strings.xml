@@ -208,4 +208,9 @@
     <string name="climate_auto">Auto</string>
     <string name="climate_dry">Avfuktning</string>
     <string name="climate_fan_only">Fläkt</string>
+    <string name="not_connected_gate_title">Inte ansluten</string>
+    <string name="not_connected_gate_body">Anslut appen till Home Assistant först. Öppna HA Widgets för att ställa in anslutning, språk, tema och färger.</string>
+    <string name="open_app_button">Öppna HA Widgets</string>
+    <string name="settings_in_app_hint">Språk, tema och färger ändras i appen</string>
+    <string name="open_short">Öppna</string>
 </resources>

@@ -208,4 +208,9 @@
     <string name="climate_auto">Auto</string>
     <string name="climate_dry">Drying</string>
     <string name="climate_fan_only">Fan</string>
+    <string name="not_connected_gate_title">Not connected</string>
+    <string name="not_connected_gate_body">Connect the app to Home Assistant first. Open HA Widgets to set up the connection, language, theme, and colors.</string>
+    <string name="open_app_button">Open HA Widgets</string>
+    <string name="settings_in_app_hint">Language, theme, and colors are set in the app</string>
+    <string name="open_short">Open</string>
 </resources>

@@ -208,4 +208,9 @@
     <string name="climate_auto">Auto</string>
     <string name="climate_dry">Affugtning</string>
     <string name="climate_fan_only">Ventilator</string>
+    <string name="not_connected_gate_title">Ikke forbundet</string>
+    <string name="not_connected_gate_body">Forbind appen til Home Assistant først. Åbn HA Widgets for at opsætte forbindelse, sprog, tema og farver.</string>
+    <string name="open_app_button">Åbn HA Widgets</string>
+    <string name="settings_in_app_hint">Sprog, tema og farver ændres i appen</string>
+    <string name="open_short">Åbn</string>
 </resources>
