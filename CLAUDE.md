@@ -1059,6 +1059,16 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - LightWidget: dimmable lys → slider, ikke-dimmable → toggle
   - Batteri-knap viser status + åbner indstillinger korrekt
 - **Deferred:** Værdisensor med flere entiteter (op til 3-5) — kræver ny Room-kolonne + config-UI + widget-layout; separat opgave.
+- **Aftalt 2026-07-09 (efter v0.2.67), egne branches:**
+  - **Discoverability (næste branch):** widget-først-brugere lander i launcherens widget-opsætning
+    og opdager ikke, at forbindelse/sprog/tema bor i hoved-appen. Byg (a) "ikke forbundet"-gate i
+    ALLE widget-config-skærme med `Åbn HA Widgets`-knap, og (b) fast "Sprog, tema og farver ændres
+    i appen"-henvisning nederst i hver widget-config. Mockup godkendt i sessionen.
+  - **Konvergering på multi-widget (brainstorm/plan først):** de 9 single-entity-widgets halter
+    efter multi-widgetten (mangler visning/handling-opdeling, bekræft-ved-tryk, chips osv.) og
+    koster 10× vedligehold. Anbefalet retning: giv multi-widgetten en kompakt 1-slot-footprint,
+    SKJUL de 9 singles fra widget-vælgeren men BEHOLD deres providers (slet ikke — orphaner
+    placerede widgets). Kræver brainstorm→spec→plan før kode.
 - M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
 
 ### Åbne UX-problemer
