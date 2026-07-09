@@ -75,33 +75,6 @@
     <string name="battery_status_exempt">Exempt from battery optimization</string>
     <string name="battery_status_restricted">Restricted by battery optimization</string>
 
-    <!-- LightWidget -->
-    <string name="light_widget_label">HA Light</string>
-
-    <!-- SwitchWidget -->
-    <string name="switch_widget_label">HA Switch</string>
-
-    <!-- SceneWidget -->
-    <string name="scene_widget_label">HA Scene</string>
-
-    <!-- ScriptWidget -->
-    <string name="script_widget_label">HA Script</string>
-
-    <!-- AutomationWidget -->
-    <string name="automation_widget_label">HA Automation</string>
-
-    <!-- SensorWidget -->
-    <string name="sensor_widget_label">HA Sensor</string>
-
-    <!-- BinarySensorWidget -->
-    <string name="binary_sensor_widget_label">HA Binary sensor</string>
-
-    <!-- CoverWidget -->
-    <string name="cover_widget_label">HA Cover</string>
-
-    <!-- ClimateWidget -->
-    <string name="climate_widget_label">HA Climate</string>
-
     <!-- MultiEntityWidget: single variant, fixed 4-slot default footprint (see
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entity</string>

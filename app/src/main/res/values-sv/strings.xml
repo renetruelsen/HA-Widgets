@@ -75,33 +75,6 @@
     <string name="battery_status_exempt">Undantagen från batterioptimering</string>
     <string name="battery_status_restricted">Begränsad av batterioptimering</string>
 
-    <!-- LightWidget -->
-    <string name="light_widget_label">HA Ljus</string>
-
-    <!-- SwitchWidget -->
-    <string name="switch_widget_label">HA Strömbrytare</string>
-
-    <!-- SceneWidget -->
-    <string name="scene_widget_label">HA Scen</string>
-
-    <!-- ScriptWidget -->
-    <string name="script_widget_label">HA Skript</string>
-
-    <!-- AutomationWidget -->
-    <string name="automation_widget_label">HA Automatisering</string>
-
-    <!-- SensorWidget -->
-    <string name="sensor_widget_label">HA Sensor</string>
-
-    <!-- BinarySensorWidget -->
-    <string name="binary_sensor_widget_label">HA Binär sensor</string>
-
-    <!-- CoverWidget -->
-    <string name="cover_widget_label">HA Cover</string>
-
-    <!-- ClimateWidget -->
-    <string name="climate_widget_label">HA Klimat</string>
-
     <!-- MultiEntityWidget: en variant, fast 4-slot standardfootprint (se
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entitet</string>
