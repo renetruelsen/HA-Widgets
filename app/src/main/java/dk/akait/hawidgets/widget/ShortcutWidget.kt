@@ -4,11 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -22,7 +22,6 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.fillMaxSize
-import androidx.glance.unit.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.WidgetConfig
 import dk.akait.hawidgets.data.WidgetConfigStore
@@ -56,9 +55,9 @@ class ShortcutWidget : GlanceAppWidget() {
         val config = WidgetConfigStore.get(context).get(appWidgetId)
 
         provideContent {
-            // Kun den ukonfigurerede "Opsæt"-visning bruger tema-farver (GlanceTheme.colors
-            // via UnconfiguredWidgetContent). Den konfigurerede genvej-tile er bevidst altid
-            // brand-blå (uafhængig af tema) — se ShortcutContent.
+            // Både den ukonfigurerede "Opsæt"-visning og den konfigurerede genvej-tile bruger
+            // det globale widget-farvetema (GlanceTheme.colors via WidgetGlanceTheme) — genvejen
+            // er altid "tændt" og bruger derfor primary/onPrimary som entity-widgetsenes aktive look.
             WidgetGlanceTheme(context) {
                 val isWide = LocalSize.current.width >= 110.dp
                 if (config == null) {
@@ -89,12 +88,12 @@ private fun ShortcutContent(
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
-    val contentColor = ColorProvider(Color.White)
+    val contentColor = GlanceTheme.colors.onPrimary
 
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(Color(0xFF03A9F4))
+            .background(GlanceTheme.colors.primary)
             .cornerRadius(16.dp)
             .clickable(actionStartActivity(intent)),
         contentAlignment = Alignment.Center,
