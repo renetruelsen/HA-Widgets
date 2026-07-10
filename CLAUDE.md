@@ -1110,6 +1110,29 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     kunne ikke testes non-destruktivt på emulatoren (ville strande token) — dækket af opus-review +
     S23-QA.*
   - **Merged til `main` (fast-forward) + pushed 2026-07-10.**
+- ✅ **v0.2.71 — MultiEntityWidget: understøtter nu en 4. sekundær-chip pr. slot (2026-07-10,
+  brugerønske, faser sprunget over efter eksplicit anmodning):**
+  - **Baggrund:** grænsen for sekundær-chips var hardcodet til 3 (`MAX_SECONDARY_ENTITIES = 3`);
+    brugeren bad om at tilføje en 4. plads ("4. slot" = 4. sekundær-chip — hoved-slots er allerede
+    ubegrænsede via `LazyColumn` siden v0.2.29).
+  - `MAX_SECONDARY_ENTITIES` hævet 3 → 4 (`MultiEntityDrafts.kt`).
+  - **Data:** 12 nye nullable `secondary4*`-kolonner på `multi_widget_slot`
+    (`MultiWidgetSlotEntity.kt`), samme mønster som secondary1-3. Ny **Room-migration v11→v12**
+    (`MIGRATION_11_12`, additiv — alle kolonner nullable, eksisterende slots får null i
+    secondary4-felterne, ingen datatab). `secondary4ShowIcon` nullable (null = default = vist),
+    som secondary1-3ShowIcon.
+  - **Den 4. plads trådet gennem:** `secondaryColumns()`/`withSecondaryColumns()` (læs/skriv, nu
+    4. element / c3), `MultiWidgetDao` (sync-UNION-query `allSecondaryEntityIds` + fan-out
+    `slotsForEntity`), `MultiEntityWidget.allEntityIds()` (observation/preload), og
+    `MultiEntityListScreen` slot-kort-resumé.
+  - **Config-UI** ("Ekstra info (N/4)", tilføj-knap, chip-rendering) opdaterede sig automatisk —
+    alt læser `MAX_SECONDARY_ENTITIES` og itererer over `secondaryColumns()`, ingen tals-specifik
+    kode.
+  - **QA (Galaxy S23, `R3CWC00JY4M`):** build grøn (kun præeksisterende
+    `ExperimentalCoroutinesApi`-warning), `adb install -r` OK (data bevaret), migration v11→v12
+    fuldført (`user_version=12`, alle 12 `secondary4`-kolonner bekræftet i skemaet på enheden),
+    app starter uden crash. Selve config-flowet (tilføj/vis den 4. chip interaktivt i UI) ikke
+    kørt igennem denne session — kodestien er identisk med de 3 verificerede eksisterende chips.
 
 ## Næste skridt
 
