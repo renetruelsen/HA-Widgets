@@ -1082,6 +1082,34 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (multi-only sync). Whole-branch-review (opus): READY TO MERGE, 2 minor orphan-fund fixet.
     Device-QA på S23 afventer bruger.
   - **Merged til `main` (fast-forward) + pushed 2026-07-09.**
+- ✅ **v0.2.69-70 — Widget-config discoverability: gate til app-opsætning + app-genvej
+  (2026-07-09/10, brugerønske, subagent-driven-development):**
+  - **Baggrund:** widget-først-brugere lander i launcherens widget-opsætning og opdager ikke, at
+    global opsætning (forbindelse, sprog, tema, farver) bor i hoved-appen. Efter konvergeringen er
+    der kun 2 config-skærme: `ShortcutWidgetConfigActivity` + `MultiEntityWidgetConfigActivity`.
+    Proces: brainstorm → spec → plan (5 tasks) → subagent-driven implementering → opus
+    whole-branch-review. Spec: `docs/superpowers/specs/2026-07-09-widget-discoverability-design.md`,
+    plan: `docs/superpowers/plans/2026-07-09-widget-discoverability.md`.
+  - **Delte composables** (`widget/common/ConfigDiscoverability.kt`): `NotConnectedGate` (kort med
+    "Åbn HA Widgets"-knap → MainActivity), `AppSettingsHint` (diskret bund-henvisning "Sprog, tema
+    og farver ændres i appen"), `rememberResumeTick()` (lifecycle ON_RESUME-tæller).
+  - **Gate → én kilde til opsætning:** begge config-skærme viser gaten når `!SecureStore.isConfigured`
+    (i stedet for multis blindgyde-fejl / genvejens inline URL+token-formular, som blev **fjernet** —
+    forbindelse bor nu kun i appen). **Resume-recheck:** vender man tilbage forbundet, gen-tjekker
+    `rememberResumeTick`-keyed effekt `isConfigured`, gaten forsvinder, config fortsætter automatisk
+    (ingen gen-tilføjelse). Load kører kun én gang (`loaded`-guard).
+  - **Deep-link:** `MainActivity.EXTRA_OPEN_SETTINGS` åbner indstillings-arket direkte.
+  - **App-genvej i config (v0.2.70):** Tune-ikon-action i BEGGE config-skærmes TopAppBar (dér brugere
+    kigger efter indstillinger) + den bevarede bund-henvisning → to synlige veje til app-indstillinger.
+  - **v0.2.70 også:** `loadError` i multi-config gjort funktionel (try/catch om entitets-load,
+    `load_entities_error`-streng) — var død/altid-null efter gate-omlægningen.
+  - **Ryddet:** forældreløse strenge `ha_not_connected_error`, `connect_to_ha_title/body`.
+  - **QA:** build + 55 unit-tests grønne. Emulator (forbundet): begge config-skærme viser
+    top-bar-genvej + bund-henvisning; begge deep-linker til indstillings-arket; genvej-config viser
+    dashboard-picker UDEN token-felt. **S23 bruger-bekræftet OK (2026-07-10).** *Ikke-forbundet-gaten
+    kunne ikke testes non-destruktivt på emulatoren (ville strande token) — dækket af opus-review +
+    S23-QA.*
+  - **Merged til `main` (fast-forward) + pushed 2026-07-10.**
 
 ## Næste skridt
 
@@ -1094,11 +1122,8 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   - LightWidget: dimmable lys → slider, ikke-dimmable → toggle
   - Batteri-knap viser status + åbner indstillinger korrekt
 - **Deferred:** Værdisensor med flere entiteter (op til 3-5) — kræver ny Room-kolonne + config-UI + widget-layout; separat opgave.
-- **Discoverability (aftalt 2026-07-09, egen branch — IKKE påbegyndt):** widget-først-brugere
-  lander i launcherens widget-opsætning og opdager ikke, at forbindelse/sprog/tema bor i
-  hoved-appen. Byg (a) "ikke forbundet"-gate i ALLE widget-config-skærme med `Åbn HA Widgets`-knap,
-  og (b) fast "Sprog, tema og farver ændres i appen"-henvisning nederst i hver widget-config.
-  Mockup godkendt i sessionen.
+- ~~Discoverability~~ — **GJORT i v0.2.69-70** (gate + app-genvej i top-bar + bund-henvisning +
+  deep-link + resume-recheck; genvejens inline connect fjernet).
 - ~~Konvergering på multi-widget~~ — **GJORT i v0.2.68** (slettede alle 9 singles i stedet for
   skjul-men-behold, da appen ingen brugere har; ingen kompakt 1-slot-footprint tilføjet).
 - M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
