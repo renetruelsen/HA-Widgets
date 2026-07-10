@@ -63,6 +63,7 @@
     <string name="overlay_width">Width: %1$d %%</string>
     <string name="overlay_height">Height: %1$d %%</string>
     <string name="load_dashboards_error">Could not fetch dashboards: %1$s</string>
+    <string name="load_entities_error">Could not fetch entities: %1$s</string>
 
     <!-- Battery optimization dialog -->
     <string name="battery_dialog_title">Allow background access</string>

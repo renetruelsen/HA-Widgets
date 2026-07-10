@@ -63,6 +63,7 @@
     <string name="overlay_width">Bredde: %1$d %%</string>
     <string name="overlay_height">Højde: %1$d %%</string>
     <string name="load_dashboards_error">Kunne ikke hente dashboards: %1$s</string>
+    <string name="load_entities_error">Kunne ikke hente enheder: %1$s</string>
 
     <!-- Battery optimization dialog -->
     <string name="battery_dialog_title">Tillad baggrundsadgang</string>

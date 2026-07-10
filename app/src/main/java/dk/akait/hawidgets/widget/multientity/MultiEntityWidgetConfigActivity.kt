@@ -98,15 +98,20 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         }
         notConnected = false
         if (loaded) return@LaunchedEffect
-        val client = HaApiClient(store.baseUrl!!, store.token!!)
-        allEntities = client.listStatesByDomains(MULTI_ENTITY_DOMAINS.toSet()).sortedBy { it.friendlyName }
-        val db = AppDatabase.get(context)
-        slots = db.multiWidgetDao().getSlots(appWidgetId)
-        showRefreshIcon = db.multiWidgetDao().get(appWidgetId)?.showRefreshIcon ?: true
-        attrsByEntityId = allEntities.mapNotNull { entity ->
-            db.entityStateDao().get(entity.entityId)?.attributesJson?.let { entity.entityId to it }
-        }.toMap()
-        loaded = true
+        try {
+            val client = HaApiClient(store.baseUrl!!, store.token!!)
+            allEntities = client.listStatesByDomains(MULTI_ENTITY_DOMAINS.toSet()).sortedBy { it.friendlyName }
+            val db = AppDatabase.get(context)
+            slots = db.multiWidgetDao().getSlots(appWidgetId)
+            showRefreshIcon = db.multiWidgetDao().get(appWidgetId)?.showRefreshIcon ?: true
+            attrsByEntityId = allEntities.mapNotNull { entity ->
+                db.entityStateDao().get(entity.entityId)?.attributesJson?.let { entity.entityId to it }
+            }.toMap()
+            loadError = null
+            loaded = true
+        } catch (e: Exception) {
+            loadError = context.getString(R.string.load_entities_error, e.message ?: "")
+        }
         isLoading = false
     }
 

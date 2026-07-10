@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -57,7 +58,16 @@ internal fun ListScreen(
     onOpenAppSettings: () -> Unit,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.multi_entity_config_title)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.multi_entity_config_title)) },
+                actions = {
+                    IconButton(onClick = onOpenAppSettings) {
+                        Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.settings_in_app_hint))
+                    }
+                },
+            )
+        },
         bottomBar = { AppSettingsHint(onOpenSettings = onOpenAppSettings) },
     ) { padding ->
         Column(

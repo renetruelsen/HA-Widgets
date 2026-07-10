@@ -63,6 +63,7 @@
     <string name="overlay_width">Bredd: %1$d %%</string>
     <string name="overlay_height">Höjd: %1$d %%</string>
     <string name="load_dashboards_error">Kunde inte hämta instrumentpaneler: %1$s</string>
+    <string name="load_entities_error">Kunde inte hämta enheter: %1$s</string>
 
     <!-- Battery optimization dialog -->
     <string name="battery_dialog_title">Tillåt bakgrundsåtkomst</string>

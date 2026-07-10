@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
@@ -175,7 +176,17 @@ private fun ConfigScreen(
                     IconButton(onClick = onCancel) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cancel))
                     }
-                }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        context.startActivity(
+                            Intent(context, dk.akait.hawidgets.MainActivity::class.java)
+                                .putExtra(dk.akait.hawidgets.MainActivity.EXTRA_OPEN_SETTINGS, true)
+                        )
+                    }) {
+                        Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.settings_in_app_hint))
+                    }
+                },
             )
         },
         bottomBar = {
