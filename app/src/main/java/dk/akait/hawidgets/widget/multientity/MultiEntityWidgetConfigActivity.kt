@@ -66,6 +66,8 @@ internal sealed interface Step {
     data object ListScreen : Step
     data class SlotEditor(val editIndex: Int?, val draft: SlotDraft) : Step
     data class EntityPicker(val forTarget: PickerTarget, val editIndex: Int?, val draft: SlotDraft) : Step
+    /** App-vælger for "Åbn app"-handlingen (kun hoved-slotten). */
+    data class AppPicker(val editIndex: Int?, val draft: SlotDraft) : Step
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -213,12 +215,20 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             },
         )
 
+        is Step.AppPicker -> AppPickerScreen(
+            onSelected = { pkg ->
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(action = "OPEN_APP", packageName = pkg))
+            },
+            onBack = { step = Step.SlotEditor(s.editIndex, s.draft) },
+        )
+
         is Step.SlotEditor -> SlotEditorScreen(
             draft = s.draft,
             isEditing = s.editIndex != null,
             attrsByEntityId = attrsByEntityId,
             onChangeDisplay = { step = Step.EntityPicker(PickerTarget.Display, s.editIndex, s.draft) },
             onChangeTarget = { step = Step.EntityPicker(PickerTarget.Action, s.editIndex, s.draft) },
+            onChooseApp = { step = Step.AppPicker(s.editIndex, s.draft) },
             onActionChange = { newAction -> step = Step.SlotEditor(s.editIndex, s.draft.copy(action = newAction)) },
             onRangeInputModeChange = { mode -> step = Step.SlotEditor(s.editIndex, s.draft.copy(rangeInputMode = mode)) },
             onLabelChange = { newLabel -> step = Step.SlotEditor(s.editIndex, s.draft.copy(label = newLabel)) },

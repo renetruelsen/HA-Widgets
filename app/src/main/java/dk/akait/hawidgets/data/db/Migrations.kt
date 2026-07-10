@@ -158,3 +158,11 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4ShowIcon INTEGER")
     }
 }
+
+/** v12 → v13: "Åbn app"-handling på hoved-slotten. Én ny nullable kolonne — additiv, eksisterende
+ * slots får null (ingen app-handling). */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN actionPackageName TEXT")
+    }
+}

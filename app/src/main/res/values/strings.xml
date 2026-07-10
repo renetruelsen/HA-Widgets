@@ -29,7 +29,6 @@
     <string name="how_to_use_step1">Tap \'Add dashboard shortcut\' above</string>
     <string name="how_to_use_step2">Choose dashboard and view in the configuration</string>
     <string name="how_to_use_step3">Tap the widget icon on the home screen to open your dashboard</string>
-    <string name="how_to_use_tip_more_widgets">There are many more widgets (lights, sensors, switches and more) — find them via your phone\'s own \'Add widget\': long-press the home screen → Widgets → HA Widgets.</string>
     <string name="onboarding_intro">Connect your Home Assistant instance below. You can also skip this and connect the first time you add a widget.</string>
     <string name="token_help_link">How do I create a token?</string>
     <string name="token_help_title">Create a Long-Lived Access Token</string>
@@ -137,6 +136,14 @@
     <string name="target_label">Target: %1$s</string>
     <string name="choose_other_target">Choose another target</string>
     <string name="act_on_other_entity">Act on another entity</string>
+    <string name="action_open_app">Open app</string>
+    <string name="action_control_ha">Control Home Assistant</string>
+    <string name="action_open_app_option">Open an app on the phone</string>
+    <string name="choose_app">Choose app</string>
+    <string name="change_app">Change app</string>
+    <string name="selected_app">Selected app</string>
+    <string name="no_app_selected">No app selected</string>
+    <string name="app_not_found">App not found</string>
     <string name="extra_info_section">Extra info (%1$d/%2$d)</string>
     <string name="extra_info_room_for_more">Room for %1$d more</string>
     <string name="add_extra_entity">+ Add extra entity</string>

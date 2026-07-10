@@ -5,6 +5,15 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Synlighed af apps med en launcher-genvej (Android 11+) til "Åbn app"-handlingen.
+         Undgår den Play-restriktede QUERY_ALL_PACKAGES — vi behøver kun apps med et ikon. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".HaWidgetsApp"
         android:allowBackup="false"
@@ -111,6 +120,13 @@
             android:name=".widget.common.ConfirmActionActivity"
             android:exported="false"
             android:theme="@style/Theme.HaWidgets.Dialog"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".widget.common.AppLaunchActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:taskAffinity=""
             android:excludeFromRecents="true" />
 

@@ -347,6 +347,7 @@ private fun SlotRow(
         actionState = actionState,
         confirmAction = slot.confirmAction,
         rangeInputMode = slot.rangeInputMode,
+        packageName = slot.actionPackageName,
     )
 
     StatefulSurface(

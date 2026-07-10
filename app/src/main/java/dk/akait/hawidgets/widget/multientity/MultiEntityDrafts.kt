@@ -42,6 +42,8 @@ internal data class SlotDraft(
     val rangeInputMode: String? = null,
     /** Skjul domæne-ikonet på hoved-rækken — brugervalgt, default vist. */
     val showIcon: Boolean = true,
+    /** Pakkenavn for "Åbn app"-handlingen ([action] == "OPEN_APP"). Null ellers. Kun hoved-slotten. */
+    val packageName: String? = null,
 )
 
 /**
@@ -189,17 +191,18 @@ internal fun draftFromSlot(
     // Normalisér gammelt data: en slot gemt med action=NONE men et ANDET mål var muligt i den
     // gamle UI, men er ugyldigt i den nye model (mål ≠ visning ⇒ altid en handling, ingen
     // "Kun visning"-radio at vælge). Snap til første gyldige handling, så en radio er valgt.
+    // "OPEN_APP" er domæne-uafhængig og peger på en app (ikke actionEntity) — springer normalisering over.
     val targetDiffers = actionEntity.entityId != display.entityId
     val opts = actionOptionsFor(actionEntity.domain)
-    val normalizedAction = if (targetDiffers && slot.action !in opts) {
-        opts.firstOrNull() ?: slot.action
-    } else {
-        slot.action
+    val normalizedAction = when {
+        slot.action == "OPEN_APP" -> "OPEN_APP"
+        targetDiffers && slot.action !in opts -> opts.firstOrNull() ?: slot.action
+        else -> slot.action
     }
     val secondaries = slot.secondaryColumns().mapNotNull { it.toDraft(allEntities) }
     return SlotDraft(
         display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction,
-        slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode, slot.showIcon,
+        slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode, slot.showIcon, slot.actionPackageName,
     )
 }
 
@@ -207,14 +210,17 @@ internal fun draftFromSlot(
  * visnings-entitet er valgt (samme guard som den tidligere saveSlot). */
 internal fun SlotDraft.toSlotEntity(appWidgetId: Int, slotIndex: Int): MultiWidgetSlotEntity? {
     val display = displayEntity ?: return null
-    val action = actionEntity ?: display
+    // "OPEN_APP" peger på en app, ikke en HA-entitet — action-mål-kolonnerne sættes til visningens
+    // (så de er gyldige og targetDiffers=false ved genindlæsning), og pakkenavnet bæres separat.
+    val isApp = action == "OPEN_APP"
+    val target = if (isApp) display else (actionEntity ?: display)
     return MultiWidgetSlotEntity(
         appWidgetId = appWidgetId,
         slotIndex = slotIndex,
         displayEntityId = display.entityId,
         displayDomain = display.domain,
-        actionEntityId = action.entityId,
-        actionDomain = action.domain,
+        actionEntityId = target.entityId,
+        actionDomain = target.domain,
         action = this.action,
         label = label.trim(),
         confirmAction = confirmAction,
@@ -222,5 +228,6 @@ internal fun SlotDraft.toSlotEntity(appWidgetId: Int, slotIndex: Int): MultiWidg
         datetimeFormat = datetimeFormat,
         rangeInputMode = rangeInputMode,
         showIcon = showIcon,
+        actionPackageName = if (isApp) packageName else null,
     ).withSecondaryColumns(secondaryEntities.map { it.toColumns() })
 }

@@ -3,12 +3,16 @@ package dk.akait.hawidgets.widget.multientity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -52,6 +57,7 @@ internal fun actionLabel(action: String): String = when (action) {
     "TEXT" -> stringResource(R.string.action_text)
     "DATETIME" -> stringResource(R.string.action_datetime)
     "HISTORY" -> stringResource(R.string.action_history)
+    "OPEN_APP" -> stringResource(R.string.action_open_app)
     else -> stringResource(R.string.action_view_only)
 }
 
@@ -64,7 +70,21 @@ internal fun actionShortLabel(action: String): String = when (action) {
     "TEXT" -> stringResource(R.string.action_text)
     "DATETIME" -> stringResource(R.string.action_datetime)
     "HISTORY" -> stringResource(R.string.action_history_short)
+    "OPEN_APP" -> stringResource(R.string.action_open_app)
     else -> stringResource(R.string.action_view_only_short)
+}
+
+/** Radio-række for meta-valget "Styr Home Assistant" vs. "Åbn app" i hoved-slottens Handling-sektion. */
+@Composable
+private fun ActionModeRow(selected: Boolean, label: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(8.dp))
+        Text(label)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +95,7 @@ internal fun SlotEditorScreen(
     attrsByEntityId: Map<String, String>,
     onChangeDisplay: () -> Unit,
     onChangeTarget: () -> Unit,
+    onChooseApp: () -> Unit,
     onActionChange: (String) -> Unit,
     onRangeInputModeChange: (String?) -> Unit,
     onLabelChange: (String) -> Unit,
@@ -100,18 +121,34 @@ internal fun SlotEditorScreen(
 ) {
     val display = draft.displayEntity ?: return
     val action = draft.actionEntity ?: display
+    val context = LocalContext.current
 
-    val targetDiffers = action.entityId != display.entityId
+    // "Åbn app": handlingen peger på en app, ikke en HA-entitet — mål-relateret UI (targetDiffers,
+    // invalidTarget, "handl på anden entitet") er derfor undertrykt i denne tilstand.
+    val isAppMode = draft.action == "OPEN_APP"
+    val targetDiffers = !isAppMode && action.entityId != display.entityId
     val opts = actionOptionsFor(action.domain)
+    val canControlHa = opts.isNotEmpty()
     val readOnly = opts.isEmpty()
     // Ugyldigt: bruger valgte et andet mål der ikke kan handles på (fx en sensor) → bloker gem.
-    val invalidTarget = targetDiffers && readOnly
+    val invalidTarget = !isAppMode && targetDiffers && readOnly
+    // App-handling valgt men ingen app endnu → bloker gem.
+    val invalidAppChoice = isAppMode && draft.packageName == null
     val reactsToTap = draft.action != "NONE"
-    // Husk seneste rigtige handlings-valg, så kontakt FRA→TIL genopretter brugerens valg (fx
-    // RANGE) i stedet for altid at nulstille til opts.first() (code-review-fund). Nulstilles
-    // når mål/visning skifter (remember-keys), hvor opts alligevel genberegnes.
+    // App'ens brugervendte navn (opslag via pakkenavn — synligt takket være <queries> launcher).
+    val appLabel = draft.packageName?.let { pkg ->
+        remember(pkg) {
+            try {
+                val pm = context.packageManager
+                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+            } catch (e: Exception) { pkg }
+        }
+    }
+    // Husk seneste rigtige HA-handling (ikke NONE/OPEN_APP), så kontakt/meta-skift genopretter
+    // brugerens valg (fx RANGE) i stedet for altid at nulstille til opts.first() (code-review-fund).
+    // Nulstilles når mål/visning skifter (remember-keys), hvor opts alligevel genberegnes.
     var rememberedAction by remember(display.entityId, action.entityId) {
-        mutableStateOf(draft.action.takeIf { it != "NONE" })
+        mutableStateOf(draft.action.takeIf { it != "NONE" && it != "OPEN_APP" })
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.slot_editor_title)) }) }) { padding ->
@@ -159,44 +196,65 @@ internal fun SlotEditorScreen(
 
             // ── HANDLING ──
             SectionCard(title = stringResource(R.string.section_action)) {
-                when {
-                    invalidTarget -> {
-                        Text(
-                            stringResource(R.string.action_invalid_target),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                    readOnly -> {
-                        Text(
-                            stringResource(R.string.action_read_only),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    else -> {
-                        // "Reagér på tryk"-kontakt: kun når mål == visning. Ved andet mål er en
-                        // handling altid underforstået, så kontakten (og dermed NONE) findes ikke.
-                        if (!targetDiffers) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Checkbox(
-                                    checked = reactsToTap,
-                                    onCheckedChange = { on ->
-                                        onActionChange(
-                                            if (on) rememberedAction?.takeIf { it in opts } ?: opts.first()
-                                            else "NONE"
-                                        )
-                                    },
-                                )
-                            }
+                if (invalidTarget) {
+                    Text(
+                        stringResource(R.string.action_invalid_target),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                } else {
+                    // "Reagér på tryk"-kontakt: kun når mål == visning. Ved andet mål er en
+                    // handling altid underforstået, så kontakten (og dermed NONE) findes ikke.
+                    // Vises nu OGSÅ for read-only visnings-entiteter (fx en sensor), fordi
+                    // "Åbn app" er en gyldig handling uanset domæne.
+                    if (!targetDiffers) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Checkbox(
+                                checked = reactsToTap,
+                                onCheckedChange = { on ->
+                                    onActionChange(
+                                        when {
+                                            !on -> "NONE"
+                                            canControlHa -> rememberedAction?.takeIf { it in opts } ?: opts.first()
+                                            else -> "OPEN_APP"
+                                        }
+                                    )
+                                },
+                            )
                         }
-                        val showActionChoice = targetDiffers || reactsToTap
-                        if (showActionChoice) {
-                            if (opts.size == 1) {
+                    }
+                    val showActionChoice = targetDiffers || reactsToTap
+                    if (showActionChoice) {
+                        // Selve under-valget (HA-handlinger eller app-vælgeren) — hvad der vises
+                        // afhænger af den aktuelle tilstand (isAppMode).
+                        val subChoice: @Composable () -> Unit = {
+                            if (isAppMode) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            appLabel ?: stringResource(R.string.no_app_selected),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                        if (draft.packageName != null) {
+                                            Text(
+                                                stringResource(R.string.selected_app),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                    TextButton(onClick = onChooseApp) {
+                                        Text(stringResource(if (draft.packageName == null) R.string.choose_app else R.string.change_app))
+                                    }
+                                }
+                            } else if (opts.size == 1) {
                                 Text(
                                     stringResource(R.string.on_tap_label, actionShortLabel(opts[0])),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -220,15 +278,51 @@ internal fun SlotEditorScreen(
                                     }
                                 }
                             }
-                        } else {
-                            // Kontakt FRA (mål == visning): slotten viser kun status.
-                            Text(
-                                stringResource(R.string.slot_view_only_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 2.dp),
-                            )
                         }
+                        // Rykket ind med en lodret streg, så det tydeligt hører til meta-valget ovenfor.
+                        val indentedSubChoice: @Composable () -> Unit = {
+                            Row(modifier = Modifier.height(IntrinsicSize.Min).padding(start = 14.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(2.dp)
+                                        .fillMaxHeight()
+                                        .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(1.dp)),
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) { subChoice() }
+                            }
+                        }
+                        // Meta-valg: styr Home Assistant vs. åbn en app. Under-valget foldes ud LIGE
+                        // under sit eget meta-punkt. Kun vist når HA-styring overhovedet er mulig for
+                        // målet; ellers er "Åbn app" det eneste (og underforståede) valg.
+                        if (canControlHa) {
+                            ActionModeRow(
+                                selected = !isAppMode,
+                                label = stringResource(R.string.action_control_ha),
+                                onClick = {
+                                    val ha = rememberedAction?.takeIf { it in opts } ?: opts.first()
+                                    rememberedAction = ha
+                                    onActionChange(ha)
+                                },
+                            )
+                            if (!isAppMode) indentedSubChoice()
+                            ActionModeRow(
+                                selected = isAppMode,
+                                label = stringResource(R.string.action_open_app_option),
+                                onClick = { onActionChange("OPEN_APP") },
+                            )
+                            if (isAppMode) indentedSubChoice()
+                        } else {
+                            subChoice()
+                        }
+                    } else {
+                        // Kontakt FRA (mål == visning): slotten viser kun status.
+                        Text(
+                            stringResource(R.string.slot_view_only_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 2.dp),
+                        )
                     }
                 }
                 if (draft.action == "TOGGLE" || draft.action == "TRIGGER") {
@@ -253,8 +347,12 @@ internal fun SlotEditorScreen(
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
-                TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) {
-                    Text(if (targetDiffers) stringResource(R.string.choose_other_target) else stringResource(R.string.act_on_other_entity))
+                // "Handl på en anden entitet" giver ikke mening i app-tilstand (handlingen peger
+                // på en app) — skjult dér.
+                if (!isAppMode) {
+                    TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) {
+                        Text(if (targetDiffers) stringResource(R.string.choose_other_target) else stringResource(R.string.act_on_other_entity))
+                    }
                 }
             }
             Spacer(Modifier.padding(8.dp))
@@ -302,7 +400,7 @@ internal fun SlotEditorScreen(
 
             TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cancel)) }
             Spacer(Modifier.padding(2.dp))
-            Button(onClick = onSave, enabled = !invalidTarget, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onSave, enabled = !invalidTarget && !invalidAppChoice, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(if (isEditing) R.string.update_slot else R.string.add_to_widget))
             }
         }

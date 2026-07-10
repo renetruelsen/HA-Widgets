@@ -29,7 +29,6 @@
     <string name="how_to_use_step1">Tryk \'Tilføj dashboard-genvej\' ovenfor</string>
     <string name="how_to_use_step2">Vælg dashboard og visning i konfigurationen</string>
     <string name="how_to_use_step3">Tryk på widget-ikonet på hjemskærmen for at åbne dit dashboard</string>
-    <string name="how_to_use_tip_more_widgets">Der findes mange flere widgets (lys, sensorer, kontakter m.m.) — find dem via telefonens egen \'Tilføj widget\': hold på hjemskærmen → Widgets → HA Widgets.</string>
     <string name="onboarding_intro">Forbind din Home Assistant-instans nedenfor. Du kan også springe dette over og forbinde første gang du tilføjer en widget.</string>
     <string name="token_help_link">Hvordan laver jeg et token?</string>
     <string name="token_help_title">Sådan laver du et Long-Lived Access Token</string>
@@ -137,6 +136,14 @@
     <string name="target_label">Mål: %1$s</string>
     <string name="choose_other_target">Vælg andet mål</string>
     <string name="act_on_other_entity">Handl på en anden enhed</string>
+    <string name="action_open_app">Åbn app</string>
+    <string name="action_control_ha">Styr Home Assistant</string>
+    <string name="action_open_app_option">Åbn app på telefonen</string>
+    <string name="choose_app">Vælg app</string>
+    <string name="change_app">Skift app</string>
+    <string name="selected_app">Valgt app</string>
+    <string name="no_app_selected">Ingen app valgt</string>
+    <string name="app_not_found">App ikke fundet</string>
     <string name="extra_info_section">Ekstra info (%1$d/%2$d)</string>
     <string name="extra_info_room_for_more">Plads til %1$d mere</string>
     <string name="add_extra_entity">+ Tilføj ekstra entitet</string>

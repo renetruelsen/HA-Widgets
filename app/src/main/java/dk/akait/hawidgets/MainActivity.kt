@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenu
@@ -304,20 +303,6 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
                         StepRow(1, stringResource(R.string.how_to_use_step1))
                         StepRow(2, stringResource(R.string.how_to_use_step2))
                         StepRow(3, stringResource(R.string.how_to_use_step3))
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(
-                                Icons.Default.Widgets,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                stringResource(R.string.how_to_use_tip_more_widgets),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             } else {

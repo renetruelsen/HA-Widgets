@@ -38,7 +38,19 @@ internal fun clickModifier(
     actionState: EntityStateEntity?,
     confirmAction: Boolean,
     rangeInputMode: String?,
+    packageName: String? = null,
 ): GlanceModifier {
+    // "Åbn app": åbner en anden app på telefonen — helt uafhængigt af HA-tilstand (placeret FØR
+    // unavailable-guarden nedenfor). Selve launch-intent-opslaget + "app ikke fundet"-fallback sker
+    // i AppLaunchActivity, så et afinstalleret pakkenavn giver en toast frem for et tavst/døende tap.
+    if (action == "OPEN_APP") {
+        val pkg = packageName ?: return base
+        val intent = Intent(context, dk.akait.hawidgets.widget.common.AppLaunchActivity::class.java).apply {
+            putExtra(dk.akait.hawidgets.widget.common.AppLaunchActivity.EXTRA_PACKAGE, pkg)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return base.clickable(actionStartActivity(intent))
+    }
     if (action == "NONE") {
         return base.clickable(
             actionRunCallback<RefreshEntityAction>(

@@ -31,6 +31,9 @@ data class MultiWidgetSlotEntity(
     val rangeInputMode: String? = null,
     // Skjul domæne-ikonet på hoved-rækken — default true (vist), uændret adfærd for eksisterende rækker.
     val showIcon: Boolean = true,
+    // v0.2.72: "Åbn app"-handling (kun hoved-slotten). Når action == "OPEN_APP" peger trykket på
+    // denne pakke i stedet for en HA-handling; displayet forbliver en HA-entitet. Null ellers.
+    val actionPackageName: String? = null,
     // Sekundære info/handlings-chips (v0.2.28) — op til 3 pr. slot, hver med samme
     // visning/handling-uafhængighed som hoved-entiteten selv. Null = chip ikke i brug.
     val secondary1DisplayEntityId: String? = null,
