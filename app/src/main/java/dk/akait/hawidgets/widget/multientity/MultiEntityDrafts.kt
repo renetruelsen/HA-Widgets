@@ -5,7 +5,7 @@ import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.widget.common.compatibleActionsFor
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
 
-internal const val MAX_SECONDARY_ENTITIES = 3
+internal const val MAX_SECONDARY_ENTITIES = 4
 
 /** Samme visning/handling-uafhængighed som [SlotDraft] selv — se docs/widget-settings-spec.md §9. */
 internal data class SecondarySlotDraft(
@@ -90,13 +90,19 @@ internal fun MultiWidgetSlotEntity.secondaryColumns(): List<SecondaryColumns> = 
         secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision,
         secondary3DatetimeFormat, secondary3RangeInputMode, secondary3Label, secondary3ShowIcon,
     ),
+    SecondaryColumns(
+        secondary4DisplayEntityId, secondary4DisplayDomain, secondary4ActionEntityId, secondary4ActionDomain,
+        secondary4Action, secondary4ShowValue, secondary4ConfirmAction, secondary4DisplayPrecision,
+        secondary4DatetimeFormat, secondary4RangeInputMode, secondary4Label, secondary4ShowIcon,
+    ),
 )
 
-/** Skriver op til 3 sekundær-pladser tilbage til de flade kolonner (resten nulstilles). */
+/** Skriver op til 4 sekundær-pladser tilbage til de flade kolonner (resten nulstilles). */
 internal fun MultiWidgetSlotEntity.withSecondaryColumns(cols: List<SecondaryColumns>): MultiWidgetSlotEntity {
     val c0 = cols.getOrNull(0)
     val c1 = cols.getOrNull(1)
     val c2 = cols.getOrNull(2)
+    val c3 = cols.getOrNull(3)
     return copy(
         secondary1DisplayEntityId = c0?.displayEntityId, secondary1DisplayDomain = c0?.displayDomain,
         secondary1ActionEntityId = c0?.actionEntityId, secondary1ActionDomain = c0?.actionDomain,
@@ -113,6 +119,11 @@ internal fun MultiWidgetSlotEntity.withSecondaryColumns(cols: List<SecondaryColu
         secondary3Action = c2?.action, secondary3ShowValue = c2?.showValue, secondary3ConfirmAction = c2?.confirmAction,
         secondary3DisplayPrecision = c2?.displayPrecision, secondary3DatetimeFormat = c2?.datetimeFormat,
         secondary3RangeInputMode = c2?.rangeInputMode, secondary3Label = c2?.label, secondary3ShowIcon = c2?.showIcon,
+        secondary4DisplayEntityId = c3?.displayEntityId, secondary4DisplayDomain = c3?.displayDomain,
+        secondary4ActionEntityId = c3?.actionEntityId, secondary4ActionDomain = c3?.actionDomain,
+        secondary4Action = c3?.action, secondary4ShowValue = c3?.showValue, secondary4ConfirmAction = c3?.confirmAction,
+        secondary4DisplayPrecision = c3?.displayPrecision, secondary4DatetimeFormat = c3?.datetimeFormat,
+        secondary4RangeInputMode = c3?.rangeInputMode, secondary4Label = c3?.label, secondary4ShowIcon = c3?.showIcon,
     )
 }
 

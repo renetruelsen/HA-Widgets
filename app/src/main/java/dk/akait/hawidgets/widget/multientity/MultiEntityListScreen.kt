@@ -247,5 +247,6 @@ private fun secondarySlotSummaries(slot: MultiWidgetSlotEntity): List<Pair<Int, 
         summaryFor(slot.secondary1DisplayEntityId, slot.secondary1DisplayDomain, slot.secondary1ActionEntityId, slot.secondary1Action),
         summaryFor(slot.secondary2DisplayEntityId, slot.secondary2DisplayDomain, slot.secondary2ActionEntityId, slot.secondary2Action),
         summaryFor(slot.secondary3DisplayEntityId, slot.secondary3DisplayDomain, slot.secondary3ActionEntityId, slot.secondary3Action),
+        summaryFor(slot.secondary4DisplayEntityId, slot.secondary4DisplayDomain, slot.secondary4ActionEntityId, slot.secondary4Action),
     )
 }

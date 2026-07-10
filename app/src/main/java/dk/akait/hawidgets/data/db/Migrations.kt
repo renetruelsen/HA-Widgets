@@ -138,3 +138,23 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         db.execSQL("DROP TABLE IF EXISTS entity_widget")
     }
 }
+
+/** v11 → v12: 4. sekundær-chip pr. slot (12 nye nullable kolonner, samme mønster som secondary1-3).
+ * `secondary4ShowIcon` er nullable (null = default = vist), præcis som secondary1-3ShowIcon fra v10.
+ * Additiv — eksisterende slots får null i alle secondary4-felter (chip ikke i brug). */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4DisplayEntityId TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4DisplayDomain TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4ActionEntityId TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4ActionDomain TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4Action TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4ShowValue INTEGER")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4ConfirmAction INTEGER")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4DisplayPrecision INTEGER")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4DatetimeFormat TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4RangeInputMode TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4Label TEXT")
+        db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN secondary4ShowIcon INTEGER")
+    }
+}

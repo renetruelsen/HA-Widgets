@@ -79,13 +79,14 @@ private data class MultiWidgetViewState(
     val states: Map<String, EntityStateEntity?>,
 )
 
-/** Alle entity-id'er en slot kan referere (visning/handling for hoved-entiteten + op til 3
+/** Alle entity-id'er en slot kan referere (visning/handling for hoved-entiteten + op til 4
  * sekundær-chips) — bruges til at afgøre hvilke entiteter der skal observeres/præloades. */
 internal fun MultiWidgetSlotEntity.allEntityIds(): List<String> = listOfNotNull(
     displayEntityId, actionEntityId,
     secondary1DisplayEntityId, secondary1ActionEntityId,
     secondary2DisplayEntityId, secondary2ActionEntityId,
     secondary3DisplayEntityId, secondary3ActionEntityId,
+    secondary4DisplayEntityId, secondary4ActionEntityId,
 )
 
 private fun statesFlow(
