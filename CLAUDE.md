@@ -1133,6 +1133,42 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     fuldført (`user_version=12`, alle 12 `secondary4`-kolonner bekræftet i skemaet på enheden),
     app starter uden crash. Selve config-flowet (tilføj/vis den 4. chip interaktivt i UI) ikke
     kørt igennem denne session — kodestien er identisk med de 3 verificerede eksisterende chips.
+- ✅ **v0.2.72 — MultiEntityWidget: "Åbn app"-handling på hoved-slotten (2026-07-10, brugerønske,
+  brainstorm+mockup-gate, faser ellers sprunget over):**
+  - **Baggrund:** nogle enheder (fx en el-bil) kan HA ikke styre fuldt — funktionen bor i
+    producentens egen app. Bruger ønskede at kunne vise en HA-entitet (fx `sensor.car_battery`)
+    men lade selve trykket åbne en app. Konceptet holdes intakt (HA-widget) — kun HANDLINGEN er en
+    app-genvej. Afklaret via brainstorming + klikbart mockup (design godkendt af bruger). Scope:
+    **kun hoved-slotten** (ikke sekundær-chips), **kun apps med launcher-genvej** (ikke
+    QUERY_ALL_PACKAGES) — begge brugervalg.
+  - **Data:** ny nullable `actionPackageName`-kolonne på hoved-slotten + **Room-migration v12→v13**
+    (`MIGRATION_12_13`, additiv). Ny action-værdi `"OPEN_APP"`; for den sættes action-mål-kolonnerne
+    til visningens (så `targetDiffers=false` ved genindlæsning) og pakkenavnet bæres separat
+    (`toSlotEntity`/`draftFromSlot` i `MultiEntityDrafts.kt`, `SlotDraft.packageName`).
+  - **Config-UI (`MultiEntitySlotEditor.kt`):** i Handling-sektionen vælger man nu — når "Reagér på
+    tryk" er til — mellem **Styr Home Assistant** (uændret HA-under-valg: toggle/skyder/udløs/…) og
+    **Åbn app på telefonen** (app-vælger-knap). Meta-valget vises kun når HA-styring overhovedet er
+    mulig; for read-only visnings-entiteter (fx en sensor) er "Åbn app" det eneste (underforståede)
+    valg — derfor vises "Reagér på tryk" nu OGSÅ for read-only display. Under-valget foldes ud LIGE
+    under sit eget meta-punkt med en lodret grupperings-streg (2 brugerfeedback-iterationer). Gem
+    blokeres hvis app-handling valgt men ingen app endnu. "Handl på en anden entitet" skjult i
+    app-tilstand.
+  - **App-vælger (`MultiEntityAppPicker.kt`, nyt `Step.AppPicker`):** liste over installerede apps
+    med launcher-genvej (ikon via `Drawable.toBitmap()` → `ImageBitmap`, søgbar). Kræver
+    `<queries>` for MAIN/LAUNCHER i manifestet (Android 11+).
+  - **Tryk (`MultiEntityClickModifier.kt`):** `OPEN_APP`-gren placeret FØR HA-state-guarden (app-tryk
+    er uafhængigt af HA-tilstand) → ny `AppLaunchActivity` (`widget/common/`, usynlig bro-aktivitet):
+    slår `getLaunchIntentForPackage` op og starter app'en, eller viser en "App ikke fundet"-toast
+    hvis afinstalleret (intet tavst/døende tap). Chips sender `packageName=null` (understøtter ikke
+    OPEN_APP).
+  - **Sideoprydning:** fjernet den nu-forældede onboarding-hjælpetekst "Der findes mange flere
+    widgets…" (`how_to_use_tip_more_widgets` + Row/divider/`Widgets`-ikon i `MainActivity.kt`) —
+    ikke aktuel efter widget-konvergeringen (v0.2.68, kun 2 widgets tilbage). Alle nye strenge på
+    3 sprog.
+  - **QA (Galaxy S23, `R3CWC00JY4M`):** build grøn, `adb install -r` OK, migration v12→v13 fuldført
+    (`user_version=13`, `actionPackageName`-kolonne i skemaet), app starter uden crash. **v0.2.72
+    funktionelt godkendt af bruger på S23.** Grupperings-streg + "foldes ud under eget meta-punkt"
+    bruger-bekræftet OK.
 
 ## Næste skridt
 
