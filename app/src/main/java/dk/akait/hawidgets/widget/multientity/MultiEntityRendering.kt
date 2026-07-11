@@ -337,7 +337,9 @@ private fun SlotRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     chips.forEachIndexed { index, chip ->
                         if (index > 0) Spacer(modifier = GlanceModifier.width(CHIP_GAP_DP.dp))
-                        SecondaryChip(context, chip, states, rowHeating = heating)
+                        // rowHeating skal matche hvad rækken FAKTISK tegner: unavailable trumfer heating
+                        // (rækken bliver grå, ikke orange), så chips må ikke arve heating-paletten der.
+                        SecondaryChip(context, chip, states, rowHeating = heating && !isUnavailable)
                     }
                 }
             }
