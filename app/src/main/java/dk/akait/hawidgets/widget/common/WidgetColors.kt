@@ -58,6 +58,35 @@ object WidgetColors {
     val heatingFill: ColorProvider = ColorProvider(Color(0xFFFF6D00))
     val onHeating: ColorProvider = ColorProvider(Color(0xFFFFFFFF))
 
+    /**
+     * Chip-flade: subtilt MØRKERE end hoved-rækkens neutrale baggrund, så en chip løfter sig visuelt
+     * fra rækken (de deler ellers samme neutrale farve og flyder sammen). Realiseret som en let mørk
+     * scrim (samme værdi i begge temaer) der lægges OVEN PÅ rækkens baggrund → adapterer automatisk
+     * til den underliggende farve, inkl. Blå+system's dynamiske Material You-flade. Fast (ikke
+     * konfigurerbar) i v0.2.73; en fremtidig tema-editor kan gøre den bruger-styret.
+     */
+    val chipBackground: ColorProvider = ColorProvider(Color(0x22000000))
+
+    /** Dæmpet ("mørkere hvid") tekst/ikon på en chip — nedtonet ift. rækkens onSurfaceVariant, så
+     * chip-indhold underordner sig hoved-rækken. Fast lys/mørk-par, tvunget-tema-bevidst. */
+    fun chipDimText(context: Context): ColorProvider =
+        themed(context, day = Color(0xFF4A535B), night = Color(0xFFAEB6BA))
+
+    /** Nedtonet grå for en UTILGÆNGELIG entitet (v0.2.73: erstatter den fulde røde error-container
+     * — en offline entitet er ikke en fejl brugeren skal rette). Fast lys/mørk-par. */
+    fun fadedContent(context: Context): ColorProvider =
+        themed(context, day = Color(0xFF9AA1A8), night = Color(0xFF7A8085))
+
+    /** Fælles lys/mørk-vælger: tvinger en side ved forced light/dark (så farven matcher
+     * GlanceTheme, som også tvinges), ellers en dynamisk day/night-provider. Samme mønster som
+     * [frameBackground]/[refreshOverlay]. */
+    private fun themed(context: Context, day: Color, night: Color): ColorProvider =
+        when (SecureStore.get(context).themeMode) {
+            SecureStore.THEME_LIGHT -> ColorProvider(day)
+            SecureStore.THEME_DARK -> ColorProvider(night)
+            else -> androidx.glance.color.ColorProvider(day = day, night = night)
+        }
+
     /** [ColorProviders] svarende til det aktive farvetema + tema-tilstand. Se [resolveColorMode]
      * for selve beslutningslogikken (testet separat uden Context). */
     fun providers(context: Context): ColorProviders {
