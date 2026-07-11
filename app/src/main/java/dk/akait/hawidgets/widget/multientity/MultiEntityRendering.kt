@@ -370,7 +370,10 @@ private fun SecondaryChip(
     val actionState = states[chip.actionEntityId]
     val isUnavailable = displayState?.state == "unavailable" ||
         (chip.action != "NONE" && actionState?.state == "unavailable")
-    val stateful = chip.action != "NONE" && hasOnOffState(chip.actionDomain)
+    // Farve-tilstanden følger action-målets VÆRDI, ikke om chippen har en handling — actionEntityId
+    // er allerede = displayEntityId når action=="NONE", så et rent visnings-domæne med on/off-state
+    // (fx en binary_sensor eller lock uden handling) skal stadig farves efter sin faktiske tilstand.
+    val stateful = hasOnOffState(chip.actionDomain)
     val isActive = stateful && actionState != null && isActiveState(chip.actionDomain, actionState.state)
     val heating = isHeating(chip.displayDomain, displayState) ||
         (chip.action != "NONE" && isHeating(chip.actionDomain, actionState))
