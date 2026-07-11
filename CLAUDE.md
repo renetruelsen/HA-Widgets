@@ -1169,6 +1169,47 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (`user_version=13`, `actionPackageName`-kolonne i skemaet), app starter uden crash. **v0.2.72
     funktionelt godkendt af bruger på S23.** Grupperings-streg + "foldes ud under eget meta-punkt"
     bruger-bekræftet OK.
+- ✅ **v0.2.73 — MultiEntityWidget: active-styling flyttet fra fuld baggrund til ikon+status
+  ("D"-stil) (2026-07-11, brugerønske, dev-pipeline med mockup-gates + subagent-driven-development):**
+  - **Baggrund:** en aktiv/tændt on/off-entitet fik fuld solid primary-baggrund — brugeren oplevede
+    det som for voldsomt (særligt device_tracker "nogen hjemme"). HA's egne bubble-cards farver i
+    stedet ikon+tekst og lader baggrunden være neutral. Ændringen flytter aktiv-signalet fra
+    baggrunden til indholdet. Ren rendering — ingen Room-migration, ingen config-UI, ingen ny data.
+    Proces: brainstorm → klikbare mockups (begge temaer) med companion → spec → plan → 6 subagent-
+    tasks (impl + task-review pr. task). Spec: `docs/superpowers/specs/2026-07-11-widget-active-styling-design.md`,
+    plan: `docs/superpowers/plans/2026-07-11-widget-active-styling.md`.
+  - **Endelig styling (beslutningstræ afklaret med bruger via mockups):**
+    - **Hoved-slot aktiv = "D":** neutral baggrund, ikon+status i `primary`-farve, label neutral.
+      Aldrig fuld primary-baggrund på en hoved-række længere. (Vurderet mod "B" = også label farvet,
+      og "C" = kun ikon — D er kompromiset tydelighed/ro.)
+    - **Chip TOGGLE tændt = fuld primary** (skal skille sig ud som kontakt). Øvrige aktive chips = D
+      på chip-flade. Inaktiv/info/TOGGLE-slukket chip = dæmpet.
+    - **Chip-adskillelse:** chips får en subtilt mørkere flade (`WidgetColors.chipBackground`, translucent
+      scrim = adapterer til underliggende flade, begge temaer) + dæmpet tekst, så en chip løfter sig fra
+      rækken (de delte samme neutrale farve før og flød sammen). Fast (ikke konfigurerbar) i denne omgang.
+    - **Climate der varmer** (`hvac_action=="heating"`) = **fuld orange** `#FF6D00` (uændret — bevidst
+      genbesøgt: den skal være det eneste "høje" element nu hvor alt andet er stilfærdigt, "nu varmes
+      der sgu'").
+    - **Utilgængelig** = nedtonet grå (`WidgetColors.fadedContent`) — skiftet fra fuld rød error-container
+      (en offline entitet er ikke en fejl brugeren skal rette).
+    - **Ingen borders** (CTA-affordance fravalgt: opsætter=bruger, ingen fremmed at "lære").
+  - **Arkitektur (struktureret til fremtidig tema-editor):** ny pure, unit-testbar
+    `resolveStyle(isChip, isActive, isToggle, heating, unavailable): StyleTokens` (`WidgetSlotStyle.kt`,
+    13 tests) afgør semantiske `ColorRole`'er; `@Composable colorFor(role, context)` (`MultiEntityRendering.kt`)
+    oversætter → faktiske `ColorProvider`'e (aktive fra `GlanceTheme.colors`, neutrale/faded/chip fra
+    `WidgetColors`). `SlotRow`/`SecondaryChip` læser kun fladt resultat. `StyleTokens.showBorder` er altid
+    `false` nu, men den 2-lags `StatefulSurface`-border-kapacitet er BEVARET (`@Suppress("unused")`) så en
+    fremtidig tema-editor bare skal tænde flaget. Gammel `surfaceFor`/`Surface` fjernet.
+  - **QA:** clean build + 68 unit-tests grønne (55 eksisterende + 13 nye). Whole-branch review + per-task
+    review (spec+kvalitet) rene. **Emulator (`pixel_test`):** APK installeret, app starter uden crash,
+    placeret multi-widget (widget 15) renderer korrekt med neutral/inaktiv styling + synlig chip-adskillelse
+    (chips på mørkere flade end rækken); app-tema-vælger virker (UI skiftede til lyst). **IKKE visuelt
+    bekræftet på emulator:** aktiv-D / orange / faded live-tilstande + widget-tema-repaint — Glance's
+    fire-and-forget `update()` + emulatorens Nexus-launcher-caching regenererede ikke widget-RemoteViews
+    trods `updateAllWidgets()` (kendt emulator-quirk, virker på rigtige enheder; injiceret testtilstand +
+    launcher-genstart gav ingen repaint). Disse tilstande er dækket af `resolveStyle`-unit-tests (hver
+    kombination) + colorFor-mapper. **Device-QA på Galaxy S23 (live states, rigtig launcher) udføres af
+    brugeren selv** — plan-beslutning. `code-review` køres inden merge.
 
 ## Næste skridt
 
