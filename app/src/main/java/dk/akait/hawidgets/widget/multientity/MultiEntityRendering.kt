@@ -384,23 +384,26 @@ private fun SecondaryChip(
 ) {
     val displayState = states[chip.displayEntityId]
     val actionState = states[chip.actionEntityId]
-    // Utilgængelig når enten visnings-entiteten ELLER (ved en rigtig handling) action-målet er
-    // "unavailable" — samme konsistens som SlotRow: en chip der viser A men handler på et dødt B
-    // får error-styling i stedet for at se tap-bar ud (clickModifier dropper klikket tavst).
     val isUnavailable = displayState?.state == "unavailable" ||
         (chip.action != "NONE" && actionState?.state == "unavailable")
-    // "Tændt" følger ACTION-målet (ikke visningen) for on/off-domæner — retter fejlen hvor en
-    // toggle-chip der viste en anden entitet aldrig blev fuld-farvet.
     val stateful = chip.action != "NONE" && hasOnOffState(chip.actionDomain)
     val isActive = stateful && actionState != null && isActiveState(chip.actionDomain, actionState.state)
-    // Rød når climate'en (visnings- eller action-mål) faktisk varmer — samme som hoved-rækken.
     val heating = isHeating(chip.displayDomain, displayState) ||
         (chip.action != "NONE" && isHeating(chip.actionDomain, actionState))
-    val surface = surfaceFor(stateful = stateful, active = isActive, unavailable = isUnavailable, heating = heating, isChip = true)
+
+    val tokens = resolveStyle(
+        isChip = true,
+        isActive = isActive,
+        isToggle = chip.action == "TOGGLE",
+        heating = heating,
+        unavailable = isUnavailable,
+    )
+    val bgColor = colorFor(tokens.bg, context)
+    val iconColor = colorFor(tokens.icon, context)
+    val labelColor = colorFor(tokens.label, context)
+    val valueColor = colorFor(tokens.status, context)
 
     val labelText = chip.label
-    // Ikon + (custom label og/eller værdi på 2 linjer). Bruger kan vise label, værdi, begge eller
-    // ingen af delene — uafhængige config-valg (v0.2.42).
     val valueText = if (chip.showValue) {
         displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat)
     } else null
@@ -413,17 +416,17 @@ private fun SecondaryChip(
                     provider = ImageProvider(domainIconResId(chip.displayDomain)),
                     contentDescription = labelText.ifEmpty { chip.displayEntityId },
                     modifier = GlanceModifier.size(14.dp),
-                    colorFilter = ColorFilter.tint(surface.content),
+                    colorFilter = ColorFilter.tint(iconColor),
                 )
                 if (hasText) Spacer(modifier = GlanceModifier.width(4.dp))
             }
             if (hasText) {
                 Column {
                     if (labelText.isNotEmpty()) {
-                        Text(labelText, style = TextStyle(color = surface.content, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                        Text(labelText, style = TextStyle(color = labelColor, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                     }
                     if (valueText != null) {
-                        Text(valueText, style = TextStyle(color = surface.content, fontSize = 11.sp), maxLines = 1)
+                        Text(valueText, style = TextStyle(color = valueColor, fontSize = 11.sp), maxLines = 1)
                     }
                 }
             }
@@ -443,27 +446,17 @@ private fun SecondaryChip(
         rangeInputMode = chip.rangeInputMode,
     )
 
-    // Eksplicit 48dp højde — Android-tilgængelighedens tap-target-minimum. Ikon vist: asymmetrisk
-    // 6dp venstre / 8dp højre (v0.2.60, kompenserer ikonets egen indre "luft"). Ikon skjult:
-    // symmetrisk 8dp begge sider (v0.2.59).
-    val chipRingPad = if (chip.showIcon) {
-        GlanceModifier.padding(start = CHIP_INNER_H_PAD_DP.dp, end = CHIP_INNER_H_PAD_END_DP.dp)
-    } else {
-        GlanceModifier.padding(horizontal = CHIP_INNER_H_PAD_NO_ICON_DP.dp)
-    }
-    val chipSinglePad = if (chip.showIcon) {
+    // Asymmetrisk padding når ikon vises (v0.2.60): 6dp før ikon / 8dp efter tekst; symmetrisk 8dp
+    // uden ikon (v0.2.59). Border altid false i v0.2.73 → ét fyldt lag.
+    val chipPad = if (chip.showIcon) {
         GlanceModifier.padding(start = CHIP_SINGLE_H_PAD_DP.dp, end = CHIP_SINGLE_H_PAD_END_DP.dp)
     } else {
         GlanceModifier.padding(horizontal = CHIP_SINGLE_H_PAD_NO_ICON_DP.dp)
     }
-    StatefulSurface(
-        surface = surface,
-        cornerDp = CHIP_CORNER_DP,
-        outerBase = GlanceModifier.height(48.dp),
-        innerBase = GlanceModifier.fillMaxHeight(),
-        ringInnerPad = chipRingPad,
-        singlePad = chipSinglePad,
-        makeClickable = { withClick(it) },
-        content = chipContent,
-    )
+    Box(
+        modifier = withClick(
+            GlanceModifier.height(48.dp).background(bgColor).cornerRadius(CHIP_CORNER_DP.dp).then(chipPad),
+        ),
+        contentAlignment = Alignment.Center,
+    ) { chipContent() }
 }
