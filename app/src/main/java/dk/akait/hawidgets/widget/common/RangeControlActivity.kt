@@ -170,15 +170,21 @@ class RangeControlActivity : ComponentActivity() {
                             else -> "%"
                         }
 
+                        // Trin-størrelsen (0.5 for et lille range som climate 16–30°C, ellers 1.0)
+                        // afgør både −/+ knapperne OG hvor mange decimaler værdien vises med: et
+                        // brøkdels-trin (0.5) skal vises med 1 decimal, så en halv grad ikke
+                        // trunkeres til heltal (fx 23.5 → "23"). Bruges også i applyStep nedenfor.
+                        val step = stepFor(minValue, maxValue)
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            val displayValue = if (domain == "number" || domain == "input_number") {
-                                formatPreciseValue(sliderValue)
-                            } else {
-                                sliderValue.toInt().toString()
+                            val displayValue = when {
+                                domain == "number" || domain == "input_number" -> formatPreciseValue(sliderValue)
+                                step < 1.0 -> formatOneDecimal(sliderValue)
+                                else -> sliderValue.toInt().toString()
                             }
                             Text(
                                 "$valueLabel: $displayValue$unitSuffix",
@@ -192,11 +198,11 @@ class RangeControlActivity : ComponentActivity() {
                         }
 
                         // −/+ trin-knapper flankerer slideren (Task 13, variant B). Trin-størrelsen
-                        // afledes af range-bredden (stepFor); et tryk snapper til nærmeste trin og
-                        // flytter ét trin (stepValue). Både knap og direkte slider-træk går gennem
-                        // SAMME præcise Double-værdi til sendRangeCommand — number/input_number
-                        // bevarer dermed decimaler (v0.2.34) uændret.
-                        val step = stepFor(minValue, maxValue)
+                        // (step, beregnet ovenfor) afledes af range-bredden (stepFor); et tryk
+                        // snapper til nærmeste trin og flytter ét trin (stepValue). Både knap og
+                        // direkte slider-træk går gennem SAMME præcise Double-værdi til
+                        // sendRangeCommand — number/input_number bevarer dermed decimaler (v0.2.34)
+                        // uændret.
                         val controlsEnabled = domain == "number" || domain == "input_number" || isOn
                         fun applyStep(direction: Int) {
                             val next = stepValue(sliderValue.toDouble(), direction, step, minValue, maxValue)
@@ -238,3 +244,9 @@ private fun formatPreciseValue(value: Float): String {
     val rounded = String.format(java.util.Locale.ROOT, "%.2f", value).trimEnd('0').trimEnd('.')
     return rounded.ifEmpty { "0" }
 }
+
+/** Viser altid præcis 1 decimal (fx "23.5", "24.0") for et brøkdels-trin (0.5) som climate — så en
+ * halv grad ikke trunkeres til heltal. Locale.ROOT tvinger '.' som separator, konsistent med
+ * [formatPreciseValue] og de værdier vi sender til Home Assistant. */
+private fun formatOneDecimal(value: Float): String =
+    String.format(java.util.Locale.ROOT, "%.1f", value)
