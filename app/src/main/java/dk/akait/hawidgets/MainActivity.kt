@@ -427,7 +427,6 @@ private fun SettingsSheet(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             val store = remember { SecureStore.get(context) }
-            val scope = rememberCoroutineScope()
             var themeMode by remember { mutableStateOf(store.themeMode) }
             ThemeRow(currentMode = themeMode) { mode ->
                 store.themeMode = mode
@@ -435,7 +434,7 @@ private fun SettingsSheet(
                 // Widgets læser IKKE Room for tema-valget (det bor i SecureStore), så en
                 // reaktiv Flow kan ikke drive gen-render. Tving derfor hver placeret widget
                 // til at gen-tegne via updateAll() (ADR-5).
-                scope.launch { updateAllWidgets(context) }
+                updateAllWidgets(context)
                 // App-UI'et gen-læser themeMode i HaWidgetsTheme ved recomposition —
                 // recreate() sikrer at HELE activity-træet (inkl. denne sheet) skifter tema.
                 (context as? android.app.Activity)?.recreate()
@@ -448,7 +447,7 @@ private fun SettingsSheet(
                 // Samme begrundelse som ThemeRow/LanguageRow (ADR-5): widgets observerer ikke
                 // SecureStore reaktivt, så en eksplicit updateAll() er nødvendig. Ingen recreate()
                 // her — farvetemaet påvirker KUN widgets, ikke app-UI'et (jf. spec).
-                scope.launch { updateAllWidgets(context) }
+                updateAllWidgets(context)
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -460,7 +459,7 @@ private fun SettingsSheet(
                     currentTag = tag
                     // Widgets gen-læser ikke locale reaktivt (samme begrundelse som tema, ADR-5) —
                     // uden dette ville placerede widgets først skifte sprog ved næste periodiske sync.
-                    scope.launch { updateAllWidgets(context) }
+                    updateAllWidgets(context)
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
@@ -630,10 +629,14 @@ private fun ColorThemeRow(currentTheme: String, onSelect: (String) -> Unit) {
     )
 }
 
-/** Tving alle placerede Glance-widgets til at gen-tegne efter et tema-skift. Én linje pr.
- * GlanceAppWidget-klasse (jf. AndroidManifest's <receiver>-liste). */
-private suspend fun updateAllWidgets(context: android.content.Context) {
-    val app = context.applicationContext
-    MultiEntityWidget().updateAll(app)
-    ShortcutWidget().updateAll(app)
+/** Tving alle placerede Glance-widgets til at gen-tegne efter et tema-/farve-/sprog-skift. Én linje
+ * pr. GlanceAppWidget-klasse (jf. AndroidManifest's <receiver>-liste). Kører på [HaWidgetsApp.appScope]
+ * — IKKE en composable-scope — så arbejdet overlever det `recreate()` et tema-skift udløser (ellers
+ * blev opdateringen annulleret midt i, og kun nogle widgets nåede at gen-tegne). */
+private fun updateAllWidgets(context: android.content.Context) {
+    val app = context.applicationContext as HaWidgetsApp
+    app.appScope.launch {
+        MultiEntityWidget().updateAll(app)
+        ShortcutWidget().updateAll(app)
+    }
 }
