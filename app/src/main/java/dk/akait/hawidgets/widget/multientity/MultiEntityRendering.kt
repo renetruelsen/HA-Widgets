@@ -105,6 +105,21 @@ private fun surfaceFor(stateful: Boolean, active: Boolean, unavailable: Boolean,
     }
 }
 
+/** Oversætter en semantisk [ColorRole] til en faktisk Glance-[ColorProvider]. Aktive farver læses
+ * fra GlanceTheme (respekterer farvetema); neutrale/faded/chip-flader fra WidgetColors. */
+@Composable
+private fun colorFor(role: ColorRole, context: Context): ColorProvider = when (role) {
+    ColorRole.PRIMARY -> GlanceTheme.colors.primary
+    ColorRole.ON_PRIMARY -> GlanceTheme.colors.onPrimary
+    ColorRole.ROW_BG -> GlanceTheme.colors.surfaceVariant
+    ColorRole.NEUTRAL -> GlanceTheme.colors.onSurfaceVariant
+    ColorRole.CHIP_BG -> WidgetColors.chipBackground
+    ColorRole.CHIP_DIM -> WidgetColors.chipDimText(context)
+    ColorRole.FADED -> WidgetColors.fadedContent(context)
+    ColorRole.HEATING_BG -> WidgetColors.heatingFill
+    ColorRole.ON_HEATING -> WidgetColors.onHeating
+}
+
 /** True når en climate-entitet FAKTISK varmer lige nu (hvac_action == "heating"). Kun climate-
  * domænet kan give true — øvrige domæner rapporterer ikke hvac_action. */
 private fun isHeating(domain: String, state: EntityStateEntity?): Boolean =
@@ -285,22 +300,23 @@ private fun SlotRow(
 ) {
     val displayState = states[slot.displayEntityId]
     val actionState = states[slot.actionEntityId]
-    // Utilgængelig når enten visnings-entiteten ELLER (ved en rigtig handling) action-målet er
-    // "unavailable" — så en slot der viser A men handler på et dødt B får et visuelt signal, i
-    // stedet for at se tap-bar ud mens clickModifier tavst dropper klikket.
     val isUnavailable = displayState?.state == "unavailable" ||
         (slot.action != "NONE" && actionState?.state == "unavailable")
     val isActive = displayState != null && isActiveState(slot.displayDomain, displayState.state)
-    // Rød når climate'en (uanset om den er visnings- eller action-entiteten) faktisk varmer.
     val heating = isHeating(slot.displayDomain, displayState) ||
         (slot.action != "NONE" && isHeating(slot.actionDomain, actionState))
-    val surface = surfaceFor(
-        stateful = hasOnOffState(slot.displayDomain),
-        active = isActive,
-        unavailable = isUnavailable,
-        heating = heating,
+
+    val tokens = resolveStyle(
         isChip = false,
+        isActive = isActive,
+        isToggle = false,
+        heating = heating,
+        unavailable = isUnavailable,
     )
+    val bgColor = colorFor(tokens.bg, context)
+    val iconColor = colorFor(tokens.icon, context)
+    val labelColor = colorFor(tokens.label, context)
+    val statusColor = colorFor(tokens.status, context)
 
     val label = slot.label.ifEmpty {
         friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: slot.displayEntityId
@@ -316,13 +332,13 @@ private fun SlotRow(
                     provider = ImageProvider(domainIconResId(slot.displayDomain)),
                     contentDescription = label,
                     modifier = GlanceModifier.size(24.dp),
-                    colorFilter = ColorFilter.tint(surface.content),
+                    colorFilter = ColorFilter.tint(iconColor),
                 )
                 Spacer(modifier = GlanceModifier.width(10.dp))
             }
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(label, style = TextStyle(color = surface.content, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                Text(statusText, style = TextStyle(color = surface.content, fontSize = 11.sp), maxLines = 1)
+                Text(label, style = TextStyle(color = labelColor, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                Text(statusText, style = TextStyle(color = statusColor, fontSize = 11.sp), maxLines = 1)
             }
             if (chips.isNotEmpty()) {
                 Spacer(modifier = GlanceModifier.width(8.dp))
@@ -350,16 +366,14 @@ private fun SlotRow(
         packageName = slot.actionPackageName,
     )
 
-    StatefulSurface(
-        surface = surface,
-        cornerDp = ROW_CORNER_DP,
-        outerBase = GlanceModifier.fillMaxWidth(),
-        innerBase = GlanceModifier.fillMaxWidth(),
-        ringInnerPad = GlanceModifier.padding(ROW_INNER_PAD_DP.dp),
-        singlePad = GlanceModifier.padding(ROW_SINGLE_PAD_DP.dp),
-        makeClickable = { withClick(it) },
-        content = rowContent,
-    )
+    // Border altid false i v0.2.73 → altid ét fyldt lag. StatefulSurface bevares (Task 5) til den
+    // fremtidige border-kapacitet; her renderes det enkle lag direkte.
+    Box(
+        modifier = withClick(
+            GlanceModifier.fillMaxWidth().background(bgColor).cornerRadius(ROW_CORNER_DP.dp).padding(ROW_SINGLE_PAD_DP.dp),
+        ),
+        contentAlignment = Alignment.Center,
+    ) { rowContent() }
 }
 
 @Composable
