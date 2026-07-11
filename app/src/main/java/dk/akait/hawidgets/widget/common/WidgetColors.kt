@@ -58,6 +58,16 @@ object WidgetColors {
     val heatingFill: ColorProvider = ColorProvider(Color(0xFFFF6D00))
     val onHeating: ColorProvider = ColorProvider(Color(0xFFFFFFFF))
 
+    /** Chips PÅ en varmende (fuld orange) hoved-række bruger disse FASTE farver (tema-uafhængige,
+     * ligesom [heatingFill]/[onHeating] — den orange baggrund er selv tema-uafhængig). En
+     * TOGGLE-tændt chip får den fulde [heatingChipAccent]-flade (skiller sig ud som kontakt); alt
+     * andet chip-indhold (aktiv D, info, TOGGLE-slukket) bruger [heatingChipDim] på den normale
+     * chip-scrim. Utilgængelig bruger [heatingChipUnavailable] (lysere end den normale FADED-grå,
+     * som ville være ulæselig på orange). Nuancer valgt via mockup-sammenligning m. bruger (v0.2.73). */
+    val heatingChipAccent: ColorProvider = ColorProvider(Color(0xFFFF9F4D))
+    val heatingChipDim: ColorProvider = ColorProvider(Color(0xFFFFE8D6))
+    val heatingChipUnavailable: ColorProvider = ColorProvider(Color(0xFFD8D3CE))
+
     /**
      * Chip-flade: subtilt MØRKERE end hoved-rækkens neutrale baggrund, så en chip løfter sig visuelt
      * fra rækken (de deler ellers samme neutrale farve og flyder sammen). Realiseret som en let mørk

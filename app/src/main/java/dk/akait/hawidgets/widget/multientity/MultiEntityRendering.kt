@@ -29,6 +29,7 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextDecoration
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import dk.akait.hawidgets.R
@@ -101,7 +102,14 @@ private fun colorFor(role: ColorRole, context: Context): ColorProvider = when (r
     ColorRole.FADED -> WidgetColors.fadedContent(context)
     ColorRole.HEATING_BG -> WidgetColors.heatingFill
     ColorRole.ON_HEATING -> WidgetColors.onHeating
+    ColorRole.HEATING_ACCENT -> WidgetColors.heatingChipAccent
+    ColorRole.HEATING_DIM -> WidgetColors.heatingChipDim
+    ColorRole.HEATING_UNAVAIL -> WidgetColors.heatingChipUnavailable
 }
+
+/** Overstregning gælder KUN label/navnet (aldrig status/værdi), og kun ved utilgængelig (v0.2.73). */
+private fun labelDecoration(tokens: StyleTokens): TextDecoration =
+    if (tokens.strikeLabel) TextDecoration.LineThrough else TextDecoration.None
 
 /** True når en climate-entitet FAKTISK varmer lige nu (hvac_action == "heating"). Kun climate-
  * domænet kan give true — øvrige domæner rapporterer ikke hvac_action. */
@@ -321,7 +329,7 @@ private fun SlotRow(
                 Spacer(modifier = GlanceModifier.width(10.dp))
             }
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(label, style = TextStyle(color = labelColor, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                Text(label, style = TextStyle(color = labelColor, fontSize = 13.sp, fontWeight = FontWeight.Medium, textDecoration = labelDecoration(tokens)), maxLines = 1)
                 Text(statusText, style = TextStyle(color = statusColor, fontSize = 11.sp), maxLines = 1)
             }
             if (chips.isNotEmpty()) {
@@ -329,7 +337,7 @@ private fun SlotRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     chips.forEachIndexed { index, chip ->
                         if (index > 0) Spacer(modifier = GlanceModifier.width(CHIP_GAP_DP.dp))
-                        SecondaryChip(context, chip, states)
+                        SecondaryChip(context, chip, states, rowHeating = heating)
                     }
                 }
             }
@@ -365,6 +373,7 @@ private fun SecondaryChip(
     context: Context,
     chip: SecondaryChipData,
     states: Map<String, EntityStateEntity?>,
+    rowHeating: Boolean,
 ) {
     val displayState = states[chip.displayEntityId]
     val actionState = states[chip.actionEntityId]
@@ -384,6 +393,7 @@ private fun SecondaryChip(
         isToggle = chip.action == "TOGGLE",
         heating = heating,
         unavailable = isUnavailable,
+        rowHeating = rowHeating,
     )
     val bgColor = colorFor(tokens.bg, context)
     val iconColor = colorFor(tokens.icon, context)
@@ -410,7 +420,7 @@ private fun SecondaryChip(
             if (hasText) {
                 Column {
                     if (labelText.isNotEmpty()) {
-                        Text(labelText, style = TextStyle(color = labelColor, fontSize = 11.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                        Text(labelText, style = TextStyle(color = labelColor, fontSize = 11.sp, fontWeight = FontWeight.Medium, textDecoration = labelDecoration(tokens)), maxLines = 1)
                     }
                     if (valueText != null) {
                         Text(valueText, style = TextStyle(color = valueColor, fontSize = 11.sp), maxLines = 1)
