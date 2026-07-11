@@ -63,47 +63,31 @@ internal const val REFRESH_STRIP_HEIGHT_DP = 24
 // + lille padding, og en indre Box med fyld-farven → ringen ses som en kant. SURFACE_BORDER_DP er
 // ringens tykkelse; de indre paddinger er skåret så den samlede kant+padding matcher det tidligere
 // 8dp minus 4dp (brugervalgt lavere rækkehøjde) = 6dp pr. side.
+// SURFACE_BORDER_DP/ROW_INNER_PAD_DP/CHIP_INNER_H_PAD_DP/CHIP_INNER_H_PAD_END_DP/
+// CHIP_INNER_H_PAD_NO_ICON_DP bruges kun af den bevarede (ubrugte) StatefulSurface — beholdes til
+// den fremtidige tema-editor (se StatefulSurface-doc). @Suppress("unused") hvor de reelt ikke har
+// nogen call-site i dag (StatefulSurface tager ring-padding som GlanceModifier-parametre, ikke
+// disse rå dp-konstanter direkte).
 private const val SURFACE_BORDER_DP = 2
+@Suppress("unused")
 private const val ROW_INNER_PAD_DP = 4      // + 2dp ring = 6dp pr. side (outline-tilstand)
 private const val ROW_SINGLE_PAD_DP = 6     // fyldt/uden ring: 6dp pr. side
+@Suppress("unused")
 private const val CHIP_INNER_H_PAD_DP = 4   // + 2dp ring = 6dp (venstre side, ikon vist)
 private const val CHIP_SINGLE_H_PAD_DP = 6  // venstre side, ikon vist
 // Uden ikon mistes ikonets 14dp+4dp-spacer "buffer" foran teksten, så den stramme 6dp-kant bliver
 // synlig/følelig (brugerfeedback) — bump til 8dp total pr. side når chip.showIcon == false.
+@Suppress("unused")
 private const val CHIP_INNER_H_PAD_NO_ICON_DP = 6   // + 2dp ring = 8dp pr. side
 private const val CHIP_SINGLE_H_PAD_NO_ICON_DP = 8
 // Ikonets eget indre "luft" i sit 14dp-felt (v0.2.60-fund) gør teksten visuelt skæv når ikonet ER
 // vist — højre side (efter teksten) bumpes til 8dp for at kompensere, venstre side (før ikonet)
 // forbliver 6dp (CHIP_INNER_H_PAD_DP/CHIP_SINGLE_H_PAD_DP ovenfor).
+@Suppress("unused")
 private const val CHIP_INNER_H_PAD_END_DP = 6   // + 2dp ring = 8dp (højre side, ikon vist)
 private const val CHIP_SINGLE_H_PAD_END_DP = 8  // højre side, ikon vist
 private const val ROW_CORNER_DP = 12
 private const val CHIP_CORNER_DP = 10
-
-/** Farvelag for en række/chip: [outer] = ring-farve (null = ingen ring, ét enkelt lag),
- * [inner] = fyld-farve, [content] = ikon/tekst-farve. */
-private class Surface(val outer: ColorProvider?, val inner: ColorProvider, val content: ColorProvider)
-
-@Composable
-private fun surfaceFor(stateful: Boolean, active: Boolean, unavailable: Boolean, heating: Boolean, isChip: Boolean): Surface {
-    val c = GlanceTheme.colors
-    return when {
-        unavailable -> Surface(null, c.errorContainer, c.onErrorContainer)
-        // Climate der FAKTISK varmer (hvac_action == "heating", v0.2.48): fuld rød i stedet for blå.
-        // Ingen ring — hverken chip eller række (v0.2.50: aktive/varme chips står solidt uden kant).
-        // Andre climate-tilstande (idle/cool/auto/off) falder videre ned og bliver neutrale.
-        heating -> Surface(null, WidgetColors.heatingFill, WidgetColors.onHeating)
-        // Info-agtige (sensor/number/scene/script + rene visnings-slots): neutralt fyld, ingen on/off.
-        !stateful -> Surface(null, c.surfaceVariant, c.onSurfaceVariant)
-        // v0.2.61: ring-farven for en TÆNDT chip er nu `primary` (samme som fyldet) i stedet for
-        // `surfaceVariant` — ingen synlig kant på en tændt chip (kun SLUKKET chips har en synlig,
-        // temafarvet ring). Tilbagevenden til v0.2.50-beslutningen, som en senere session ændrede.
-        active -> if (isChip) Surface(c.primary, c.primary, c.onPrimary) else Surface(null, c.primary, c.onPrimary)
-        // Slukket on/off: chips beholder outline (primary ring), men hoved-rækken har KUN neutralt
-        // gråt fyld uden ring (brugerønske v0.2.48) — kun det fyldte lag skiller tændt fra slukket.
-        else -> if (isChip) Surface(c.primary, c.surfaceVariant, c.onSurfaceVariant) else Surface(null, c.surfaceVariant, c.onSurfaceVariant)
-    }
-}
 
 /** Oversætter en semantisk [ColorRole] til en faktisk Glance-[ColorProvider]. Aktive farver læses
  * fra GlanceTheme (respekterer farvetema); neutrale/faded/chip-flader fra WidgetColors. */
@@ -126,17 +110,18 @@ private fun isHeating(domain: String, state: EntityStateEntity?): Boolean =
     domain == "climate" && state != null &&
         hvacActionFromJson(state.attributesJson) == "heating"
 
-// v0.2.42 række/chip-styling: tændt = fuld primary-farve, slukket (on/off-domæner) = kun outline.
-// Glance har ingen border-modifier, så en "outline" laves med to lag: en ydre Box med ring-farve
-// + lille padding om en indre Box med fyld-farven → ringen ses som en kant.
-/** Renderer et [Surface] enten som ét fyldt lag (outer == null) eller to lag (ring om fyld).
- * Samler den ellers 4×-gentagne branch-struktur fra [SlotRow] og [SecondaryChip] ét sted
- * (v0.2.44-cleanup): [outerBase]/[innerBase] bærer sizing (fillMaxWidth vs height/fillMaxHeight),
- * [ringInnerPad]/[singlePad] er content-padding for hhv. ring- og enkelt-lag-tilstand, og
- * [makeClickable] wrapper det yderste lag med det rette klik-modifier. */
+/**
+ * BEVARET til en fremtidig tema-editor (chip-border-toggle). Renderer et lag med [bg] enten som ét
+ * fyldt lag ([showBorder] == false) eller to lag (ring i [borderColor] om fyldet). I v0.2.73 kalder
+ * INGEN denne funktion — [resolveStyle] returnerer altid showBorder == false, og SlotRow/SecondaryChip
+ * renderer det enkle lag direkte. Når editoren tænder borders, ruter de to render-steder herigennem.
+ */
+@Suppress("unused")
 @Composable
 private fun StatefulSurface(
-    surface: Surface,
+    bg: ColorProvider,
+    borderColor: ColorProvider?,
+    showBorder: Boolean,
     cornerDp: Int,
     outerBase: GlanceModifier,
     innerBase: GlanceModifier,
@@ -145,15 +130,15 @@ private fun StatefulSurface(
     makeClickable: (GlanceModifier) -> GlanceModifier,
     content: @Composable () -> Unit,
 ) {
-    if (surface.outer != null) {
+    if (showBorder && borderColor != null) {
         Box(
             modifier = makeClickable(
-                outerBase.background(surface.outer).cornerRadius(cornerDp.dp).padding(SURFACE_BORDER_DP.dp),
+                outerBase.background(borderColor).cornerRadius(cornerDp.dp).padding(SURFACE_BORDER_DP.dp),
             ),
             contentAlignment = Alignment.Center,
         ) {
             Box(
-                modifier = innerBase.background(surface.inner)
+                modifier = innerBase.background(bg)
                     .cornerRadius((cornerDp - SURFACE_BORDER_DP).dp).then(ringInnerPad),
                 contentAlignment = Alignment.Center,
             ) { content() }
@@ -161,7 +146,7 @@ private fun StatefulSurface(
     } else {
         Box(
             modifier = makeClickable(
-                outerBase.background(surface.inner).cornerRadius(cornerDp.dp).then(singlePad),
+                outerBase.background(bg).cornerRadius(cornerDp.dp).then(singlePad),
             ),
             contentAlignment = Alignment.Center,
         ) { content() }
