@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 
 /**
  * Keystore-backed secure storage for the HA connection.
@@ -13,6 +16,9 @@ import androidx.security.crypto.MasterKey
  * NEVER written to WebView storage — the WebView only receives it in memory via
  * the external-auth JS bridge.
  */
+/** (tema-tilstand, farvetema)-par — de to SecureStore-værdier der tilsammen bestemmer widget-farver. */
+data class ThemeSettings(val themeMode: String, val colorTheme: String)
+
 class SecureStore private constructor(private val prefs: SharedPreferences) {
 
     var baseUrl: String?
@@ -44,6 +50,29 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
 
     val isConfigured: Boolean
         get() = !baseUrl.isNullOrBlank() && !token.isNullOrBlank()
+
+    /** Nuværende (tema-tilstand, farvetema) — det par der bestemmer en widgets farver. */
+    fun themeSettings(): ThemeSettings = ThemeSettings(themeMode, widgetColorTheme)
+
+    /**
+     * Reaktiv strøm af [ThemeSettings]: emitterer nuværende værdi straks, og igen hver gang tema-
+     * eller farvetema-nøglen ændres. Collectes af [dk.akait.hawidgets.widget.common.WidgetGlanceTheme]
+     * så en Glance-session RE-KOMPONERER (og dermed re-læser farverne) når brugeren skifter tema/farve.
+     *
+     * Uden dette blev temaet kun læst imperativt under komposition, og `updateAll()` genfremkaldte det
+     * kun hvis kompositionen tilfældigvis re-komponerede af anden grund (en Room-emission) — derfor
+     * "trådte ikke altid i kraft øjeblikkeligt". Samme reaktive fix-mønster som [WidgetConfigStore.observe].
+     */
+    fun observeThemeSettings(): Flow<ThemeSettings> = callbackFlow {
+        trySend(themeSettings())
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, changedKey ->
+            if (changedKey == KEY_THEME_MODE || changedKey == KEY_WIDGET_COLOR_THEME || changedKey == null) {
+                trySend(themeSettings())
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     fun setDashboardPath(appWidgetId: Int, path: String) {
         prefs.edit().putString(keyDashboard(appWidgetId), path).apply()

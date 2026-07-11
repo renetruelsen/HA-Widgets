@@ -1252,7 +1252,31 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     fuld-primary TOGGLE-chip, og utilgængelig (faded + **navn overstreget**, status urørt) verificeret
     visuelt i BÅDE lyst og mørkt tema. Heating-orange-chips ikke visuelt bekræftet på emulator (widget 15
     har ingen climate-entitet) — dækket af unit-tests + mockup + brugerens S23-spa. **Device-QA på S23
-    udføres af brugeren.** `code-review` køres inden merge.
+    udføres af brugeren.** `code-review` køres inden merge. **Bruger-bekræftet OK på S23 (varmende spa
+    verificeret live).** Merged til `main` + pushed.
+- ✅ **v0.2.75 — tema-/farveskift træder nu ALTID i kraft med det samme (2026-07-11, systematic-
+  debugging efter brugerrapport "kan ikke altid få tema-/farvetema til at træde i kraft øjeblikkeligt"):**
+  - **Baggrund:** v0.2.74's `appScope`-fix (recreate-race) hjalp, men skiftet var stadig intermitterende.
+    Root cause fundet via logcat-instrumentering på den fejlende enhed (S23) — IKKE gætteri.
+  - **Root cause (bekræftet via `HAThemeDbg`-logcat på S23):** temaet blev læst IMPERATIVT via
+    `WidgetColors.providers(context)` inde i `WidgetGlanceTheme` under komposition — det er IKKE
+    observeret Compose-state. `updateAll()` re-komponerer kun når Compose ser en state-ændring, så
+    temaet blev kun genfremkaldt hvis kompositionen TILFÆLDIGVIS re-komponerede af anden grund (en
+    Room-Flow-emission). Logcat viste præcist: første skift ramte en tilfældig re-komposition
+    (`providers()` re-læst 8×), men de næste 2-3 skift fyrede `updateAllWidgets()` korrekt UDEN en
+    eneste efterfølgende `providers()`-læsning → widgetten forblev forældet.
+  - **Fix (reaktiv tema-state):** ny `SecureStore.observeThemeSettings(): Flow<ThemeSettings>`
+    (callbackFlow på `OnSharedPreferenceChangeListener`, watcher `theme_mode`+`widget_color_theme` —
+    samme mønster som `WidgetConfigStore.observe`). `WidgetGlanceTheme` collecter den nu via
+    `collectAsState` og udregner farverne via en ny ren `WidgetColors.providersFor(colorTheme,
+    themeMode)` — så SELVE pref-ændringen udløser en emission → re-komposition → nye farver, uanset om
+    noget andet ændrer sig. Gælder ALLE Glance-widgets (multi + genvej). `updateAllWidgets()`/`appScope`
+    (v0.2.74) bevaret som supplement (vækker sessioner), men reaktiviteten er det der gør det pålideligt.
+  - **QA — verificeret på S23 (den enhed der viste fejlen):** logcat bekræftede at TO farveskift i træk
+    nu BEGGE re-læser temaet med den nye værdi (`providersFor color=blue` så `color=green`), straks
+    (~50-250ms) — hvor det andet skift før fixen havde nul re-læsninger. Bruger-bekræftet: widgetten
+    skifter farve hver gang nu. Debug-logging fjernet efter verifikation. Clean build + 68 unit-tests
+    grønne. `code-review` køres inden merge.
 
 ## Næste skridt
 

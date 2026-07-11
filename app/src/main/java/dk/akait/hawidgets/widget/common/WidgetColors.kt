@@ -2,6 +2,9 @@ package dk.akait.hawidgets.widget.common
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.glance.GlanceTheme
 import androidx.glance.color.ColorProviders
@@ -101,8 +104,15 @@ object WidgetColors {
      * for selve beslutningslogikken (testet separat uden Context). */
     fun providers(context: Context): ColorProviders {
         val store = SecureStore.get(context)
-        val preset = presetFor(store.widgetColorTheme)
-        return when (resolveColorMode(store.widgetColorTheme, store.themeMode)) {
+        return providersFor(store.widgetColorTheme, store.themeMode)
+    }
+
+    /** Ren (Context-fri) udgave: (farvetema, tema-tilstand) → [ColorProviders]. Bruges af den
+     * reaktive [WidgetGlanceTheme] med værdier fra `SecureStore.observeThemeSettings()`, så et
+     * tema-/farveskift altid udløser en re-komposition med de nye farver. */
+    fun providersFor(colorTheme: String, themeMode: String): ColorProviders {
+        val preset = presetFor(colorTheme)
+        return when (resolveColorMode(colorTheme, themeMode)) {
             ColorMode.DYNAMIC -> DynamicThemeColorProviders
             ColorMode.FORCED_LIGHT -> material3ColorProviders(light = preset.light, dark = preset.light)
             ColorMode.FORCED_DARK -> material3ColorProviders(light = preset.dark, dark = preset.dark)
@@ -147,8 +157,16 @@ object WidgetColors {
  * Erstatning for et bart `GlanceTheme { … }`-kald: vælger farve-providers ud fra det
  * globale tema-valg, men lader alle `GlanceTheme.colors.X`-opslag i indholdet stå
  * uændret. For "system" er adfærden identisk med det tidligere `GlanceTheme { … }`.
+ *
+ * REAKTIVT: temaet collectes fra [SecureStore.observeThemeSettings] i stedet for at læses
+ * imperativt én gang. Uden dette re-læste `updateAll()` kun temaet hvis kompositionen
+ * tilfældigvis re-komponerede af anden grund → tema-/farveskift "trådte ikke altid i kraft
+ * øjeblikkeligt" (bekræftet via logcat på S23). Nu udløser selve pref-ændringen en emission →
+ * re-komposition → nye farver, uanset om noget andet ændrer sig.
  */
 @Composable
 fun WidgetGlanceTheme(context: Context, content: @Composable () -> Unit) {
-    GlanceTheme(colors = WidgetColors.providers(context), content = content)
+    val store = remember { SecureStore.get(context) }
+    val settings by store.observeThemeSettings().collectAsState(initial = store.themeSettings())
+    GlanceTheme(colors = WidgetColors.providersFor(settings.colorTheme, settings.themeMode), content = content)
 }
