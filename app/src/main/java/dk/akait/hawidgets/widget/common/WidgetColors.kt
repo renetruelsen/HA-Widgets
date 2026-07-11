@@ -167,6 +167,10 @@ object WidgetColors {
 @Composable
 fun WidgetGlanceTheme(context: Context, content: @Composable () -> Unit) {
     val store = remember { SecureStore.get(context) }
-    val settings by store.observeThemeSettings().collectAsState(initial = store.themeSettings())
+    // remember Flow'et: uden dette gen-skabes det ved HVER re-komposition (også entity-ticks), hvilket
+    // afregistrerer/genregistrerer pref-listeneren og laver gentagne krypterede pref-læsninger på
+    // RemoteViews-stien. Stabil Flow-identitet → collectAsState beholder samme subscription.
+    val settingsFlow = remember(store) { store.observeThemeSettings() }
+    val settings by settingsFlow.collectAsState(initial = remember(store) { store.themeSettings() })
     GlanceTheme(colors = WidgetColors.providersFor(settings.colorTheme, settings.themeMode), content = content)
 }
