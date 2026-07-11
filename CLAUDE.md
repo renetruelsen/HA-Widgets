@@ -1210,6 +1210,49 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     launcher-genstart gav ingen repaint). Disse tilstande er dækket af `resolveStyle`-unit-tests (hver
     kombination) + colorFor-mapper. **Device-QA på Galaxy S23 (live states, rigtig launcher) udføres af
     brugeren selv** — plan-beslutning. `code-review` køres inden merge.
+- ✅ **v0.2.74 — active-styling opfølgning: 3 brugerrapporterede fund fra S23-QA (2026-07-11,
+  fortsat dev-pipeline m. master-matrix-mockup):** efter v0.2.73's S23-install rapporterede brugeren
+  tre ting; alle rettet på samme branch (`feature/widget-active-styling`, endnu ikke merged).
+  - **#3 — chip-farve fulgte "har handling", ikke værdi:** en chip UDEN handling (`action=="NONE"`)
+    blev aldrig farvet efter sin tilstand, fordi `stateful` krævede `action != "NONE"`. Sås tydeligt på
+    en lock-chip (låst blev ikke farvet), mens en device_tracker-chip tilfældigt virkede (den havde en
+    `HISTORY`-handling). Fix (`MultiEntityRendering.kt`): `stateful = hasOnOffState(chip.actionDomain)`
+    (dropper `action != "NONE"`-gaten). `actionEntityId` er allerede = `displayEntityId` når action=NONE,
+    så et rent visnings-domæne med on/off-state (binary_sensor, lock, light … uden handling) farves nu
+    korrekt efter sin faktiske værdi.
+  - **#2 — tema-/farve-skift opdaterede ikke alle widgets pålideligt:** `updateAllWidgets()` blev
+    launchet på settings-sheet'ens `rememberCoroutineScope()`; tema-skiftets efterfølgende `recreate()`
+    rev scope'en ned og kunne annullere opdaterings-coroutinen midt i, så kun nogle placerede widgets
+    nåede at gen-tegne (og forsinket / ikke samtidigt). Fix: ny applikations-levetids
+    `HaWidgetsApp.appScope` (`SupervisorJob` + `Dispatchers.Default`) der overlever `recreate()`;
+    `updateAllWidgets` er nu ikke-suspend og launcher selv på den scope. Alle 3 kaldesteder (tema/farve/
+    sprog) opdateret; den nu-ubrugte composable-`scope` i `SettingsSheet` fjernet. **Verificeret på
+    emulator:** app-tema-skift Lyst↔Mørk repainter nu den placerede multi-widget pålideligt uden
+    reinstall (før: widgetten forblev i gammelt tema). Dette var sandsynligvis også årsagen til at
+    v0.2.73-QA'ens tema-repaint "ikke virkede" på emulatoren — ikke kun launcher-caching.
+  - **#1 — heating-rækkens aktive chips clashede med orangen:** en aktiv/tændt chip på en varmende
+    (fuld orange) række brugte de normale primary/blå farver, som så forkert ud oven på orangen.
+    Afklaret via en komplet "master-matrix"-mockup (alle chip-kombinationer × begge temaer × normal/
+    varmende kontekst). Nye FASTE (tema-uafhængige) heating-chip-farver i `WidgetColors`
+    (`heatingChipAccent=#FF9F4D`, `heatingChipDim=#FFE8D6`, `heatingChipUnavailable=#D8D3CE`) — den
+    orange baggrund er selv tema-uafhængig, så en tema-afhængig tekstfarve ovenpå gav to nuancer.
+    Regel (chips PÅ en varmende række): TOGGLE-tændt = fuld `#FF9F4D` + hvid tekst (skiller sig ud som
+    kontakt); ALT andet indhold (aktiv D, info, TOGGLE-slukket) = `#FFE8D6` på chip-scrim (bevidst
+    ensfarvet/simpelt — rækken skriger allerede "varmer"); utilgængelig = `#D8D3CE` (læsbar på orange,
+    modsat den normale FADED-grå). En chip der SELV varmer vinder og bliver fuld orange.
+  - **Bonus (samme runde) — overstregning af utilgængeligt NAVN:** utilgængelig (række + chip, alle
+    kontekster/temaer) overstreger nu label/navnet (`TextDecoration.LineThrough`); status/værdien
+    (fx "Utilgængelig") forbliver læsbar. Ny `StyleTokens.strikeLabel` + `resolveStyle`-param
+    `rowHeating`. Erstatter/supplerer den rene faded-farve som "død"-signatur.
+  - **Arkitektur:** `resolveStyle` udvidet med `rowHeating`-param + 3 nye `ColorRole`'er
+    (`HEATING_ACCENT`/`HEATING_DIM`/`HEATING_UNAVAIL`); egen-varme > rowHeating > normal i prioritet;
+    unavailable stadig øverst. 23 unit-tests (13 nye/ændrede for rowHeating + strike + prioritet).
+  - **QA:** clean build + alle unit-tests grønne. **Emulator (`pixel_test`, injiceret testtilstand +
+    tema-toggle for at fremtvinge frisk provideGlance):** aktiv-D (blåt ikon+status, neutralt navn),
+    fuld-primary TOGGLE-chip, og utilgængelig (faded + **navn overstreget**, status urørt) verificeret
+    visuelt i BÅDE lyst og mørkt tema. Heating-orange-chips ikke visuelt bekræftet på emulator (widget 15
+    har ingen climate-entitet) — dækket af unit-tests + mockup + brugerens S23-spa. **Device-QA på S23
+    udføres af brugeren.** `code-review` køres inden merge.
 
 ## Næste skridt
 
