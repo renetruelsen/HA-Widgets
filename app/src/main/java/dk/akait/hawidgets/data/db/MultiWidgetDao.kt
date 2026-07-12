@@ -13,6 +13,9 @@ interface MultiWidgetDao {
     @Query("SELECT * FROM multi_widget WHERE appWidgetId = :id")
     suspend fun get(id: Int): MultiWidgetEntity?
 
+    @Query("SELECT * FROM multi_widget")
+    suspend fun getAll(): List<MultiWidgetEntity>
+
     @Query("SELECT * FROM multi_widget WHERE appWidgetId = :id")
     fun observe(id: Int): Flow<MultiWidgetEntity?>
 
