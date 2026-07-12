@@ -1277,6 +1277,60 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (~50-250ms) — hvor det andet skift før fixen havde nul re-læsninger. Bruger-bekræftet: widgetten
     skifter farve hver gang nu. Debug-logging fjernet efter verifikation. Clean build + 68 unit-tests
     grønne. `code-review` køres inden merge.
+- ✅ **v0.2.77 — remote error logging til rtr.dk Log Collector (2026-07-12, brainstorm →
+  spec → plan → subagent-driven-development, 6 kode-tasks + integrations-QA):**
+  - **Baggrund:** før Play Store-release skulle appen kunne sende crash-logs og
+    HA-forbindelsesfejl til en ekstern log-collector (`docs/ha-widgets-logging.md`, brugerens
+    egen rtr.dk-tjeneste) — så bugs fra rigtige installationer kan debugges uden fysisk adgang
+    til enheden. Guiden var skrevet til Flutter/Dart; oversat til Kotlin/OkHttp-idiomer der
+    matcher `HaApiClient`s eksisterende mønster. Spec:
+    `docs/superpowers/specs/2026-07-12-remote-error-logging-design.md`, plan:
+    `docs/superpowers/plans/2026-07-12-remote-error-logging.md`.
+  - **Ny `dk.akait.hawidgets.logging`-pakke:** `LogBuffer` (ren, unit-testet 300-linjers
+    ring-buffer + `formatLogLine`), `WidgetConfigDump.kt` (`formatWidgetConfigDump` — ren
+    serialisering af aktuel widget-config til log-linjer, kun entity-ID'er/domæner/handlinger,
+    ALDRIG HA-URL/token — samt `collectWidgetConfigDump` der henter data fra Room +
+    `WidgetConfigStore`), og `RemoteLogger` (singleton: `i/w/e`, `ensureDeviceLine`,
+    `installCrashHandler`, blokerende `flush(force, configLines)`).
+  - **Token-sikkerhed (v0.2.45-lære anvendt igen):** `LOG_UPLOAD_TOKEN` læses fra
+    `local.properties` (git-ignoreret) → `BuildConfig`-felt, default tom streng. **Under
+    implementeringen opdagede en task-reviewer at `docs/ha-widgets-logging.md` (committet til
+    `main` tidligere samme session, IKKE pushet endnu) indeholdt det RIGTIGE rtr.dk-token i
+    klartekst** — samme fejlklasse som v0.2.45-hændelsen. Rettet med det samme: tokenet erstattet
+    med `<LOG_UPLOAD_TOKEN>`-placeholder i alle 4 forekomster, ny commit på `main` FØR noget
+    nogensinde blev pushet. Selve tokenet er ikke roteret på rtr.dk af Claude — det er brugerens
+    eget valg om at gøre bagefter.
+  - **Crash-reporting (E-niveau):** `HaWidgetsApp.onCreate()` installerer en global
+    `Thread.UncaughtExceptionHandler` (`RemoteLogger.installCrashHandler`) — skriver E-linje +
+    stacktrace + widget-config-dump, forsøger en FORCED blokerende upload, og delegerer
+    ALTID videre til den oprindelige handler (eller kill-process) bagefter. **Task-review fandt
+    og fik rettet** en Critical-fejl her: guard-blokken brugte `catch (_: Exception)`, som ikke
+    fanger `Error`-subklasser (`StackOverflowError`/`OutOfMemoryError`) — hvis selve
+    logging-arbejdet (Room/coroutines på en evt. allerede presset stack) kastede en `Error`,
+    ville delegeringen til den rigtige crash-handler aldrig ske. Rettet til `catch (_: Throwable)`.
+  - **HA-forbindelsesfejl (W-niveau, throttlet 30 sek):** `HaApiClient.checkConnection/
+    getState/callService/listStatesByDomains` logger nu netværksfejl via `RemoteLogger.w` —
+    bevidst `W` ikke `E`, da kun linjer med literalt `" E ["` udløser server-sidens mail-alarm,
+    og en forbigående netværksfejl under periodisk sync ikke skal trigge den. `getState`/
+    `listStatesByDomains` logger KUN i deres `catch`-blok (ægte netværksfejl) — en almindelig
+    ikke-2xx/tom-body-respons (fx en slettet entitet) forbliver bevidst tavs.
+  - **"Send log nu"-knap:** ny række i `MainActivity`s indstillings-ark (samme stil som
+    Batteri-rækken, brugergodkendt via klikbart browser-mockup under brainstorming). Kalder
+    `RemoteLogger.flush(force = true, configLines = ...)` på `HaWidgetsApp.appScope` (ikke
+    `rememberCoroutineScope()` — samme begrundelse som `updateAllWidgets`), viser Toast der
+    reflekterer det faktiske resultat. Aktiv i BEGGE build-typer (debug + release).
+  - **QA:** clean build, 87/87 unit-tests grønne (19 nye: `LogBufferTest` + `WidgetConfigDumpTest`).
+    Emulator (`pixel_test`, ægte HA-forbindelse bevaret fra tidligere session): app starter uden
+    crash; indstillings-rækken renderer korrekt ("Error log"/"Send a diagnostic log to the
+    developer"/"Send log now"); tryk på knappen uden `LOG_UPLOAD_TOKEN` sat logger korrekt
+    "No LOG_UPLOAD_TOKEN configured — skipping upload" (no-op, ingen crash); **`adb shell am
+    crash` udløste en ægte uhåndteret exception på appens rigtige proces** — logcat bekræftede
+    `RemoteLogger`s crash-handler kørte (no-token no-op logget) FØR appen døde helt normalt
+    (`Force finishing activity` → `SIG 9` → proces død), dvs. delegeringen til Androids
+    standard-crash-håndtering var uændret; app genstartede bagefter uden problemer. **Ikke
+    testet:** faktisk upload til rtr.dk med et rigtigt token (kræver brugerens eget token, som
+    Claude ikke har adgang til efter redaktionen) og HA-forbindelsesfejl-stien med slukket
+    netværk (ville kræve længere emulator-session). Device-QA på S23 afventer bruger.
 
 ## Næste skridt
 
@@ -1378,3 +1432,7 @@ JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assemble
 - **rtr-dk `/projects/ha-widgets` bruger placeholder-billede:** websitet (`rtr-dk`-repoet) har
   endnu ingen rigtig markedsføringsgrafik/screenshots for HA-Widgets, og genbruger derfor et
   ubrugt Strata-skabelonbillede (`06.jpg`) på appens projektside, indtil rigtig grafik findes.
+- **Remote logging kræver `LOG_UPLOAD_TOKEN` i `local.properties`:** uden nøglen bygger og kører
+  appen fint, men `RemoteLogger.flush()` er en stille no-op (ingen logs når rtr.dk). Sæt
+  `LOG_UPLOAD_TOKEN=<token>` lokalt for at aktivere upload; aldrig committet til git (v0.2.45-lære,
+  gentaget for `docs/ha-widgets-logging.md` i v0.2.77 — se dér).
