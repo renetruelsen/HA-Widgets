@@ -12,7 +12,7 @@ POST https://rtr.dk/api/logs
 ## Headers
 | Header | Værdi | Note |
 |---|---|---|
-| `Authorization` | `Bearer hV3nRk7dQmZ2sPxL` | HA-Widgets upload-token |
+| `Authorization` | `Bearer <LOG_UPLOAD_TOKEN>` | HA-Widgets upload-token |
 | `X-App-Id` | `ha-widgets` | Skal matche token'ets app |
 | `X-App-Version` | fx `0.9.1` | Appens version (`package_info_plus`) |
 | `X-App-Platform` | `android` / `ios` | `Platform.operatingSystem` |
@@ -74,7 +74,7 @@ class RemoteLogger {
 
   static const _endpoint = 'https://rtr.dk/api/logs';
   static const _token = String.fromEnvironment('LOG_TOKEN',
-      defaultValue: 'hV3nRk7dQmZ2sPxL'); // sæt via --dart-define i release
+      defaultValue: '<LOG_UPLOAD_TOKEN>'); // sæt via --dart-define i release
   static const _appId = 'ha-widgets';
 
   final Queue<String> _buffer = Queue<String>();
@@ -149,7 +149,7 @@ void main() {
 }
 ```
 
-> **Token i release:** byg med `--dart-define=LOG_TOKEN=hV3nRk7dQmZ2sPxL` fremfor at hardcode.
+> **Token i release:** byg med `--dart-define=LOG_TOKEN=<LOG_UPLOAD_TOKEN>` fremfor at hardcode.
 > (Bemærk: en klient-token kan aldrig gøres 100% hemmelig i en mobil-app — den kan roteres i
 > `appsettings` hvis den misbruges.)
 
@@ -157,7 +157,7 @@ void main() {
 ```bash
 curl -s -w "\nHTTP %{http_code}\n" -X POST https://rtr.dk/api/logs \
   -H "Content-Type: text/plain; charset=utf-8" \
-  -H "Authorization: Bearer hV3nRk7dQmZ2sPxL" \
+  -H "Authorization: Bearer <LOG_UPLOAD_TOKEN>" \
   -H "X-App-Id: ha-widgets" -H "X-App-Version: 0.9.1" -H "X-App-Platform: android" \
   --data-binary $'2026-07-12T10:00:00Z I [BOOT] test\n2026-07-12T10:00:01Z E [HA] test-fejl'
 ```
