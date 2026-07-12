@@ -117,8 +117,9 @@ object RemoteLogger {
                 buffer.addRaw(Log.getStackTraceString(throwable))
                 val configLines = runBlocking { collectWidgetConfigDump(appContext) }
                 flush(force = true, configLines = configLines)
-            } catch (_: Exception) {
-                // Logging må aldrig forstyrre den rigtige crash-håndtering.
+            } catch (_: Throwable) {
+                // Logging må aldrig forstyrre den rigtige crash-håndtering — inkl. Error
+                // (fx StackOverflowError/OutOfMemoryError), da throwable selv kan være sådan én.
             }
             if (previous != null) {
                 previous.uncaughtException(thread, throwable)
