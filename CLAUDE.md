@@ -1319,7 +1319,7 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     `RemoteLogger.flush(force = true, configLines = ...)` på `HaWidgetsApp.appScope` (ikke
     `rememberCoroutineScope()` — samme begrundelse som `updateAllWidgets`), viser Toast der
     reflekterer det faktiske resultat. Aktiv i BEGGE build-typer (debug + release).
-  - **QA:** clean build, 87/87 unit-tests grønne (19 nye: `LogBufferTest` + `WidgetConfigDumpTest`).
+  - **QA:** clean build, 87/87 unit-tests grønne (10 nye: `LogBufferTest` + `WidgetConfigDumpTest`).
     Emulator (`pixel_test`, ægte HA-forbindelse bevaret fra tidligere session): app starter uden
     crash; indstillings-rækken renderer korrekt ("Error log"/"Send a diagnostic log to the
     developer"/"Send log now"); tryk på knappen uden `LOG_UPLOAD_TOKEN` sat logger korrekt

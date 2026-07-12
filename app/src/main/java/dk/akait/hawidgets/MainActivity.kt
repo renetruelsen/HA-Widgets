@@ -676,8 +676,12 @@ private fun updateAllWidgets(context: android.content.Context) {
 
 /** Forcerer en upload af den nuværende log-buffer + widget-config-dump, uanset 30s-throttlen.
  * Kører på [HaWidgetsApp.appScope] (ikke en composable-scope) så den overlever at
- * indstillings-arket lukkes, samme begrundelse som [updateAllWidgets]. */
+ * indstillings-arket lukkes, samme begrundelse som [updateAllWidgets]. Hvis featuren slet ikke er
+ * konfigureret ([RemoteLogger.isConfigured] false — intet LOG_UPLOAD_TOKEN på denne build), sker
+ * der stille ingenting og [onResult] kaldes IKKE — intet token er ikke en fejl, og skal derfor
+ * ikke vise en "kunne ikke sende"-toast på enhver udvikler-maskine uden nøglen sat op. */
 private fun sendLogNow(context: android.content.Context, onResult: (Boolean) -> Unit) {
+    if (!RemoteLogger.isConfigured()) return
     val app = context.applicationContext as HaWidgetsApp
     app.appScope.launch {
         val configLines = collectWidgetConfigDump(context.applicationContext)

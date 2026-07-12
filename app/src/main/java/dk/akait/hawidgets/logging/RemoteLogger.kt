@@ -8,6 +8,7 @@ import android.os.Process
 import android.util.Log
 import dk.akait.hawidgets.BuildConfig
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -67,6 +68,14 @@ object RemoteLogger {
     }
 
     /**
+     * True hvis [BuildConfig.LOG_UPLOAD_TOKEN] er sat — dvs. om featuren overhovedet er
+     * konfigureret på denne build. Bruges af "Send log nu"-knappen til at afgøre om et
+     * `flush()`-forsøg giver mening, eller om der stille skal ske ingenting (intet token er
+     * ikke en fejl brugeren skal have en "kunne ikke sende"-toast for).
+     */
+    fun isConfigured(): Boolean = BuildConfig.LOG_UPLOAD_TOKEN.isNotBlank()
+
+    /**
      * Uploader bufferens indhold. [force] ignorerer 30s-throttlen (bruges af crash-handleren og
      * "Send log nu"). [configLines] tilføjes til bufferen lige før upload (crash + manuel send —
      * IKKE den rutinemæssige, throttlede auto-flush fra [w]/[e]). Blokerende netværkskald — kald
@@ -115,7 +124,9 @@ object RemoteLogger {
             try {
                 buffer.add('E', "CRASH", throwable.toString())
                 buffer.addRaw(Log.getStackTraceString(throwable))
-                val configLines = runBlocking { collectWidgetConfigDump(appContext) }
+                val configLines = runBlocking {
+                    withTimeoutOrNull(2000) { collectWidgetConfigDump(appContext) } ?: emptyList()
+                }
                 flush(force = true, configLines = configLines)
             } catch (_: Throwable) {
                 // Logging må aldrig forstyrre den rigtige crash-håndtering — inkl. Error
