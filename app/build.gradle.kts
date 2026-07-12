@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+}
+
+val localProperties = Properties().apply {
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) {
+        localFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -15,6 +24,11 @@ android {
         targetSdk = 35
         versionCode = 76
         versionName = "0.2.76"
+        buildConfigField(
+            "String",
+            "LOG_UPLOAD_TOKEN",
+            "\"${localProperties.getProperty("LOG_UPLOAD_TOKEN", "")}\""
+        )
     }
 
     buildTypes {
