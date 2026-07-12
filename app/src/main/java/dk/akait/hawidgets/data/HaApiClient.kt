@@ -1,6 +1,7 @@
 package dk.akait.hawidgets.data
 
 import dk.akait.hawidgets.data.db.EntityStateEntity
+import dk.akait.hawidgets.logging.RemoteLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -43,11 +44,15 @@ class HaApiClient(
                 when (response.code) {
                     200 -> Result.Ok
                     401 -> Result.Error("Token afvist (401). Tjek dit long-lived token.")
+                        .also { RemoteLogger.w("HA", it.message) }
                     else -> Result.Error("Uventet svar fra HA: HTTP ${response.code}")
+                        .also { RemoteLogger.w("HA", it.message) }
                 }
             }
         } catch (e: Exception) {
-            Result.Error("Kunne ikke nå HA: ${e.message ?: e.javaClass.simpleName}")
+            val msg = "Kunne ikke nå HA: ${e.message ?: e.javaClass.simpleName}"
+            RemoteLogger.w("HA", msg)
+            Result.Error(msg)
         }
     }
 
@@ -70,6 +75,7 @@ class HaApiClient(
                 )
             }
         } catch (e: Exception) {
+            RemoteLogger.w("HA", "getState($entityId) failed: ${e.message ?: e.javaClass.simpleName}")
             null
         }
     }
@@ -98,10 +104,14 @@ class HaApiClient(
                 .build()
             (if (fast) httpFast else http).newCall(request).execute().use { response ->
                 if (response.isSuccessful) Result.Ok
-                else Result.Error("HTTP ${response.code}")
+                else Result.Error("HTTP ${response.code}").also {
+                    RemoteLogger.w("HA", "callService $domain.$service failed: ${it.message}")
+                }
             }
         } catch (e: Exception) {
-            Result.Error(e.message ?: e.javaClass.simpleName)
+            val msg = e.message ?: e.javaClass.simpleName
+            RemoteLogger.w("HA", "callService $domain.$service exception: $msg")
+            Result.Error(msg)
         }
     }
 
@@ -138,6 +148,7 @@ class HaApiClient(
                 }
             }
         } catch (e: Exception) {
+            RemoteLogger.w("HA", "listStatesByDomains failed: ${e.message ?: e.javaClass.simpleName}")
             emptyList()
         }
     }

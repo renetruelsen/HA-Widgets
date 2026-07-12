@@ -73,6 +73,18 @@ class WidgetConfigStore private constructor(
         prefs.edit().remove(key(appWidgetId)).apply()
     }
 
+    /** Alle gemte genvej-konfigurationer, keyed på appWidgetId — bruges kun af log-dump'et
+     * (RemoteLogger), ikke af selve widget-rendering (som bruger [get]/[observe] pr. id). */
+    fun getAll(): Map<Int, WidgetConfig> =
+        prefs.all.entries
+            .filter { it.key.startsWith("widget_") }
+            .mapNotNull { (key, value) ->
+                val id = key.removePrefix("widget_").toIntOrNull() ?: return@mapNotNull null
+                val config = (value as? String)?.let { runCatching { WidgetConfig.fromJson(it) }.getOrNull() }
+                config?.let { id to it }
+            }
+            .toMap()
+
     companion object {
         private fun key(id: Int) = "widget_$id"
 
