@@ -73,6 +73,13 @@
     <string name="battery_status_exempt">Fritaget fra batterioptimering</string>
     <string name="battery_status_restricted">Begrænset af batterioptimering</string>
 
+    <!-- Remote error logging -->
+    <string name="log_send_title">Fejllog</string>
+    <string name="log_send_subtitle">Send en diagnostik-log til udvikleren</string>
+    <string name="log_send_now">Send log nu</string>
+    <string name="log_send_success">Log sendt</string>
+    <string name="log_send_failed">Kunne ikke sende log</string>
+
     <!-- MultiEntityWidget: én variant, fast 4-slot default-footprint (se
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entitet</string>

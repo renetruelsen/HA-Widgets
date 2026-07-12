@@ -86,6 +86,12 @@ import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
 import dk.akait.hawidgets.widget.multientity.MultiEntityWidget
 import dk.akait.hawidgets.widget.common.WIDGET_COLOR_THEMES
 import dk.akait.hawidgets.widget.common.presetFor
+import dk.akait.hawidgets.logging.RemoteLogger
+import dk.akait.hawidgets.logging.collectWidgetConfigDump
+import androidx.compose.material.icons.filled.BugReport
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -487,6 +493,33 @@ private fun SettingsSheet(
                     context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 }) { Text(stringResource(R.string.settings_open)) }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(Icons.Default.BugReport, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.log_send_title), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.log_send_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedButton(onClick = {
+                    sendLogNow(context) { ok ->
+                        Toast.makeText(
+                            context,
+                            if (ok) R.string.log_send_success else R.string.log_send_failed,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }) { Text(stringResource(R.string.log_send_now)) }
+            }
         }
     }
 }
@@ -638,5 +671,17 @@ private fun updateAllWidgets(context: android.content.Context) {
     app.appScope.launch {
         MultiEntityWidget().updateAll(app)
         ShortcutWidget().updateAll(app)
+    }
+}
+
+/** Forcerer en upload af den nuværende log-buffer + widget-config-dump, uanset 30s-throttlen.
+ * Kører på [HaWidgetsApp.appScope] (ikke en composable-scope) så den overlever at
+ * indstillings-arket lukkes, samme begrundelse som [updateAllWidgets]. */
+private fun sendLogNow(context: android.content.Context, onResult: (Boolean) -> Unit) {
+    val app = context.applicationContext as HaWidgetsApp
+    app.appScope.launch {
+        val configLines = collectWidgetConfigDump(context.applicationContext)
+        val ok = withContext(Dispatchers.IO) { RemoteLogger.flush(force = true, configLines = configLines) }
+        withContext(Dispatchers.Main) { onResult(ok) }
     }
 }

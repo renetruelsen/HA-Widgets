@@ -73,6 +73,13 @@
     <string name="battery_status_exempt">Exempt from battery optimization</string>
     <string name="battery_status_restricted">Restricted by battery optimization</string>
 
+    <!-- Remote error logging -->
+    <string name="log_send_title">Error log</string>
+    <string name="log_send_subtitle">Send a diagnostic log to the developer</string>
+    <string name="log_send_now">Send log now</string>
+    <string name="log_send_success">Log sent</string>
+    <string name="log_send_failed">Couldn\'t send log</string>
+
     <!-- MultiEntityWidget: single variant, fixed 4-slot default footprint (see
          docs/widget-settings-spec.md §8) -->
     <string name="multi_entity_widget_label">HA Multi-entity</string>
