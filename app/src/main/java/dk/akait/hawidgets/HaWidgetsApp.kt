@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.WebView
 import dk.akait.hawidgets.data.SecureStore
+import dk.akait.hawidgets.logging.RemoteLogger
 import dk.akait.hawidgets.worker.SyncWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,8 @@ class HaWidgetsApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        RemoteLogger.ensureDeviceLine(this)
+        RemoteLogger.installCrashHandler(this)
         Handler(Looper.getMainLooper()).post {
             runCatching { WebView(this).destroy() }
         }
