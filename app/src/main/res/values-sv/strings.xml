@@ -75,6 +75,14 @@
     <string name="battery_status_exempt">Undantagen från batterioptimering</string>
     <string name="battery_status_restricted">Begränsad av batterioptimering</string>
 
+    <!-- Remote error logging: legacy strings, still referenced by MainActivity's old settings
+         row until Task 7 removes both the row and these strings together -->
+    <string name="log_send_title">Fellogg</string>
+    <string name="log_send_subtitle">Skicka en diagnostikslogg till utvecklaren</string>
+    <string name="log_send_now">Skicka logg nu</string>
+    <string name="log_send_success">Logg skickad</string>
+    <string name="log_send_failed">Kunde inte skicka logg</string>
+
     <!-- Remote error logging: Report a problem dialog -->
     <string name="report_problem_row_title">Rapportera ett problem</string>
     <string name="report_problem_row_subtitle">Skicka loggar och en valfri notering till utvecklaren</string>

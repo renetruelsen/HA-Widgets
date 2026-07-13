@@ -75,6 +75,14 @@
     <string name="battery_status_exempt">Exempt from battery optimization</string>
     <string name="battery_status_restricted">Restricted by battery optimization</string>
 
+    <!-- Remote error logging: legacy strings, still referenced by MainActivity's old settings
+         row until Task 7 removes both the row and these strings together -->
+    <string name="log_send_title">Error log</string>
+    <string name="log_send_subtitle">Send a diagnostic log to the developer</string>
+    <string name="log_send_now">Send log now</string>
+    <string name="log_send_success">Log sent</string>
+    <string name="log_send_failed">Couldn\'t send log</string>
+
     <!-- Remote error logging: Report a problem dialog -->
     <string name="report_problem_row_title">Report a problem</string>
     <string name="report_problem_row_subtitle">Send logs and an optional note to the developer</string>
