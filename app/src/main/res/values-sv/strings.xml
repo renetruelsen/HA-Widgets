@@ -41,6 +41,8 @@
     <string name="section_connection">Anslutning</string>
     <string name="section_getting_started">Kom igång</string>
     <string name="section_settings_title">Inställningar</string>
+    <string name="section_appearance">Utseende</string>
+    <string name="section_troubleshooting">Felsökning</string>
     <string name="settings_open">Öppna</string>
     <string name="cd_close_settings">Stäng</string>
 
@@ -73,12 +75,24 @@
     <string name="battery_status_exempt">Undantagen från batterioptimering</string>
     <string name="battery_status_restricted">Begränsad av batterioptimering</string>
 
-    <!-- Remote error logging -->
-    <string name="log_send_title">Fellogg</string>
-    <string name="log_send_subtitle">Skicka en diagnostikslogg till utvecklaren</string>
-    <string name="log_send_now">Skicka logg nu</string>
-    <string name="log_send_success">Logg skickad</string>
-    <string name="log_send_failed">Kunde inte skicka logg</string>
+    <!-- Remote error logging: Report a problem dialog -->
+    <string name="report_problem_row_title">Rapportera ett problem</string>
+    <string name="report_problem_row_subtitle">Skicka loggar och en valfri notering till utvecklaren</string>
+    <string name="report_problem_button">Rapportera</string>
+    <string name="report_problem_title">Rapportera ett problem</string>
+    <string name="report_problem_crash_title">Appen stängdes oväntat</string>
+    <string name="report_problem_body">Skicka de senaste loggarna till utvecklaren. Beskriv gärna vad som hände (valfritt).</string>
+    <string name="report_problem_crash_body">Appen stängdes oväntat förra gången (%1$s). Skicka loggar för att hjälpa till att åtgärda det? Lägg gärna till detaljer (valfritt).</string>
+    <string name="report_problem_note_label">Vad hände? (valfritt)</string>
+    <string name="copy_log">Kopiera logg</string>
+    <string name="sending_in_progress">Skickar rapport…</string>
+    <string name="report_problem_button_send">Skicka rapport</string>
+    <string name="report_problem_success">Rapport skickad</string>
+    <string name="report_problem_not_configured">Rapportering är inte konfigurerad i den här byggen</string>
+    <string name="report_problem_network_error">Nätverksfel — kunde inte skicka</string>
+    <string name="report_problem_server_rejected">Servern avvisade rapporten</string>
+    <string name="retry_action">Försök igen</string>
+    <string name="copied_to_clipboard">Kopierat till urklipp</string>
 
     <!-- MultiEntityWidget: en variant, fast 4-slot standardfootprint (se
          docs/widget-settings-spec.md §8) -->

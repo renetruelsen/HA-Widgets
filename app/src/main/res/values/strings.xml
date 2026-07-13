@@ -41,6 +41,8 @@
     <string name="section_connection">Connection</string>
     <string name="section_getting_started">Getting started</string>
     <string name="section_settings_title">Settings</string>
+    <string name="section_appearance">Appearance</string>
+    <string name="section_troubleshooting">Troubleshooting</string>
     <string name="settings_open">Open</string>
     <string name="cd_close_settings">Close</string>
 
@@ -73,12 +75,24 @@
     <string name="battery_status_exempt">Exempt from battery optimization</string>
     <string name="battery_status_restricted">Restricted by battery optimization</string>
 
-    <!-- Remote error logging -->
-    <string name="log_send_title">Error log</string>
-    <string name="log_send_subtitle">Send a diagnostic log to the developer</string>
-    <string name="log_send_now">Send log now</string>
-    <string name="log_send_success">Log sent</string>
-    <string name="log_send_failed">Couldn\'t send log</string>
+    <!-- Remote error logging: Report a problem dialog -->
+    <string name="report_problem_row_title">Report a problem</string>
+    <string name="report_problem_row_subtitle">Send logs and an optional note to the developer</string>
+    <string name="report_problem_button">Report</string>
+    <string name="report_problem_title">Report a problem</string>
+    <string name="report_problem_crash_title">App closed unexpectedly</string>
+    <string name="report_problem_body">Send the most recent logs to the developer. Describe what happened, if you like (optional).</string>
+    <string name="report_problem_crash_body">The app closed unexpectedly last time (%1$s). Send logs to help fix it? Add details, if you like (optional).</string>
+    <string name="report_problem_note_label">What happened? (optional)</string>
+    <string name="copy_log">Copy log</string>
+    <string name="sending_in_progress">Sending report…</string>
+    <string name="report_problem_button_send">Send report</string>
+    <string name="report_problem_success">Report sent</string>
+    <string name="report_problem_not_configured">Reporting isn\'t set up on this build</string>
+    <string name="report_problem_network_error">Network error — couldn\'t send</string>
+    <string name="report_problem_server_rejected">Server rejected the report</string>
+    <string name="retry_action">Retry</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
 
     <!-- MultiEntityWidget: single variant, fixed 4-slot default footprint (see
          docs/widget-settings-spec.md §8) -->
