@@ -1331,6 +1331,81 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     testet:** faktisk upload til rtr.dk med et rigtigt token (kræver brugerens eget token, som
     Claude ikke har adgang til efter redaktionen) og HA-forbindelsesfejl-stien med slukket
     netværk (ville kræve længere emulator-session). Device-QA på S23 afventer bruger.
+- ✅ **v0.2.78 — Settings-ark redesignet + "Report a problem"-dialog erstatter "Send log nu"
+  (2026-07-13, brainstorm → to UX-review-gates → subagent-driven-development, 7 tasks):**
+  - **Baggrund:** brugeren rapporterede at indstillings-arket (bottom sheet) på Galaxy S23 nogle
+    gange åbnede i en delvist udfoldet tilstand, hvor nederste rækker (bl.a. "Send log nu") kun
+    var nåelige via et ikke-oplagt træk-op-greb. To uafhængige UX-reviewere (informationsarkitektur
+    hhv. interaktion/tilgængelighed) blev dispatchet mod et emulator-skærmbillede + koden; begge
+    klikbare mockups (sektionsopdelt layout, "Report a problem"-dialogens flow) blev **godkendt
+    uændret af brugeren**.
+  - **Root cause + fix (`MainActivity.kt`):** `rememberModalBottomSheetState()` brugte Material3's
+    standard delvist-udfoldede starttilstand, og indholdet stod i en almindelig `Column` uden
+    `verticalScroll` — kombinationen betød at nederste rækker kunne lande under synligt-område ved
+    den delvist-udfoldede højde, uden at sheetet selv kunne scrolles for at nå dem. Fix:
+    `rememberModalBottomSheetState(skipPartiallyExpanded = true)` (sheetet åbner nu ALTID fuldt
+    udfoldet) + `Modifier.verticalScroll(rememberScrollState())` på selve indholds-Columnen (sikrer
+    en vej til bunds selv ved ekstreme skriftstørrelser/indhold) + alle rækker fik
+    `heightIn(min = 48.dp)` (Android tilgængeligheds-tap-target-minimum, matcher
+    `MultiEntityWidget`-familiens etablerede 48dp-konvention).
+  - **To-sektions-omlægning:** indstillingerne er nu grupperet under to `SectionHeader`'e —
+    **"Appearance"** (Tema/Widget-farve/Sprog) og **"Troubleshooting"** (Batterioptimering/
+    "Report a problem"). Matcher den godkendte info-arkitektur-mockup.
+  - **"Send log nu" → "Report a problem":** den gamle envejs-knap ("send det aktuelle log-buffer
+    uden kontekst") erstattet af en fuld dialog (`ReportProblemDialog`) med et valgfrit note-felt
+    (300-tegns hård grænse + live tæller), en "Kopiér log"-knap (kopierer log-linjer + widget-
+    config-dump til clipboard UDEN at lukke dialogen — så brugeren kan indsætte i en anden app,
+    fx en besked til udvikleren, og vende tilbage), og en "Send report"-knap.
+  - **`RemoteLogger.flush()`: `Boolean` → `UploadResult` sealed class** (`Success`/`NotConfigured`/
+    `NetworkError`/`ServerRejected(code)`/`Throttled`) — den gamle boolske returværdi kunne ikke
+    skelne "intet token konfigureret" fra en reel netværksfejl, så UI'et viste samme generiske
+    besked for begge. Nu mapper `MainActivity` hver `UploadResult`-gren til sin egen lokaliserede
+    Snackbar-besked (`report_problem_not_configured`/`_network_error`/`_server_rejected`/
+    `_success`), og netværksfejlens Snackbar har en "Retry"-action der genåbner dialogen
+    (`SnackbarResult.ActionPerformed → showReportDialog = true`).
+  - **Crash-persistence + "spørg kun én gang pr. crash":** `SecureStore.pendingCrashSummary`/
+    `pendingCrashLog` gemmer crash-teksten så et efterfølgende proces-liv kan hente den via
+    `RemoteLogger.restorePersistedLines` (nyt process' `LogBuffer` starter tomt — uden denne
+    genindlæsning ville en crash-uploads `E [CRASH] …`-linje og stacktrace være tabt, da de blev
+    skrevet af den proces der lige døde). `HaWidgetsApp` viser `ReportProblemDialog` automatisk
+    ved næste app-åbning HVIS der er en pending crash, og rydder feltet ved "Cancel" ELLER "Send
+    report" — så dialogen ikke popper op igen ved efterfølgende almindelige åbninger (kun ved en
+    NY crash).
+  - **Reel fejl fundet og rettet UNDER QA (commit `2a7864e`, allerede reviewet og merged ind på
+    denne branch før denne opgave startede):** crash-auto-dialogen dukkede IKKE op efter en rigtig
+    tvungen crash (`adb shell am crash dk.akait.hawidgets`) — root cause: `SecureStore`s
+    crash-persistence-felter brugte den asynkrone `apply()`-skrivning, som ikke nåede at ramme
+    disk før proces-død (Android dræber processen næsten øjeblikkeligt efter en uhåndteret
+    exception, `apply()`s baggrunds-commit vinder ikke det kapløb). Rettet med en ny
+    `SecureStore.persistPendingCrashSync()` der bruger synkron, BLOKERENDE `commit()` i stedet.
+    Verificeret end-to-end efter fix: tvungen crash → genåbn app → "App closed unexpectedly"-
+    dialog dukker automatisk op med den rigtige exception-tekst
+    (`android.app.RemoteServiceException$CrashedByAdbException: shell-induced crash`) → tryk
+    Cancel → force-stop + genåbn igen → dialogen dukker korrekt IKKE op igen (ask-once-per-crash
+    bekræftet).
+  - **QA:** clean build + fuld unit-test-suite grøn. Emulator (`pixel_test`): Settings-arket åbner
+    fuldt udfoldet ved første tryk (ingen delvist-trukket tilstand), korrekt to-sektions-layout
+    ("Appearance": Tema/Widget-farve/Sprog, "Troubleshooting": Batterioptimering/"Report a
+    problem") — matcher den godkendte mockup nøjagtigt. "Report a problem"-dialogen: note-feltets
+    live "X/300"-tæller virker, "Kopiér log" kopierer rigtige log-linjer + widget-config til
+    clipboard uden at lukke dialogen (verificeret via Gboards clipboard-forslags-strip, som viste
+    det kopierede indhold), "Send report" viser en ikke-lukbar "Sender rapport…"-spinner-dialog.
+    Denne emulator-session havde ingen DNS-rute til rtr.dk (bekræftet via logcat:
+    `UnknownHostException: Unable to resolve host "rtr.dk"`) — det gjorde det muligt at
+    verificere en RIGTIG (ikke simuleret) netværksfejl-sti: Snackbaren viste korrekt
+    "Network error — couldn't send" med en "Retry"-action. **Ikke testet denne session:**
+    "Send report"s SUCCESS-sti med virkende netværk (kun netværksfejl-stien blev afprøvet, da
+    netop denne emulator-instans manglede DNS-rute ud — en tidligere, urelateret sessions
+    emulator nåede rtr.dk med succes, så selve upload-mekanismen er ikke ny/uverificeret, blot
+    ikke genbekræftet som succesfuld i DENNE session); "ikke konfigureret"-Snackbarens besked
+    (uden `LOG_UPLOAD_TOKEN`) — et `LOG_UPLOAD_TOKEN` var allerede sat i `local.properties` fra
+    en tidligere session, så denne build havde det altid konfigureret, ikke gentestet uden;
+    `ServerRejected`-resultat-tilstanden; Retry-Snackbar-actionens faktiske genåbning af dialogen
+    (forsøgt to gange, begge gange forhindrede en skærmbillede-timing/koordinat-ramme-fejl på
+    controller-siden en visuel bekræftelse, selvom selve kodestien blev uafhængigt verificeret
+    korrekt under Task 7's code-review — sporet `SnackbarResult.ActionPerformed → showReportDialog
+    = true` i `MainActivity.kt`). Device-QA på Galaxy S23 (ingen enhed tilsluttet denne session) —
+    afventer bruger, per projektets etablerede workflow.
 
 ## Næste skridt
 
@@ -1436,3 +1511,6 @@ JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assemble
   appen fint, men `RemoteLogger.flush()` er en stille no-op (ingen logs når rtr.dk). Sæt
   `LOG_UPLOAD_TOKEN=<token>` lokalt for at aktivere upload; aldrig committet til git (v0.2.45-lære,
   gentaget for `docs/ha-widgets-logging.md` i v0.2.77 — se dér).
+- **Settings-arket åbner altid fuldt udfoldet:** `rememberModalBottomSheetState(skipPartiallyExpanded = true)`
+  siden v0.2.78 — roden til at "Send log now"/"Report a problem"-rækken kunne være unåelig var
+  standardadfærdens delvist-udfoldede starttilstand kombineret med en Column uden `verticalScroll`.
