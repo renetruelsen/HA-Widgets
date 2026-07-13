@@ -68,6 +68,23 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         prefs.edit().remove(KEY_PENDING_CRASH_SUMMARY).remove(KEY_PENDING_CRASH_LOG).apply()
     }
 
+    /**
+     * Synkron, BLOKERENDE variant af [pendingCrashSummary]/[pendingCrashLog]-sætterne — kaldes
+     * KUN fra [dk.akait.hawidgets.logging.RemoteLogger.installCrashHandler]. `.apply()` skriver
+     * asynkront (via en baggrunds-handler); en crash-handler kan finde på at dræbe processen
+     * (`Process.killProcess`) eller lade systemet gøre det meget kort efter, og der er ingen
+     * garanti for at et `.apply()`-kald når at blive flushet til disk inden da. `.commit()` er
+     * synkront og garanterer derfor at data ER på disk når kaldet returnerer, FØR crash-handleren
+     * går videre til selve netværks-uploadet (som i sig selv kan hænge/blive dræbt uden risiko —
+     * persisteringen er allerede sket).
+     */
+    fun persistPendingCrashSync(summary: String, log: String) {
+        prefs.edit()
+            .putString(KEY_PENDING_CRASH_SUMMARY, summary)
+            .putString(KEY_PENDING_CRASH_LOG, log)
+            .commit()
+    }
+
     val isConfigured: Boolean
         get() = !baseUrl.isNullOrBlank() && !token.isNullOrBlank()
 

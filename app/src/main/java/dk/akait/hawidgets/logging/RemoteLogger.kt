@@ -159,9 +159,11 @@ object RemoteLogger {
                 buffer.add('E', "CRASH", throwable.toString())
                 buffer.addRaw(Log.getStackTraceString(throwable))
                 try {
-                    val store = SecureStore.get(appContext)
-                    store.pendingCrashSummary = throwable.toString()
-                    store.pendingCrashLog = buffer.body()
+                    // .commit() (synkron), IKKE .apply() — se SecureStore.persistPendingCrashSync's
+                    // KDoc. Fundet via emulator-QA: med .apply() nåede skrivningen aldrig disk før
+                    // processen døde, så auto-trigger-dialogen aldrig så et pending-crash-flag ved
+                    // næste åbning.
+                    SecureStore.get(appContext).persistPendingCrashSync(throwable.toString(), buffer.body())
                 } catch (_: Throwable) {
                     // Persistering er best-effort — må ikke forhindre selve upload-forsøget nedenfor.
                 }
