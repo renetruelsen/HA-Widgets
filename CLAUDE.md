@@ -1408,6 +1408,35 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     korrekt under Task 7's code-review — sporet `SnackbarResult.ActionPerformed → showReportDialog
     = true` i `MainActivity.kt`). Device-QA på Galaxy S23 (ingen enhed tilsluttet denne session) —
     afventer bruger, per projektets etablerede workflow.
+- ✅ **v0.2.79-80 — MultiEntityWidget: ensartet rækkehøjde + widget-popups følger farvetema
+  (2026-07-13, brugerrapport, systematic-debugging):**
+  - **v0.2.79 — rækkehøjde:** brugeren observerede at rækker uden sekundær-chip var lavere end
+    rækker med chip. Root cause (bekræftet via `uiautomator dump` + pixel-måling på emulator,
+    density 420dpi): `SecondaryChip`s Box har en hardcoded `.height(48.dp)` (a11y-tap-target,
+    v0.2.34), men `SlotRow`s eget ikon/tekst-indhold havde INTET tilsvarende — rækkens højde fulgte
+    passivt det højeste barn (tekst-kolonne ~33dp uden chip, chippens tvungne 48dp med chip). Målt
+    reelt: 116px (44dp) uden chip vs. 156px (60dp) med chip. **Fix:** ny delt `CHIP_HEIGHT_DP=48`-
+    konstant (`MultiEntityRendering.kt`), sat ubetinget på `SlotRow`s content-`Row` (ikke kun ved
+    chips.isNotEmpty()) OG på `SecondaryChip`s Box (samme konstant, DRY). Alle rækker nu ens 156px/
+    60dp, verificeret målt før/efter på emulator.
+  - **v0.2.80 — popup-farvetema:** `Range/Text/DateTime/NumberInput/ConfirmActionActivity` brugte
+    alle `HaWidgetsTheme` (app-UI'ets fast blå skema, kun lys/mørk — jf. eksisterende
+    "app-UI forbliver fast blå"-beslutning), og fulgte derfor ALDRIG brugerens valgte widget-
+    farvetema, selvom disse 5 popups reelt er widget-interaktion (åbnes ved tryk på en widget-
+    række/chip), ikke app-UI. Bruger bekræftede eksplicit at popups skal følge widget-farvetema.
+    **Fix:** ny `WidgetPopupTheme` (`widget/common/WidgetPopupTheme.kt`) — genbruger
+    `WidgetColorPreset`/`presetFor()` fra `WidgetColorPresets.kt` (samme kilde som selve widgettens
+    `WidgetGlanceTheme`), læser `SecureStore.themeMode` + `widgetColorTheme` ved komposition (samme
+    engangs-læse-mønster som `HaWidgetsTheme`, ikke reaktiv — popups er kortlivede). Alle 4 Compose-
+    baserede popups (ikke `DateTimeControlActivity`, som bruger native `DatePickerDialog`/
+    `TimePickerDialog` — OS-styret, ingen Compose-tema at ændre) skiftet fra `HaWidgetsTheme` til
+    `WidgetPopupTheme`. `HaWidgetsTheme` selv (app-UI: MainActivity, ConfigDiscoverability-gate)
+    er uændret — forbliver fast blå.
+  - **QA:** clean build. Emulator (`pixel_test`, widget-farvetema=Grøn, app-tema=Mørk): tryk på
+    lys-række åbnede `ConfirmActionActivity` med "Confirm"-knap grøn (var blå), `Cancel`-annulleret
+    uden at ændre den rigtige HA-lampe. De øvrige 3 Compose-popups deler samme `WidgetPopupTheme`-
+    kald, ikke hver især skærmbillede-verificeret separat. **Device-QA på Galaxy S23
+    (`R3CWC00JY4M`): bruger-bekræftet OK for begge fixes (2026-07-13).** Merged til `main` + pushed.
 
 ## Næste skridt
 
