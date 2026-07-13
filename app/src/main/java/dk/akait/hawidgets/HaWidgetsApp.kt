@@ -30,6 +30,9 @@ class HaWidgetsApp : Application() {
     override fun onCreate() {
         super.onCreate()
         RemoteLogger.ensureDeviceLine(this)
+        SecureStore.get(this).pendingCrashLog?.let { persisted ->
+            RemoteLogger.restorePersistedLines(persisted.split("\n"))
+        }
         RemoteLogger.installCrashHandler(this)
         Handler(Looper.getMainLooper()).post {
             runCatching { WebView(this).destroy() }
