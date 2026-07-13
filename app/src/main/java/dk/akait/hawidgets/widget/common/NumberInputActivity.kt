@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -66,7 +65,7 @@ class NumberInputActivity : ComponentActivity() {
         val unitSuffix = intent.getStringExtra(EXTRA_UNIT_SUFFIX).orEmpty()
 
         setContent {
-            HaWidgetsTheme {
+            WidgetPopupTheme {
                 Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp) {
                     val scope = rememberCoroutineScope()
                     var text by remember { mutableStateOf(trimNumber(current)) }

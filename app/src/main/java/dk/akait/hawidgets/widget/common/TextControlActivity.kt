@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.EntityRepository
 import dk.akait.hawidgets.data.HaApiClient
@@ -48,7 +47,7 @@ class TextControlActivity : ComponentActivity() {
         val maxLength = intent.getIntExtra(EXTRA_MAX_LENGTH, 255).takeIf { it > 0 } ?: 255
 
         setContent {
-            HaWidgetsTheme {
+            WidgetPopupTheme {
                 Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp) {
                     val scope = rememberCoroutineScope()
                     var text by remember { mutableStateOf(initialValue) }

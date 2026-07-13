@@ -57,6 +57,10 @@ internal const val FRAME_PADDING_DP = 4
 internal const val ROW_GAP_DP = 4
 internal const val CHIP_GAP_DP = 4
 internal const val REFRESH_STRIP_HEIGHT_DP = 24
+// Fælles a11y-tap-target-højde (v0.2.34) for chips OG selve rækkens indhold (v0.3.x-fix) — uden
+// denne på rækken driver kun tekst-kolonnen (~33dp) rækkens højde, mens en chip-rækkes 48dp-chip
+// gjorde DEN højere (44dp vs 60dp total) — brugerrapporteret uens rækkehøjde.
+internal const val CHIP_HEIGHT_DP = 48
 
 // v0.2.42 række/chip-styling: tændt = fuld primary-farve, slukket (on/off-domæner) = kun outline.
 // Glance har ingen border-modifier, så en "outline" laves med to lag: en ydre Box med ring-farve
@@ -318,7 +322,13 @@ private fun SlotRow(
 
     val chips = slot.secondaryChips()
     val rowContent: @Composable () -> Unit = {
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // Højde altid CHIP_HEIGHT_DP (ubetinget, uanset chips.isNotEmpty()) — ellers driver kun
+        // ikon/tekst (~33dp) højden på en chipløs række, mens en chip-rækkes tvungne 48dp-chip gør
+        // DEN højere. Med fast højde her bliver alle rækker ens (44dp → 60dp totalt med padding).
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().height(CHIP_HEIGHT_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             if (slot.showIcon) {
                 Image(
                     provider = ImageProvider(domainIconResId(slot.displayDomain)),
@@ -454,7 +464,7 @@ private fun SecondaryChip(
     }
     Box(
         modifier = withClick(
-            GlanceModifier.height(48.dp).background(bgColor).cornerRadius(CHIP_CORNER_DP.dp).then(chipPad),
+            GlanceModifier.height(CHIP_HEIGHT_DP.dp).background(bgColor).cornerRadius(CHIP_CORNER_DP.dp).then(chipPad),
         ),
         contentAlignment = Alignment.Center,
     ) { chipContent() }
