@@ -48,6 +48,26 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_WIDGET_COLOR_THEME, COLOR_BLUE) ?: COLOR_BLUE
         set(value) = prefs.edit().putString(KEY_WIDGET_COLOR_THEME, value).apply()
 
+    /** Sat af [dk.akait.hawidgets.logging.RemoteLogger.installCrashHandler] hvis forrige proces
+     * crashede — throwable.toString(), null = intet ventende. Læses af `MainActivity` ved næste
+     * app-åbning for at auto-åbne rapport-dialogen. Ryddes af [clearPendingCrash]. */
+    var pendingCrashSummary: String?
+        get() = prefs.getString(KEY_PENDING_CRASH_SUMMARY, null)
+        set(value) = prefs.edit().putString(KEY_PENDING_CRASH_SUMMARY, value).apply()
+
+    /** Buffer-øjebliksbilledet (newline-joinet) fra crash-tidspunktet — genindsættes i den nye
+     * proces' `RemoteLogger` via `restorePersistedLines` (se `HaWidgetsApp`), så et efterfølgende
+     * flush faktisk indeholder selve crashet (den in-memory buffer overlever ikke genstart). */
+    var pendingCrashLog: String?
+        get() = prefs.getString(KEY_PENDING_CRASH_LOG, null)
+        set(value) = prefs.edit().putString(KEY_PENDING_CRASH_LOG, value).apply()
+
+    /** Rydder begge crash-pending-felter — kaldes når rapport-dialogen er blevet vist og
+     * afsluttet (Cancel eller Send, uanset udfald): "spørg kun én gang pr. crash". */
+    fun clearPendingCrash() {
+        prefs.edit().remove(KEY_PENDING_CRASH_SUMMARY).remove(KEY_PENDING_CRASH_LOG).apply()
+    }
+
     val isConfigured: Boolean
         get() = !baseUrl.isNullOrBlank() && !token.isNullOrBlank()
 
@@ -95,6 +115,8 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         private const val KEY_TOKEN = "token"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_WIDGET_COLOR_THEME = "widget_color_theme"
+        private const val KEY_PENDING_CRASH_SUMMARY = "pending_crash_summary"
+        private const val KEY_PENDING_CRASH_LOG = "pending_crash_log"
         private fun keyDashboard(id: Int) = "dashboard_path_$id"
 
         const val THEME_LIGHT = "light"
