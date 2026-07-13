@@ -239,4 +239,23 @@
     <string name="open_app_button">Öppna HA Widgets</string>
     <string name="settings_in_app_hint">Språk, tema och färger ändras i appen</string>
     <string name="open_short">Öppna</string>
+
+    <!-- Import/export av widgetkonfigurationer -->
+    <string name="cd_more_options">Fler alternativ</string>
+    <string name="export_this_widget">Exportera denna widget</string>
+    <string name="import_config">Importera konfiguration</string>
+    <string name="section_backup">Säkerhetskopiering</string>
+    <string name="export_all_row_title">Exportera alla widgetar</string>
+    <string name="export_all_row_subtitle">Spara eller dela en säkerhetskopia med alla widgetar</string>
+    <string name="export_all_button">Exportera</string>
+    <string name="import_pick_title">Välj en konfiguration</string>
+    <string name="import_confirm_title">Ersätt inställning?</string>
+    <string name="import_confirm_message">Den valda konfigurationen ersätter denna widgets nuvarande inställning.</string>
+    <string name="import_replace_button">Ersätt</string>
+    <string name="import_success">Konfiguration importerad</string>
+    <string name="import_error_invalid_json">Kunde inte läsa filen — ingen giltig konfiguration.</string>
+    <string name="import_error_wrong_app">Filen är från en annan app.</string>
+    <string name="import_error_unsupported_version">Filen skapades av en nyare appversion (v%d).</string>
+    <string name="import_error_no_configs">Filen innehåller inga konfigurationer.</string>
+    <string name="import_error_no_matching_type">Filen har ingen konfiguration för denna widgettyp.</string>
 </resources>

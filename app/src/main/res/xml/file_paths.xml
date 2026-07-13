@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Matcher EXPORT_SUBDIR i WidgetTransferIo — den midlertidige eksport-fil. -->
+    <cache-path name="exports" path="exports/" />
+</paths>

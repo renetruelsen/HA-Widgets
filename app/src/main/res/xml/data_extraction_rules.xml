@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup / enhedsoverførsels-regler for Android 12+ (android:dataExtractionRules).
+  Samme princip som backup_rules.xml: ekskludér den KeyStore-krypterede secure store fra både
+  sky-backup og direkte enhed-til-enhed-overførsel (hardware-bundet nøgle kan ikke restores).
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="ha_secure_store.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="ha_secure_store.xml" />
+    </device-transfer>
+</data-extraction-rules>

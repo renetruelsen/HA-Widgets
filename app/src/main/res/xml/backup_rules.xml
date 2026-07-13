@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup-regler for Android 11 og ældre (android:fullBackupContent).
+
+  Alt sikkerhedskopieres som standard (Room-DB ha_widgets.db + genvej-prefs widget_config),
+  UNDTAGEN den KeyStore-krypterede secure store: dens master-nøgle er hardware-bundet og kan
+  IKKE dekrypteres på en anden enhed — at restore filen uden nøglen ville give korruption/crash.
+  Den indeholder desuden token+URL (skal ikke i sky-backup) samt tema/farve (trivielle at nulstille).
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="ha_secure_store.xml" />
+</full-backup-content>

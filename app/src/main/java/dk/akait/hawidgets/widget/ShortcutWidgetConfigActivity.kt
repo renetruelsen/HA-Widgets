@@ -56,6 +56,17 @@ import dk.akait.hawidgets.data.HaWebSocketClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.WidgetConfig
 import dk.akait.hawidgets.data.WidgetConfigStore
+import dk.akait.hawidgets.transfer.ConfirmReplaceDialog
+import dk.akait.hawidgets.transfer.ImportError
+import dk.akait.hawidgets.transfer.ImportPickerDialog
+import dk.akait.hawidgets.transfer.TRANSFER_IMPORT_MIME_TYPES
+import dk.akait.hawidgets.transfer.TransferConfig
+import dk.akait.hawidgets.transfer.TransferOverflowMenu
+import dk.akait.hawidgets.transfer.WidgetTransferIo
+import dk.akait.hawidgets.transfer.importErrorMessage
+import dk.akait.hawidgets.transfer.rememberImportLauncher
+import dk.akait.hawidgets.transfer.shortcutTransferConfig
+import dk.akait.hawidgets.transfer.singleConfigBundle
 import dk.akait.hawidgets.widget.common.AppSettingsHint
 import dk.akait.hawidgets.widget.common.NotConnectedGate
 import dk.akait.hawidgets.widget.common.rememberResumeTick
@@ -134,6 +145,20 @@ private fun ConfigScreen(
     var notConnected by remember { mutableStateOf(false) }
     var loaded by remember { mutableStateOf(false) }
 
+    // Import/eksport
+    var importChoices by remember { mutableStateOf<List<TransferConfig.Shortcut>?>(null) }
+    var pendingImport by remember { mutableStateOf<TransferConfig.Shortcut?>(null) }
+    val importLauncher = rememberImportLauncher { bundle ->
+        val shortcuts = bundle.shortcutConfigs
+        if (shortcuts.isEmpty()) {
+            android.widget.Toast.makeText(
+                context, importErrorMessage(context, ImportError.NoMatchingType), android.widget.Toast.LENGTH_LONG
+            ).show()
+        } else {
+            importChoices = shortcuts
+        }
+    }
+
     // Load dashboards once HA is configured; restore previously selected dashboard if reconfiguring.
     // Re-checks connection state on every resume (rememberResumeTick) so returning from MainActivity
     // after connecting there picks the gate back down without re-adding the widget.
@@ -168,6 +193,32 @@ private fun ConfigScreen(
         return
     }
 
+    importChoices?.let { choices ->
+        ImportPickerDialog(
+            labels = choices.map { it.label },
+            onPick = { index -> pendingImport = choices[index]; importChoices = null },
+            onDismiss = { importChoices = null },
+        )
+    }
+    pendingImport?.let { chosen ->
+        ConfirmReplaceDialog(
+            onConfirm = {
+                val cfg = chosen.config
+                mode = cfg.displayMode
+                widthPct = cfg.widthPct.toFloat()
+                heightPct = cfg.heightPct.toFloat()
+                // Match dashboard-stien mod den indlæste liste (samme HA). Findes den ikke, beholdes
+                // det nuværende valg — visning/størrelser anvendes uanset.
+                selected = dashboards.firstOrNull { it.urlPath == cfg.dashboardPath } ?: selected
+                pendingImport = null
+                android.widget.Toast.makeText(
+                    context, context.getString(R.string.import_success), android.widget.Toast.LENGTH_SHORT
+                ).show()
+            },
+            onDismiss = { pendingImport = null },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -186,6 +237,20 @@ private fun ConfigScreen(
                     }) {
                         Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.settings_in_app_hint))
                     }
+                    TransferOverflowMenu(
+                        onExport = {
+                            val d = selected ?: return@TransferOverflowMenu
+                            val cfg = WidgetConfig(
+                                dashboardPath = d.urlPath,
+                                title = d.title,
+                                displayMode = mode,
+                                widthPct = widthPct.toInt(),
+                                heightPct = heightPct.toInt(),
+                            )
+                            WidgetTransferIo.shareBundle(context, singleConfigBundle(shortcutTransferConfig(cfg)))
+                        },
+                        onImport = { importLauncher.launch(TRANSFER_IMPORT_MIME_TYPES) },
+                    )
                 },
             )
         },

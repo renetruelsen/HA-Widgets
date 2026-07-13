@@ -22,6 +22,16 @@ import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.MultiWidgetEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.transfer.ConfirmReplaceDialog
+import dk.akait.hawidgets.transfer.ImportError
+import dk.akait.hawidgets.transfer.ImportPickerDialog
+import dk.akait.hawidgets.transfer.TRANSFER_IMPORT_MIME_TYPES
+import dk.akait.hawidgets.transfer.TransferConfig
+import dk.akait.hawidgets.transfer.WidgetTransferIo
+import dk.akait.hawidgets.transfer.importErrorMessage
+import dk.akait.hawidgets.transfer.multiTransferConfig
+import dk.akait.hawidgets.transfer.rememberImportLauncher
+import dk.akait.hawidgets.transfer.singleConfigBundle
 import dk.akait.hawidgets.widget.common.AppSettingsHint
 import dk.akait.hawidgets.widget.common.MULTI_ENTITY_DOMAINS
 import dk.akait.hawidgets.widget.common.NotConnectedGate
@@ -89,6 +99,21 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     var step by remember { mutableStateOf<Step>(Step.ListScreen) }
     var notConnected by remember { mutableStateOf(false) }
     var loaded by remember { mutableStateOf(false) }
+
+    // Import/eksport-tilstand: importChoices = filens multi-configs (vises i vælgeren);
+    // pendingImport = den valgte config, der afventer bekræftelse før den overskriver.
+    var importChoices by remember { mutableStateOf<List<TransferConfig.Multi>?>(null) }
+    var pendingImport by remember { mutableStateOf<TransferConfig.Multi?>(null) }
+    val importLauncher = rememberImportLauncher { bundle ->
+        val multi = bundle.multiConfigs
+        if (multi.isEmpty()) {
+            android.widget.Toast.makeText(
+                context, importErrorMessage(context, ImportError.NoMatchingType), android.widget.Toast.LENGTH_LONG
+            ).show()
+        } else {
+            importChoices = multi
+        }
+    }
 
     val resumeTick = rememberResumeTick()
     LaunchedEffect(resumeTick) {
@@ -169,6 +194,12 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                         .putExtra(dk.akait.hawidgets.MainActivity.EXTRA_OPEN_SETTINGS, true)
                 )
             },
+            onExport = {
+                WidgetTransferIo.shareBundle(
+                    context, singleConfigBundle(multiTransferConfig(slots, showRefreshIcon))
+                )
+            },
+            onImport = { importLauncher.launch(TRANSFER_IMPORT_MIME_TYPES) },
         )
 
         is Step.EntityPicker -> EntityPickerSubScreen(
@@ -298,6 +329,30 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             },
             onSave = { saveSlot(s.editIndex, s.draft) },
             onBack = { step = Step.ListScreen },
+        )
+    }
+
+    // Import: vælger over filens multi-configs → bekræft → erstat den nuværende in-memory opsætning.
+    importChoices?.let { choices ->
+        ImportPickerDialog(
+            labels = choices.map { it.label },
+            onPick = { index -> pendingImport = choices[index]; importChoices = null },
+            onDismiss = { importChoices = null },
+        )
+    }
+    pendingImport?.let { chosen ->
+        ConfirmReplaceDialog(
+            onConfirm = {
+                // Sæt den aktuelle widgets appWidgetId + fortløbende slotIndex på de importerede slots
+                // (afsenderens appWidgetId/placeholder-0 kasseres). Gemmes via det eksisterende "Gem"-flow.
+                slots = chosen.slots.mapIndexed { i, sl -> sl.copy(appWidgetId = appWidgetId, slotIndex = i) }
+                showRefreshIcon = chosen.showRefreshIcon
+                pendingImport = null
+                android.widget.Toast.makeText(
+                    context, context.getString(R.string.import_success), android.widget.Toast.LENGTH_SHORT
+                ).show()
+            },
+            onDismiss = { pendingImport = null },
         )
     }
 }

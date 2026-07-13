@@ -239,4 +239,23 @@
     <string name="open_app_button">Open HA Widgets</string>
     <string name="settings_in_app_hint">Language, theme, and colors are set in the app</string>
     <string name="open_short">Open</string>
+
+    <!-- Import/export of widget configurations -->
+    <string name="cd_more_options">More options</string>
+    <string name="export_this_widget">Export this widget</string>
+    <string name="import_config">Import configuration</string>
+    <string name="section_backup">Backup</string>
+    <string name="export_all_row_title">Export all widgets</string>
+    <string name="export_all_row_subtitle">Save or share a backup file of every widget</string>
+    <string name="export_all_button">Export</string>
+    <string name="import_pick_title">Choose a configuration</string>
+    <string name="import_confirm_title">Replace setup?</string>
+    <string name="import_confirm_message">The selected configuration will replace this widget\'s current setup.</string>
+    <string name="import_replace_button">Replace</string>
+    <string name="import_success">Configuration imported</string>
+    <string name="import_error_invalid_json">Couldn\'t read the file — not a valid configuration.</string>
+    <string name="import_error_wrong_app">This file is from another app.</string>
+    <string name="import_error_unsupported_version">This file was made by a newer app version (v%d).</string>
+    <string name="import_error_no_configs">The file contains no configurations.</string>
+    <string name="import_error_no_matching_type">The file has no configuration for this widget type.</string>
 </resources>

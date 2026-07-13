@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -95,6 +96,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material.icons.filled.BugReport
+import dk.akait.hawidgets.transfer.WidgetTransferIo
+import dk.akait.hawidgets.transfer.collectAllConfigs
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -580,6 +583,37 @@ private fun SettingsSheet(
                     )
                 }
                 OutlinedButton(onClick = onReportProblem) { Text(stringResource(R.string.report_problem_button)) }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            SectionHeader(stringResource(R.string.section_backup))
+
+            val backupScope = rememberCoroutineScope()
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(vertical = 10.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    Icons.Default.Backup,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.export_all_row_title), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(R.string.export_all_row_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedButton(onClick = {
+                    backupScope.launch {
+                        WidgetTransferIo.shareBundle(context, collectAllConfigs(context))
+                    }
+                }) { Text(stringResource(R.string.export_all_button)) }
             }
         }
     }

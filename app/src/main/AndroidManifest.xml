@@ -16,7 +16,9 @@
 
     <application
         android:name=".HaWidgetsApp"
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
@@ -129,6 +131,17 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:taskAffinity=""
             android:excludeFromRecents="true" />
+
+        <!-- Eksponerer den eksporterede config-fil midlertidigt til systemets share-sheet. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="dk.akait.hawidgets.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

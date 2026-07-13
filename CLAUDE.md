@@ -1437,6 +1437,42 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     uden at ændre den rigtige HA-lampe. De øvrige 3 Compose-popups deler samme `WidgetPopupTheme`-
     kald, ikke hver især skærmbillede-verificeret separat. **Device-QA på Galaxy S23
     (`R3CWC00JY4M`): bruger-bekræftet OK for begge fixes (2026-07-13).** Merged til `main` + pushed.
+- ✅ **v0.2.81 — Import/eksport af widget-konfigurationer + Auto Backup (2026-07-13, brainstorm →
+  direkte implementering efter brugerønske "spring specs over"):**
+  - **Baggrund:** genbrug af en eksport/import-tilgang fra en anden (Flutter-)app. Nøgle-indsigt
+    afklaret i brainstorm: her er config nøglet på `appWidgetId` (OS-tildelt ved PLACERING), ikke et
+    stabilt scene-`id` — så "merge på id" oversætter ikke. Bruger valgte **"anvend på denne
+    widget"**-modellen (import sker altid inde i en widgets config-skærm), auto-udledte labels, og
+    at Auto Backup skulle med.
+  - **Ny `dk.akait.hawidgets.transfer`-pakke:** `WidgetTransferModel` (`TransferBundle`,
+    `TransferConfig` sealed Multi/Shortcut, `ImportError` sealed), `WidgetTransferSerializer` (rene
+    `org.json` `serialize`/`parse` — `MultiWidgetSlotEntity`/`WidgetConfig` genbrugt som
+    transport-form, secondaries via eksisterende `secondaryColumns()`/`withSecondaryColumns()`,
+    graceful field-defaults for fremtidig format-vækst; **unit-testet**: round-trip + alle fejlgrene),
+    `WidgetTransferCollector` (`collectAllConfigs` + `singleConfigBundle` + auto-label-udledning),
+    `WidgetTransferIo` (share-sheet via `FileProvider`+`ACTION_SEND`, SAF-læsning), `TransferUi`
+    (delt overflow-menu, import-vælger-dialog, bekræft-dialog, `rememberImportLauncher`).
+  - **Filformat (v1):** `{version, app:"ha-widgets", exported, configs:[…]}`. `app`-tag afviser fremmed
+    fil; `appWidgetId` gemmes bevidst IKKE; token/URL aldrig i filen.
+  - **UI:** overflow-menu (⋮) i BEGGE config-skærmes TopAppBar → "Eksportér denne" / "Importér
+    konfiguration"; import type-filtreres (multi-fil i multi-skærm, genvej i genvej-skærm), viser
+    vælger (auto-label) → bekræft "Erstat opsætning?" → lægges i den eksisterende in-memory kladde
+    (gemmes via det normale "Gem"-flow, ingen ny skrive-sti). "Eksportér alle widgets" i MainActivitys
+    nye "Backup"-sektion. Nye strenge på alle 3 sprog.
+  - **Auto Backup:** `allowBackup` false→true + `fullBackupContent`/`dataExtractionRules` — inkluderer
+    Room-DB + `widget_config`-prefs, **ekskluderer `ha_secure_store`** (KeyStore-nøgle er
+    hardware-bundet → kan ikke restores på anden enhed; indeholder også token/URL). Efter cloud-restore
+    følger config med, men widgets skal placeres igen + bruger re-auther (forventet).
+  - **QA (emulator `pixel_test`, ægte HA, EKSISTERENDE data):** build + unit-tests grønne. Verificeret
+    end-to-end: "Eksportér denne" → gyldig JSON (3 slots + sekundær-chips korrekt) + share-sheet;
+    "Eksportér alle" → fil med alle 5 multi + 1 genvej + korrekte auto-labels; import → SAF-læsning →
+    vælger (rigtig label) → bekræft → anvend → toast "Configuration imported" + liste re-renderede,
+    ingen crash; `ALLOW_BACKUP`-flag sat. **Fund undervejs + rettet:** share-sheet-previewen manglede
+    læse-adgang til FileProvider-uri'en (`FLAG_GRANT_READ_URI_PERMISSION` alene dækker ikke
+    intentresolver-previewen) → tilføjet `ClipData.newUri` på send-intenten. **Ikke interaktivt
+    emulator-testet:** genvej-config'ens import/eksport (deler samme kode som multi, kun type-filter +
+    apply afviger) og faktisk telefon-backup-restore. **Device-QA på S23 + `code-review` inden merge
+    afventer bruger.**
 
 ## Næste skridt
 
