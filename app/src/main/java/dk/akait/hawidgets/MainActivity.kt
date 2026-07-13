@@ -685,7 +685,7 @@ private fun sendLogNow(context: android.content.Context, onResult: (Boolean) -> 
     val app = context.applicationContext as HaWidgetsApp
     app.appScope.launch {
         val configLines = collectWidgetConfigDump(context.applicationContext)
-        val ok = withContext(Dispatchers.IO) { RemoteLogger.flush(force = true, configLines = configLines) }
-        withContext(Dispatchers.Main) { onResult(ok) }
+        val result = withContext(Dispatchers.IO) { RemoteLogger.flush(force = true, configLines = configLines) }
+        withContext(Dispatchers.Main) { onResult(result is RemoteLogger.UploadResult.Success) }
     }
 }

@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Process
 import android.util.Log
 import dk.akait.hawidgets.BuildConfig
+import dk.akait.hawidgets.data.SecureStore
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -25,6 +26,21 @@ object RemoteLogger {
     private const val TAG = "RemoteLogger"
     private const val ENDPOINT = "https://rtr.dk/api/logs"
     private const val THROTTLE_MS = 30_000L
+
+    /** Udfald af et [flush]-forsøg — se docs/superpowers/specs/2026-07-13-settings-redesign-
+     * error-report-design.md §C. "Report a problem"-dialogen viser 4 forskellige resultat-
+     * beskeder fra dette; eksisterende fire-and-forget-kaldesteder ([w]/[e]/crash-handleren)
+     * ignorerer fortsat returværdien. */
+    sealed class UploadResult {
+        data object Success : UploadResult()
+        data object NotConfigured : UploadResult()
+        data object NetworkError : UploadResult()
+
+        /** Kun ramt af den interne, ikke-forced auto-flush fra [w]/[e] — aldrig af
+         * "Report a problem"-dialogen (sender altid `force = true`). */
+        data object Throttled : UploadResult()
+        data class ServerRejected(val code: Int) : UploadResult()
+    }
 
     private val buffer = LogBuffer()
     @Volatile private var deviceLineAdded = false
@@ -69,27 +85,42 @@ object RemoteLogger {
 
     /**
      * True hvis [BuildConfig.LOG_UPLOAD_TOKEN] er sat — dvs. om featuren overhovedet er
-     * konfigureret på denne build. Bruges af "Send log nu"-knappen til at afgøre om et
-     * `flush()`-forsøg giver mening, eller om der stille skal ske ingenting (intet token er
-     * ikke en fejl brugeren skal have en "kunne ikke sende"-toast for).
+     * konfigureret på denne build.
      */
     fun isConfigured(): Boolean = BuildConfig.LOG_UPLOAD_TOKEN.isNotBlank()
 
+    /** Seneste [n] log-linjer, uden at røre throttle/lastFlushAt — bruges af "Copy log"
+     * (netværksfri, kopierer kun til udklipsholder). */
+    fun recentLines(n: Int = 30): List<String> = buffer.snapshot(n)
+
+    /**
+     * Genindsætter log-linjer fra en TIDLIGERE (crashet) proces' buffer i DENNE proces' friske
+     * buffer — [LogBuffer] er kun i hukommelsen og overlever ikke en proces-genstart alene, så
+     * uden dette ville et [flush] fra crash-rapport-dialogen mangle selve crash-konteksten.
+     * Kaldes fra `HaWidgetsApp.onCreate`, efter [ensureDeviceLine].
+     */
+    fun restorePersistedLines(lines: List<String>) {
+        lines.forEach(buffer::addRaw)
+    }
+
     /**
      * Uploader bufferens indhold. [force] ignorerer 30s-throttlen (bruges af crash-handleren og
-     * "Send log nu"). [configLines] tilføjes til bufferen lige før upload (crash + manuel send —
-     * IKKE den rutinemæssige, throttlede auto-flush fra [w]/[e]). Blokerende netværkskald — kald
-     * fra en baggrundstråd (crash-handleren) eller wrap i `Dispatchers.IO` fra en coroutine.
-     * Returnerer true ved 2xx, false ellers (inkl. tomt token/tom buffer/netværksfejl/429).
+     * "Report a problem"-dialogen). [configLines] tilføjes til bufferen lige før upload (crash +
+     * manuel send — IKKE den rutinemæssige, throttlede auto-flush fra [w]/[e]). Blokerende
+     * netværkskald — kald fra en baggrundstråd (crash-handleren) eller wrap i `Dispatchers.IO`
+     * fra en coroutine.
      */
-    fun flush(force: Boolean = false, configLines: List<String> = emptyList()): Boolean {
+    fun flush(force: Boolean = false, configLines: List<String> = emptyList()): UploadResult {
         if (BuildConfig.LOG_UPLOAD_TOKEN.isBlank()) {
             Log.d(TAG, "No LOG_UPLOAD_TOKEN configured — skipping upload")
-            return false
+            return UploadResult.NotConfigured
         }
         val now = System.currentTimeMillis()
-        if (!force && now - lastFlushAt < THROTTLE_MS) return false
-        if (buffer.isEmpty() && configLines.isEmpty()) return false
+        if (!force && now - lastFlushAt < THROTTLE_MS) return UploadResult.Throttled
+        // Uden enheds-/config-linjer er bufferen aldrig reelt tom i praksis (ensureDeviceLine
+        // kører altid ved appstart) — denne gren er et sikkerhedsnet mod en tom POST-body
+        // (serveren svarer 400 på det, jf. docs/ha-widgets-logging.md).
+        if (buffer.isEmpty() && configLines.isEmpty()) return UploadResult.Throttled
         lastFlushAt = now
 
         configLines.forEach(buffer::addRaw)
@@ -104,18 +135,21 @@ object RemoteLogger {
                 .header("User-Agent", "HAWidgets-Android/${BuildConfig.VERSION_NAME}")
                 .post(body.toRequestBody("text/plain; charset=utf-8".toMediaType()))
                 .build()
-            http.newCall(request).execute().use { it.isSuccessful }
+            http.newCall(request).execute().use { response ->
+                if (response.isSuccessful) UploadResult.Success else UploadResult.ServerRejected(response.code)
+            }
         } catch (ex: Exception) {
             Log.w(TAG, "Log upload failed: ${ex.message}")
-            false
+            UploadResult.NetworkError
         }
     }
 
     /**
      * Installerer en global uncaught-exception-handler: skriver en E-linje + stacktrace,
-     * tilføjer widget-config-dumpet, og forsøger en FORCED, blokerende upload FØR den
-     * oprindelige handler kaldes videre — så systemets crash-dialog/øvrig crash-reporting
-     * sker helt uændret bagefter.
+     * PERSISTERER buffer-øjebliksbilledet til [SecureStore] (så "Report a problem"-dialogen kan
+     * tilbyde at sende det ved næste app-åbning, selv efter en proces-genstart), tilføjer
+     * widget-config-dumpet, og forsøger en FORCED, blokerende upload FØR den oprindelige handler
+     * kaldes videre — så systemets crash-dialog/øvrig crash-reporting sker helt uændret bagefter.
      */
     fun installCrashHandler(context: Context) {
         val appContext = context.applicationContext
@@ -124,6 +158,13 @@ object RemoteLogger {
             try {
                 buffer.add('E', "CRASH", throwable.toString())
                 buffer.addRaw(Log.getStackTraceString(throwable))
+                try {
+                    val store = SecureStore.get(appContext)
+                    store.pendingCrashSummary = throwable.toString()
+                    store.pendingCrashLog = buffer.body()
+                } catch (_: Throwable) {
+                    // Persistering er best-effort — må ikke forhindre selve upload-forsøget nedenfor.
+                }
                 val configLines = runBlocking {
                     withTimeoutOrNull(2000) { collectWidgetConfigDump(appContext) } ?: emptyList()
                 }
