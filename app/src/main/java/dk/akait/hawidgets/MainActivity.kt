@@ -87,11 +87,14 @@ import dk.akait.hawidgets.widget.multientity.MultiEntityWidget
 import dk.akait.hawidgets.widget.common.WIDGET_COLOR_THEMES
 import dk.akait.hawidgets.widget.common.presetFor
 import dk.akait.hawidgets.logging.RemoteLogger
-import dk.akait.hawidgets.logging.collectWidgetConfigDump
+import dk.akait.hawidgets.logging.ReportProblemDialog
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material.icons.filled.BugReport
-import android.widget.Toast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -128,6 +131,9 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(openSettingsInitially) }
     var showTokenHelp by remember { mutableStateOf(false) }
+    var reportCrashSummary by remember { mutableStateOf(store.pendingCrashSummary) }
+    var showReportDialog by remember { mutableStateOf(reportCrashSummary != null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val pm = remember { context.getSystemService(PowerManager::class.java) }
     LaunchedEffect(connected) {
@@ -205,11 +211,46 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
             context = context,
             pm = pm,
             connected = connected,
-            onDismiss = { showSettings = false }
+            onDismiss = { showSettings = false },
+            onReportProblem = {
+                showSettings = false
+                reportCrashSummary = null
+                showReportDialog = true
+            }
         )
     }
 
-    Scaffold { innerPadding ->
+    if (showReportDialog) {
+        ReportProblemDialog(
+            crashSummary = reportCrashSummary,
+            onDismiss = {
+                showReportDialog = false
+                if (reportCrashSummary != null) {
+                    store.clearPendingCrash()
+                    reportCrashSummary = null
+                }
+            },
+            onResult = { result ->
+                scope.launch {
+                    val message = reportResultMessage(context, result)
+                    if (result is RemoteLogger.UploadResult.NetworkError) {
+                        val action = snackbarHostState.showSnackbar(
+                            message = message,
+                            actionLabel = context.getString(R.string.retry_action),
+                            duration = SnackbarDuration.Long
+                        )
+                        if (action == SnackbarResult.ActionPerformed) {
+                            showReportDialog = true
+                        }
+                    } else {
+                        snackbarHostState.showSnackbar(message)
+                    }
+                }
+            }
+        )
+    }
+
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -383,6 +424,16 @@ private fun SectionLabel(icon: ImageVector, text: String) {
 }
 
 @Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+    )
+}
+
+@Composable
 private fun StepRow(number: Int, text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
@@ -408,15 +459,18 @@ private fun SettingsSheet(
     context: android.content.Context,
     pm: PowerManager,
     connected: Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onReportProblem: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp),
+                .navigationBarsPadding()
+                .padding(bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
@@ -431,6 +485,8 @@ private fun SettingsSheet(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            SectionHeader(stringResource(R.string.section_appearance))
 
             val store = remember { SecureStore.get(context) }
             var themeMode by remember { mutableStateOf(store.themeMode) }
@@ -456,8 +512,6 @@ private fun SettingsSheet(
                 updateAllWidgets(context)
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 var currentTag by remember { mutableStateOf(currentLanguageTag(context)) }
                 LanguageRow(currentTag = currentTag) { tag ->
@@ -467,14 +521,17 @@ private fun SettingsSheet(
                     // uden dette ville placerede widgets først skifte sprog ved næste periodiske sync.
                     updateAllWidgets(context)
                 }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            SectionHeader(stringResource(R.string.section_troubleshooting))
 
             val batteryExempted = remember(connected) {
                 pm.isIgnoringBatteryOptimizations(context.packageName)
             }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -494,31 +551,26 @@ private fun SettingsSheet(
                 }) { Text(stringResource(R.string.settings_open)) }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(vertical = 10.dp),
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(Icons.Default.BugReport, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    Icons.Default.BugReport,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.log_send_title), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.report_problem_row_title), style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        stringResource(R.string.log_send_subtitle),
+                        stringResource(R.string.report_problem_row_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                OutlinedButton(onClick = {
-                    sendLogNow(context) { ok ->
-                        Toast.makeText(
-                            context,
-                            if (ok) R.string.log_send_success else R.string.log_send_failed,
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }) { Text(stringResource(R.string.log_send_now)) }
+                OutlinedButton(onClick = onReportProblem) { Text(stringResource(R.string.report_problem_button)) }
             }
         }
     }
@@ -674,18 +726,15 @@ private fun updateAllWidgets(context: android.content.Context) {
     }
 }
 
-/** Forcerer en upload af den nuværende log-buffer + widget-config-dump, uanset 30s-throttlen.
- * Kører på [HaWidgetsApp.appScope] (ikke en composable-scope) så den overlever at
- * indstillings-arket lukkes, samme begrundelse som [updateAllWidgets]. Hvis featuren slet ikke er
- * konfigureret ([RemoteLogger.isConfigured] false — intet LOG_UPLOAD_TOKEN på denne build), sker
- * der stille ingenting og [onResult] kaldes IKKE — intet token er ikke en fejl, og skal derfor
- * ikke vise en "kunne ikke sende"-toast på enhver udvikler-maskine uden nøglen sat op. */
-private fun sendLogNow(context: android.content.Context, onResult: (Boolean) -> Unit) {
-    if (!RemoteLogger.isConfigured()) return
-    val app = context.applicationContext as HaWidgetsApp
-    app.appScope.launch {
-        val configLines = collectWidgetConfigDump(context.applicationContext)
-        val result = withContext(Dispatchers.IO) { RemoteLogger.flush(force = true, configLines = configLines) }
-        withContext(Dispatchers.Main) { onResult(result is RemoteLogger.UploadResult.Success) }
+/** Oversætter et [RemoteLogger.UploadResult] til den lokaliserede besked vist i Snackbaren efter
+ * "Report a problem". [RemoteLogger.UploadResult.Throttled] optræder aldrig herfra i praksis
+ * (rapport-dialogen sender altid med `force = true`) — mappet til samme tekst som netværksfejl
+ * som et harmløst fallback for en udtømmende `when`. */
+private fun reportResultMessage(context: android.content.Context, result: RemoteLogger.UploadResult): String =
+    when (result) {
+        is RemoteLogger.UploadResult.Success -> context.getString(R.string.report_problem_success)
+        is RemoteLogger.UploadResult.NotConfigured -> context.getString(R.string.report_problem_not_configured)
+        is RemoteLogger.UploadResult.NetworkError -> context.getString(R.string.report_problem_network_error)
+        is RemoteLogger.UploadResult.Throttled -> context.getString(R.string.report_problem_network_error)
+        is RemoteLogger.UploadResult.ServerRejected -> context.getString(R.string.report_problem_server_rejected)
     }
-}
