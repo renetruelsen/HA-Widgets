@@ -75,4 +75,21 @@ class LogBufferTest {
         buffer.clear()
         assertTrue(buffer.isEmpty())
     }
+
+    @Test
+    fun snapshotWithLimitReturnsOnlyLastNLines() {
+        val buffer = LogBuffer(maxLines = 10)
+        repeat(5) { i -> buffer.add('I', "T", "line$i", ts) }
+        val last3 = buffer.snapshot(3)
+        assertEquals(3, last3.size)
+        assertTrue(last3[0].endsWith("line2"))
+        assertTrue(last3[2].endsWith("line4"))
+    }
+
+    @Test
+    fun snapshotWithLimitLargerThanSizeReturnsAll() {
+        val buffer = LogBuffer(maxLines = 10)
+        buffer.add('I', "A", "one", ts)
+        assertEquals(1, buffer.snapshot(30).size)
+    }
 }

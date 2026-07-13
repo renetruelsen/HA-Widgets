@@ -38,6 +38,10 @@ class LogBuffer(private val maxLines: Int = 300) {
     @Synchronized
     fun snapshot(): List<String> = lines.toList()
 
+    /** Seneste [lastN] linjer (nyeste sidst) — bruges af "Copy log", uden at klippe hele bufferen. */
+    @Synchronized
+    fun snapshot(lastN: Int): List<String> = lines.toList().takeLast(lastN)
+
     @Synchronized
     fun body(): String = lines.joinToString("\n")
 
