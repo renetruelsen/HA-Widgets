@@ -96,6 +96,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Info
 import dk.akait.hawidgets.transfer.WidgetTransferIo
 import dk.akait.hawidgets.transfer.collectAllConfigs
 import kotlinx.coroutines.launch
@@ -614,6 +615,26 @@ private fun SettingsSheet(
                         WidgetTransferIo.shareBundle(context, collectAllConfigs(context))
                     }
                 }) { Text(stringResource(R.string.export_all_button)) }
+            }
+
+            // Import bor inde i en widgets config-skærm (config knyttes til et appWidgetId, som
+            // først tildeles ved placering) — forklar stien her, hvor folk leder efter "importér".
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    stringResource(R.string.import_help_row),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

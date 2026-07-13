@@ -25,6 +25,7 @@ import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.transfer.ConfirmReplaceDialog
 import dk.akait.hawidgets.transfer.ImportError
 import dk.akait.hawidgets.transfer.ImportPickerDialog
+import dk.akait.hawidgets.transfer.ImportPickerItem
 import dk.akait.hawidgets.transfer.TRANSFER_IMPORT_MIME_TYPES
 import dk.akait.hawidgets.transfer.TransferConfig
 import dk.akait.hawidgets.transfer.WidgetTransferIo
@@ -34,6 +35,7 @@ import dk.akait.hawidgets.transfer.rememberImportLauncher
 import dk.akait.hawidgets.transfer.singleConfigBundle
 import dk.akait.hawidgets.widget.common.AppSettingsHint
 import dk.akait.hawidgets.widget.common.MULTI_ENTITY_DOMAINS
+import dk.akait.hawidgets.widget.common.domainIconResId
 import dk.akait.hawidgets.widget.common.NotConnectedGate
 import dk.akait.hawidgets.widget.common.rememberResumeTick
 import dk.akait.hawidgets.worker.SyncWorker
@@ -334,8 +336,26 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 
     // Import: vælger over filens multi-configs → bekræft → erstat den nuværende in-memory opsætning.
     importChoices?.let { choices ->
+        val items = choices.map { multi ->
+            // Titel = rigtige navne (slot-label > friendly name > entity_id), maks 2 + "+N".
+            val names = multi.slots.map { slot ->
+                slot.label.ifBlank {
+                    allEntities.firstOrNull { it.entityId == slot.displayEntityId }?.friendlyName ?: slot.displayEntityId
+                }
+            }
+            val title = when {
+                names.isEmpty() -> multi.label
+                names.size <= 2 -> names.joinToString(", ")
+                else -> names.take(2).joinToString(", ") + " +${names.size - 2}"
+            }
+            ImportPickerItem(
+                title = title,
+                subtitle = context.getString(R.string.import_item_multi_subtitle, multi.slots.size),
+                iconResId = domainIconResId(multi.slots.firstOrNull()?.displayDomain ?: ""),
+            )
+        }
         ImportPickerDialog(
-            labels = choices.map { it.label },
+            items = items,
             onPick = { index -> pendingImport = choices[index]; importChoices = null },
             onDismiss = { importChoices = null },
         )

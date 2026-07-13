@@ -59,6 +59,7 @@ import dk.akait.hawidgets.data.WidgetConfigStore
 import dk.akait.hawidgets.transfer.ConfirmReplaceDialog
 import dk.akait.hawidgets.transfer.ImportError
 import dk.akait.hawidgets.transfer.ImportPickerDialog
+import dk.akait.hawidgets.transfer.ImportPickerItem
 import dk.akait.hawidgets.transfer.TRANSFER_IMPORT_MIME_TYPES
 import dk.akait.hawidgets.transfer.TransferConfig
 import dk.akait.hawidgets.transfer.TransferOverflowMenu
@@ -194,8 +195,15 @@ private fun ConfigScreen(
     }
 
     importChoices?.let { choices ->
+        val items = choices.map { sc ->
+            ImportPickerItem(
+                title = sc.config.title.ifBlank { sc.config.dashboardPath },
+                subtitle = context.getString(R.string.import_item_shortcut_subtitle),
+                iconResId = R.drawable.ic_dashboard,
+            )
+        }
         ImportPickerDialog(
-            labels = choices.map { it.label },
+            items = items,
             onPick = { index -> pendingImport = choices[index]; importChoices = null },
             onDismiss = { importChoices = null },
         )

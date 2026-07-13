@@ -5,15 +5,23 @@ import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -25,9 +33,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.R
 import kotlinx.coroutines.Dispatchers
@@ -53,24 +65,65 @@ fun TransferOverflowMenu(onExport: () -> Unit, onImport: () -> Unit) {
     }
 }
 
-/** Vælger over filens (type-filtrerede) configs — altid vist, også ved én. */
+/** Én post i import-vælgeren — auto-udledt visning af en widget-config i filen. */
+data class ImportPickerItem(val title: String, val subtitle: String, @DrawableRes val iconResId: Int)
+
+/** Vælger over filens (type-filtrerede) configs som en liste af widgets — altid vist, også ved én. */
 @Composable
-fun ImportPickerDialog(labels: List<String>, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+fun ImportPickerDialog(items: List<ImportPickerItem>, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.import_pick_title)) },
+        title = {
+            Column {
+                Text(stringResource(R.string.import_config))
+                Text(
+                    pluralStringResource(R.plurals.import_count, items.size, items.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
         text = {
-            androidx.compose.foundation.layout.Column {
-                labels.forEachIndexed { index, label ->
-                    Text(
-                        label,
+            Column {
+                items.forEachIndexed { index, item ->
+                    if (index > 0) HorizontalDivider()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 48.dp)
+                            .heightIn(min = 56.dp)
                             .clickable { onPick(index) }
-                            .padding(vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
+                            .padding(vertical = 8.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(item.iconResId),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Spacer(Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                item.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                item.subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         },

@@ -248,7 +248,13 @@
     <string name="export_all_row_title">Eksportér alle widgets</string>
     <string name="export_all_row_subtitle">Gem eller del en backup-fil med alle widgets</string>
     <string name="export_all_button">Eksportér</string>
-    <string name="import_pick_title">Vælg en konfiguration</string>
+    <plurals name="import_count">
+        <item quantity="one">%d widget i filen</item>
+        <item quantity="other">%d widgets i filen</item>
+    </plurals>
+    <string name="import_item_multi_subtitle">Multi-widget · %d rækker</string>
+    <string name="import_item_shortcut_subtitle">Dashboard-genvej</string>
+    <string name="import_help_row">Sådan importerer du: tilføj en widget, åbn dens indstillinger, og vælg Importér.</string>
     <string name="import_confirm_title">Erstat opsætning?</string>
     <string name="import_confirm_message">Den valgte konfiguration erstatter denne widgets nuværende opsætning.</string>
     <string name="import_replace_button">Erstat</string>

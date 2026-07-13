@@ -26,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -85,6 +86,12 @@ internal fun ListScreen(
                     stringResource(R.string.multi_entity_empty_hint),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.padding(6.dp))
+                // Import er ellers gemt i ⋮-menuen; her i tom-tilstanden — hvor en bruger der lige
+                // har placeret en widget står — gøres den åbenlys ved siden af "Tilføj slot".
+                OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.import_config))
+                }
             } else {
                 slots.sortedBy { it.slotIndex }.forEachIndexed { index, slot ->
                     SlotCard(

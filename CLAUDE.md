@@ -1472,7 +1472,30 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     intentresolver-previewen) → tilføjet `ClipData.newUri` på send-intenten. **Ikke interaktivt
     emulator-testet:** genvej-config'ens import/eksport (deler samme kode som multi, kun type-filter +
     apply afviger) og faktisk telefon-backup-restore. **Device-QA på S23 + `code-review` inden merge
-    afventer bruger.**
+    afventer bruger.** Committet + pushet til `main`.
+- ✅ **v0.2.82 — import UX-forbedringer (2026-07-13, efter brugerfeedback + UX/UI-review):**
+  - **Baggrund:** brugeren fandt import svær at opdage (ikke oplagt at man skal placere en widget
+    FØR man kan importere) og import-vælgeren "flad" (svær at se at det er en liste af widgets).
+    UX-analyse: mental model-mismatch (import føles global, men bor gemt i en widgets ⋮-config, fordi
+    config knyttes til et `appWidgetId` der først tildeles ved placering). Mockup-godkendt før kode.
+  - **#1a — settings-vejledning:** diskret linje under "Eksportér alle widgets" i Indstillinger →
+    Backup: *"Sådan importerer du: tilføj en widget, åbn dens indstillinger, og vælg Importér."*
+    (Info-ikon + `import_help_row`, alle 3 sprog). Fanger den bruger der leder i Indstillinger.
+  - **#1b — synlig i tom-tilstand:** multi-widgettens config-skærm viser nu en prominent
+    "Importér konfiguration"-knap i tom-tilstanden (ingen slots endnu) ved siden af "Tilføj slot" —
+    så import er åbenlys præcis når en frisk-placeret widget står tom, ikke skjult i ⋮ (som forbliver
+    backup for genkonfiguration).
+  - **#2 — vælgeren redesignet:** `ImportPickerDialog` gik fra flad tekst-liste til Material3-liste
+    af widgets: type-ikon (domæne-ikon / `ic_dashboard`) + titel med **rigtige navne** (slot-label >
+    friendly name fra allEntities > entity_id, maks 2 + "+N") + undertekst ("Multi-widget · N rækker"
+    / "Dashboard-genvej") + chevron + divider + antal i toppen. Ny `ImportPickerItem`-datatype;
+    callerne bygger posterne (multi resolver friendly names, genvej bruger `ic_dashboard`).
+    `import_count` som `plurals` (korrekt "1 widget" vs "N widgets"). Ubrugt `import_pick_title`
+    fjernet.
+  - **QA (emulator `pixel_test`, ægte HA):** build grønt. Verificeret visuelt: redesignet vælger
+    (rigtige navne "Renés sengelampe, Hue St…", ikon, "Multi widget · 3 rows", "1 widget in the
+    file"), tom-tilstands-import-knap ("No slots yet" → prominent Import-knap), settings-vejledning
+    i Backup-sektionen. Ren UI — ingen datamodel/migration.
 
 ## Næste skridt
 

@@ -248,7 +248,13 @@
     <string name="export_all_row_title">Exportera alla widgetar</string>
     <string name="export_all_row_subtitle">Spara eller dela en säkerhetskopia med alla widgetar</string>
     <string name="export_all_button">Exportera</string>
-    <string name="import_pick_title">Välj en konfiguration</string>
+    <plurals name="import_count">
+        <item quantity="one">%d widget i filen</item>
+        <item quantity="other">%d widgetar i filen</item>
+    </plurals>
+    <string name="import_item_multi_subtitle">Multi-widget · %d rader</string>
+    <string name="import_item_shortcut_subtitle">Dashboard-genväg</string>
+    <string name="import_help_row">Så här importerar du: lägg till en widget, öppna dess inställningar och välj Importera.</string>
     <string name="import_confirm_title">Ersätt inställning?</string>
     <string name="import_confirm_message">Den valda konfigurationen ersätter denna widgets nuvarande inställning.</string>
     <string name="import_replace_button">Ersätt</string>
