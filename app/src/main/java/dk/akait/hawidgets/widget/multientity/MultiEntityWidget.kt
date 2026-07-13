@@ -18,6 +18,7 @@ import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.widget.common.UnconfiguredWidgetContent
 import dk.akait.hawidgets.widget.common.WidgetGlanceTheme
 import dk.akait.hawidgets.worker.SyncWorker
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -107,5 +108,22 @@ class MultiEntityWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
         SyncWorker.runNow(context)
+    }
+
+    // Soft-delete: stempl fjernede widgets' config med removedAt=now (hard-slettes efter grace-
+    // perioden af reconcileWidgets). Bevarer config så en ved-uheld-fjernet widget kan gendannes.
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        val pending = goAsync()
+        val scope = (context.applicationContext as dk.akait.hawidgets.HaWidgetsApp).appScope
+        scope.launch {
+            try {
+                val dao = AppDatabase.get(context).multiWidgetDao()
+                val now = System.currentTimeMillis()
+                appWidgetIds.forEach { id -> dao.get(id)?.let { dao.upsert(it.copy(removedAt = now)) } }
+            } finally {
+                pending.finish()
+            }
+        }
     }
 }

@@ -244,6 +244,7 @@
     <string name="cd_more_options">More options</string>
     <string name="export_this_widget">Export this widget</string>
     <string name="import_config">Import configuration</string>
+    <string name="recover_removed_widget">Restore a removed widget</string>
     <string name="section_backup">Backup</string>
     <string name="export_all_row_title">Export all widgets</string>
     <string name="export_all_row_subtitle">Save or share a backup file of every widget</string>
@@ -251,6 +252,10 @@
     <plurals name="import_count">
         <item quantity="one">%d widget in the file</item>
         <item quantity="other">%d widgets in the file</item>
+    </plurals>
+    <plurals name="recover_count">
+        <item quantity="one">%d removed widget</item>
+        <item quantity="other">%d removed widgets</item>
     </plurals>
     <string name="import_item_multi_subtitle">Multi widget · %d rows</string>
     <string name="import_item_shortcut_subtitle">Dashboard shortcut</string>

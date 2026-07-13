@@ -118,4 +118,13 @@ private fun ShortcutContent(
 
 class ShortcutWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ShortcutWidget()
+
+    // Soft-delete: stempl fjernede genvej-configs (prefs er synkron, ingen coroutine nødvendig).
+    // reconcileWidgets hard-sletter efter grace-perioden.
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        val store = WidgetConfigStore.get(context)
+        val now = System.currentTimeMillis()
+        appWidgetIds.forEach { store.markRemoved(it, now) }
+    }
 }

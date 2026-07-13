@@ -1496,6 +1496,38 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (rigtige navne "Renés sengelampe, Hue St…", ikon, "Multi widget · 3 rows", "1 widget in the
     file"), tom-tilstands-import-knap ("No slots yet" → prominent Import-knap), settings-vejledning
     i Backup-sektionen. Ren UI — ingen datamodel/migration.
+- ✅ **v0.2.83 — Forældreløs-oprydning: soft-delete + 30-dages grace + recovery (2026-07-13, efter
+  brugerrapport "5 widgets i import-listen, men kun 2 synlige" + systematic-debugging):**
+  - **Root cause:** hverken `MultiEntityWidgetReceiver` eller `ShortcutWidgetReceiver` overrider
+    `onDeleted`, så `GlanceAppWidgetReceiver` rydder kun Glances egen state — vores Room-rækker
+    (`multi_widget`/`_slot`) + `widget_config`-prefs blev forældreløse for evigt når en widget blev
+    fjernet fra hjemskærmen. S23 havde 26 forældreløse genvej-configs. Eksport-featuren afslørede en
+    præeksisterende data-hygiejne-bug.
+  - **Bruger-valgt model (30-dages grace):** `onDeleted` **soft-sletter** (stempler `removedAt=now`,
+    hard-sletter ikke). `SyncWorker` reconcile-sweep (kører hver 15. min) stempler ubundne, rydder
+    stempel på gen-bundne, **hard-sletter efter 30 dage** ubundet. Fordi ubundet-uden-stempel kun
+    STAMPER, er et falsk "ubundet" i boot-vinduet harmløst (næste sweep rydder stemplet) → nul risiko
+    for datatab. Ren `reconcileDecision(bound, removedAt, now, grace)` (unit-testet, 6 tests).
+  - **Data:** `MultiWidgetEntity.removedAt: Long?` + **Room-migration v13→v14** (additiv, nullable).
+    Genvej-prefs: parallelle `removed_<id>`-nøgler i `widget_config`. `MultiWidgetDao.getSoftDeleted()`.
+  - **Symptom-fix:** `collectAllConfigs` (Eksportér alle) filtreres til **faktisk bundne** id'er via
+    `AppWidgetManager.getAppWidgetIds` → import/eksport-listen viser kun levende widgets, ikke
+    forældreløse.
+  - **Recovery (fortryd-uheld):** multi-config'ens ⋮ får "Gendan fjernet widget" (kun når soft-slettede
+    findes inden for grace) → genbruger `ImportPickerDialog` (title/count parametriseret) fyldt fra de
+    soft-slettede DB-rækker → samme bekræft/anvend-flow som fil-import (kilde-rækken slettes IKKE ved
+    apply — sikkert, purges naturligt). Nyt `recover_count`-plurals ("N removed widgets").
+  - **QA (emulator `pixel_test`, ægte HA):** build + unit-tests grønne (inkl. ny `WidgetReconcilerTest`).
+    Migration v13→v14 verificeret (`user_version=14`, `removedAt`-kolonne, data intakt). Reconcile
+    verificeret via midlertidig instrumentering: `getAppWidgetIds` returnerede `[15]` (id-genbrug-cruft
+    på denne slidte emulator — dumpsys sagde 31), og reconcile stemplede korrekt de ubundne rækker som
+    forældreløse; instrumentering revertet. Recovery end-to-end: ⋮ viser "Restore a removed widget" når
+    4 soft-slettede findes → vælger med rigtige navne ("SpaV2 Spa Thermostat…" osv.) + "4 removed
+    widgets" → vælg → "Replace setup?" → anvend → listen viser den gendannede config (climate+chip)
+    + toast, ingen crash. **Purge (30d) ikke live-testet** (kan ikke vente 30 dage; dækket af
+    `reconcileDecision`-unit-test for PURGE-grenen). Device-QA på S23 + `code-review` afventer bruger.
+  - **Kendt lille nit (præeksisterende v0.2.82, ikke rettet):** `import_item_multi_subtitle` viser
+    "1 rows" (ikke ental) — kandidat til plurals.
 
 ## Næste skridt
 

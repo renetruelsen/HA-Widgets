@@ -73,6 +73,21 @@ class WidgetConfigStore private constructor(
         prefs.edit().remove(key(appWidgetId)).apply()
     }
 
+    // ── Soft-delete-tidsstempler (forældreløs-oprydning, grace-periode) ──────────────
+    // Parallelle "removed_<id>"-nøgler ved siden af "widget_<id>"-config'en; kolliderer ikke med
+    // getAll()'s "widget_"-filter. Bruges af reconcileWidgets til genvej-widgets.
+
+    fun markRemoved(appWidgetId: Int, timestamp: Long) {
+        prefs.edit().putLong(removedKey(appWidgetId), timestamp).apply()
+    }
+
+    fun clearRemoved(appWidgetId: Int) {
+        prefs.edit().remove(removedKey(appWidgetId)).apply()
+    }
+
+    fun removedAt(appWidgetId: Int): Long? =
+        if (prefs.contains(removedKey(appWidgetId))) prefs.getLong(removedKey(appWidgetId), 0L) else null
+
     /** Alle gemte genvej-konfigurationer, keyed på appWidgetId — bruges kun af log-dump'et
      * (RemoteLogger), ikke af selve widget-rendering (som bruger [get]/[observe] pr. id). */
     fun getAll(): Map<Int, WidgetConfig> =
@@ -87,6 +102,7 @@ class WidgetConfigStore private constructor(
 
     companion object {
         private fun key(id: Int) = "widget_$id"
+        private fun removedKey(id: Int) = "removed_$id"
 
         fun get(context: Context): WidgetConfigStore =
             WidgetConfigStore(

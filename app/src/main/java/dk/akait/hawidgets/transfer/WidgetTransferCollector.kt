@@ -1,10 +1,14 @@
 package dk.akait.hawidgets.transfer
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import dk.akait.hawidgets.data.WidgetConfig
 import dk.akait.hawidgets.data.WidgetConfigStore
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
+import dk.akait.hawidgets.widget.multientity.MultiEntityWidgetReceiver
 import java.time.Instant
 
 /**
@@ -42,15 +46,22 @@ fun shortcutTransferConfig(config: WidgetConfig): TransferConfig.Shortcut =
 fun singleConfigBundle(config: TransferConfig): TransferBundle =
     TransferBundle(exported = nowIso(), configs = listOf(config))
 
-/** ALLE placerede widgets (multi fra Room + genveje fra [WidgetConfigStore]) → ét bundle. */
+/**
+ * ALLE faktisk placerede widgets (multi fra Room + genveje fra [WidgetConfigStore]) → ét bundle.
+ * Filtreret til widget-id'er som AppWidgetManager stadig kender — så forældreløse config-rækker
+ * (fjernede widgets, endnu ikke purged af grace-perioden) IKKE havner i eksporten.
+ */
 suspend fun collectAllConfigs(context: Context): TransferBundle {
+    val awm = AppWidgetManager.getInstance(context)
+    val boundMulti = awm?.getAppWidgetIds(ComponentName(context, MultiEntityWidgetReceiver::class.java))?.toSet().orEmpty()
+    val boundShortcut = awm?.getAppWidgetIds(ComponentName(context, ShortcutWidgetReceiver::class.java))?.toSet().orEmpty()
+
     val dao = AppDatabase.get(context).multiWidgetDao()
-    val multi = dao.getAll().map { widget ->
-        multiTransferConfig(
-            slots = dao.getSlots(widget.appWidgetId),
-            showRefreshIcon = widget.showRefreshIcon,
-        )
-    }
-    val shortcuts = WidgetConfigStore.get(context).getAll().values.map { shortcutTransferConfig(it) }
+    val multi = dao.getAll()
+        .filter { it.appWidgetId in boundMulti }
+        .map { widget -> multiTransferConfig(dao.getSlots(widget.appWidgetId), widget.showRefreshIcon) }
+    val shortcuts = WidgetConfigStore.get(context).getAll()
+        .filterKeys { it in boundShortcut }
+        .values.map { shortcutTransferConfig(it) }
     return TransferBundle(exported = nowIso(), configs = multi + shortcuts)
 }

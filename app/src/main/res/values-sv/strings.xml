@@ -244,6 +244,7 @@
     <string name="cd_more_options">Fler alternativ</string>
     <string name="export_this_widget">Exportera denna widget</string>
     <string name="import_config">Importera konfiguration</string>
+    <string name="recover_removed_widget">Återställ borttagen widget</string>
     <string name="section_backup">Säkerhetskopiering</string>
     <string name="export_all_row_title">Exportera alla widgetar</string>
     <string name="export_all_row_subtitle">Spara eller dela en säkerhetskopia med alla widgetar</string>
@@ -251,6 +252,10 @@
     <plurals name="import_count">
         <item quantity="one">%d widget i filen</item>
         <item quantity="other">%d widgetar i filen</item>
+    </plurals>
+    <plurals name="recover_count">
+        <item quantity="one">%d borttagen widget</item>
+        <item quantity="other">%d borttagna widgetar</item>
     </plurals>
     <string name="import_item_multi_subtitle">Multi-widget · %d rader</string>
     <string name="import_item_shortcut_subtitle">Dashboard-genväg</string>

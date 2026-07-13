@@ -1,6 +1,7 @@
 package dk.akait.hawidgets.worker
 
 import android.content.Context
+import dk.akait.hawidgets.data.reconcileWidgets
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -17,6 +18,9 @@ import java.util.concurrent.TimeUnit
 class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
 
     override suspend fun doWork(): Result {
+        // Ryd forældreløse config-rækker (fjernede widgets) FØR pull, så vi ikke synker for dem.
+        // Må ikke vælte sync ved fejl.
+        runCatching { reconcileWidgets(applicationContext) }
         // Repository ejer pull + fan-out til widgets.
         val allOk = EntityRepository.refreshAll(applicationContext)
         return if (allOk) Result.success() else Result.retry()

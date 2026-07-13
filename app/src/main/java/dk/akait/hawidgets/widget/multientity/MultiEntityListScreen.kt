@@ -59,6 +59,7 @@ internal fun ListScreen(
     onOpenAppSettings: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
+    onRecover: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = {
@@ -68,7 +69,11 @@ internal fun ListScreen(
                     IconButton(onClick = onOpenAppSettings) {
                         Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.settings_in_app_hint))
                     }
-                    dk.akait.hawidgets.transfer.TransferOverflowMenu(onExport = onExport, onImport = onImport)
+                    dk.akait.hawidgets.transfer.TransferOverflowMenu(
+                        onExport = onExport,
+                        onImport = onImport,
+                        onRecover = onRecover,
+                    )
                 },
             )
         },

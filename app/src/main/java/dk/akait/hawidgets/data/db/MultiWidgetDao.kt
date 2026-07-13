@@ -16,6 +16,10 @@ interface MultiWidgetDao {
     @Query("SELECT * FROM multi_widget")
     suspend fun getAll(): List<MultiWidgetEntity>
 
+    /** Soft-slettede widgets (removedAt sat) — nyeste først. Bruges af "Gendan fjernet widget". */
+    @Query("SELECT * FROM multi_widget WHERE removedAt IS NOT NULL ORDER BY removedAt DESC")
+    suspend fun getSoftDeleted(): List<MultiWidgetEntity>
+
     @Query("SELECT * FROM multi_widget WHERE appWidgetId = :id")
     fun observe(id: Int): Flow<MultiWidgetEntity?>
 

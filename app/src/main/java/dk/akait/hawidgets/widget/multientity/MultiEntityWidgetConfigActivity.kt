@@ -19,6 +19,7 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
+import dk.akait.hawidgets.data.WIDGET_ORPHAN_GRACE_MILLIS
 import dk.akait.hawidgets.data.db.AppDatabase
 import dk.akait.hawidgets.data.db.MultiWidgetEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
@@ -106,6 +107,10 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     // pendingImport = den valgte config, der afventer bekræftelse før den overskriver.
     var importChoices by remember { mutableStateOf<List<TransferConfig.Multi>?>(null) }
     var pendingImport by remember { mutableStateOf<TransferConfig.Multi?>(null) }
+    // Recovery: soft-slettede (fjernede) widgets inden for grace-perioden, som kan gendannes til
+    // DENNE widget. recoverChoices = åben gendan-vælger (genbruger samme picker/confirm/apply-flow).
+    var recoverable by remember { mutableStateOf<List<TransferConfig.Multi>>(emptyList()) }
+    var recoverChoices by remember { mutableStateOf<List<TransferConfig.Multi>?>(null) }
     val importLauncher = rememberImportLauncher { bundle ->
         val multi = bundle.multiConfigs
         if (multi.isEmpty()) {
@@ -136,6 +141,12 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             attrsByEntityId = allEntities.mapNotNull { entity ->
                 db.entityStateDao().get(entity.entityId)?.attributesJson?.let { entity.entityId to it }
             }.toMap()
+            // Soft-slettede widgets (fjernet, endnu ikke purged) inden for grace-perioden — kan
+            // gendannes til denne widget. Ekskludér den aktuelle widget selv (defensivt).
+            val now = System.currentTimeMillis()
+            recoverable = db.multiWidgetDao().getSoftDeleted()
+                .filter { it.appWidgetId != appWidgetId && it.removedAt != null && now - it.removedAt!! <= WIDGET_ORPHAN_GRACE_MILLIS }
+                .map { multiTransferConfig(db.multiWidgetDao().getSlots(it.appWidgetId), it.showRefreshIcon) }
             loadError = null
             loaded = true
         } catch (e: Exception) {
@@ -202,6 +213,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 )
             },
             onImport = { importLauncher.launch(TRANSFER_IMPORT_MIME_TYPES) },
+            onRecover = if (recoverable.isNotEmpty()) ({ recoverChoices = recoverable }) else null,
         )
 
         is Step.EntityPicker -> EntityPickerSubScreen(
@@ -334,30 +346,42 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         )
     }
 
+    // Delt: multi-config → picker-post med rigtige navne (slot-label > friendly name > entity_id,
+    // maks 2 + "+N") + domæne-ikon. Bruges af BÅDE fil-import og gendan-fjernet.
+    fun multiPickerItems(configs: List<TransferConfig.Multi>): List<ImportPickerItem> = configs.map { multi ->
+        val names = multi.slots.map { slot ->
+            slot.label.ifBlank {
+                allEntities.firstOrNull { it.entityId == slot.displayEntityId }?.friendlyName ?: slot.displayEntityId
+            }
+        }
+        val title = when {
+            names.isEmpty() -> multi.label
+            names.size <= 2 -> names.joinToString(", ")
+            else -> names.take(2).joinToString(", ") + " +${names.size - 2}"
+        }
+        ImportPickerItem(
+            title = title,
+            subtitle = context.getString(R.string.import_item_multi_subtitle, multi.slots.size),
+            iconResId = domainIconResId(multi.slots.firstOrNull()?.displayDomain ?: ""),
+        )
+    }
+
     // Import: vælger over filens multi-configs → bekræft → erstat den nuværende in-memory opsætning.
     importChoices?.let { choices ->
-        val items = choices.map { multi ->
-            // Titel = rigtige navne (slot-label > friendly name > entity_id), maks 2 + "+N".
-            val names = multi.slots.map { slot ->
-                slot.label.ifBlank {
-                    allEntities.firstOrNull { it.entityId == slot.displayEntityId }?.friendlyName ?: slot.displayEntityId
-                }
-            }
-            val title = when {
-                names.isEmpty() -> multi.label
-                names.size <= 2 -> names.joinToString(", ")
-                else -> names.take(2).joinToString(", ") + " +${names.size - 2}"
-            }
-            ImportPickerItem(
-                title = title,
-                subtitle = context.getString(R.string.import_item_multi_subtitle, multi.slots.size),
-                iconResId = domainIconResId(multi.slots.firstOrNull()?.displayDomain ?: ""),
-            )
-        }
         ImportPickerDialog(
-            items = items,
+            items = multiPickerItems(choices),
             onPick = { index -> pendingImport = choices[index]; importChoices = null },
             onDismiss = { importChoices = null },
+        )
+    }
+    // Gendan fjernet: samme picker/bekræft/anvend-flow, blot fyldt fra soft-slettede DB-configs.
+    recoverChoices?.let { choices ->
+        ImportPickerDialog(
+            items = multiPickerItems(choices),
+            onPick = { index -> pendingImport = choices[index]; recoverChoices = null },
+            onDismiss = { recoverChoices = null },
+            titleRes = R.string.recover_removed_widget,
+            countRes = R.plurals.recover_count,
         )
     }
     pendingImport?.let { chosen ->

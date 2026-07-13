@@ -166,3 +166,11 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
         db.execSQL("ALTER TABLE multi_widget_slot ADD COLUMN actionPackageName TEXT")
     }
 }
+
+/** Soft-delete-tidsstempel for forældreløs-oprydning (grace-periode). Nullable, defaulter til NULL
+ * (= levende) på eksisterende rækker — additiv, ingen datatab. */
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE multi_widget ADD COLUMN removedAt INTEGER")
+    }
+}

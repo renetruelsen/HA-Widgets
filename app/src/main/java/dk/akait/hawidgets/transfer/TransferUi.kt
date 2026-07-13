@@ -46,9 +46,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Overflow-menu (⋮) i config-skærmenes TopAppBar med "Eksportér denne widget" + "Importér konfiguration". */
+/**
+ * Overflow-menu (⋮) i config-skærmenes TopAppBar: "Eksportér denne widget" + "Importér konfiguration",
+ * plus "Gendan fjernet widget" NÅR [onRecover] er sat (kun multi-config, og kun hvis der findes
+ * soft-slettede configs inden for grace-perioden).
+ */
 @Composable
-fun TransferOverflowMenu(onExport: () -> Unit, onImport: () -> Unit) {
+fun TransferOverflowMenu(onExport: () -> Unit, onImport: () -> Unit, onRecover: (() -> Unit)? = null) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
         Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
@@ -62,22 +66,34 @@ fun TransferOverflowMenu(onExport: () -> Unit, onImport: () -> Unit) {
             text = { Text(stringResource(R.string.import_config)) },
             onClick = { open = false; onImport() },
         )
+        if (onRecover != null) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.recover_removed_widget)) },
+                onClick = { open = false; onRecover() },
+            )
+        }
     }
 }
 
 /** Én post i import-vælgeren — auto-udledt visning af en widget-config i filen. */
 data class ImportPickerItem(val title: String, val subtitle: String, @DrawableRes val iconResId: Int)
 
-/** Vælger over filens (type-filtrerede) configs som en liste af widgets — altid vist, også ved én. */
+/** Vælger over en liste af widget-configs (fil-import ELLER gendan-fjernet) — altid vist, også ved én. */
 @Composable
-fun ImportPickerDialog(items: List<ImportPickerItem>, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+fun ImportPickerDialog(
+    items: List<ImportPickerItem>,
+    onPick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    titleRes: Int = R.string.import_config,
+    countRes: Int = R.plurals.import_count,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text(stringResource(R.string.import_config))
+                Text(stringResource(titleRes))
                 Text(
-                    pluralStringResource(R.plurals.import_count, items.size, items.size),
+                    pluralStringResource(countRes, items.size, items.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
