@@ -214,6 +214,9 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
             onDismiss = { showSettings = false },
             onReportProblem = {
                 showSettings = false
+                if (reportCrashSummary != null) {
+                    store.clearPendingCrash()
+                }
                 reportCrashSummary = null
                 showReportDialog = true
             }
@@ -225,9 +228,12 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
             crashSummary = reportCrashSummary,
             onDismiss = {
                 showReportDialog = false
+                // Retire the persisted "ask once per crash" flag as soon as the dialog is first
+                // dismissed (Cancel, or Send's dismiss-before-result) — but keep reportCrashSummary
+                // itself so a subsequent Retry (via onResult below) can reopen with the same
+                // crash framing instead of degrading to the generic dialog.
                 if (reportCrashSummary != null) {
                     store.clearPendingCrash()
-                    reportCrashSummary = null
                 }
             },
             onResult = { result ->
@@ -241,8 +247,11 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
                         )
                         if (action == SnackbarResult.ActionPerformed) {
                             showReportDialog = true
+                        } else {
+                            reportCrashSummary = null
                         }
                     } else {
+                        reportCrashSummary = null
                         snackbarHostState.showSnackbar(message)
                     }
                 }

@@ -1367,10 +1367,12 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     `pendingCrashLog` gemmer crash-teksten så et efterfølgende proces-liv kan hente den via
     `RemoteLogger.restorePersistedLines` (nyt process' `LogBuffer` starter tomt — uden denne
     genindlæsning ville en crash-uploads `E [CRASH] …`-linje og stacktrace være tabt, da de blev
-    skrevet af den proces der lige døde). `HaWidgetsApp` viser `ReportProblemDialog` automatisk
-    ved næste app-åbning HVIS der er en pending crash, og rydder feltet ved "Cancel" ELLER "Send
-    report" — så dialogen ikke popper op igen ved efterfølgende almindelige åbninger (kun ved en
-    NY crash).
+    skrevet af den proces der lige døde). `HaWidgetsApp.onCreate` genindlæser kun de persisterede
+    log-linjer ind i det friske proces' `LogBuffer` — selve `ReportProblemDialog` vises af
+    `MainActivity`s `OnboardingScreen` (gated på `store.pendingCrashSummary` ved komposition)
+    automatisk ved næste app-åbning HVIS der er en pending crash, og rydder feltet ved "Cancel"
+    ELLER "Send report" — så dialogen ikke popper op igen ved efterfølgende almindelige åbninger
+    (kun ved en NY crash).
   - **Reel fejl fundet og rettet UNDER QA (commit `2a7864e`, allerede reviewet og merged ind på
     denne branch før denne opgave startede):** crash-auto-dialogen dukkede IKKE op efter en rigtig
     tvungen crash (`adb shell am crash dk.akait.hawidgets`) — root cause: `SecureStore`s
