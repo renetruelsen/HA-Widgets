@@ -361,7 +361,9 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         }
         ImportPickerItem(
             title = title,
-            subtitle = context.getString(R.string.import_item_multi_subtitle, multi.slots.size),
+            subtitle = context.resources.getQuantityString(
+                R.plurals.import_item_multi_subtitle, multi.slots.size, multi.slots.size
+            ),
             iconResId = domainIconResId(multi.slots.firstOrNull()?.displayDomain ?: ""),
         )
     }

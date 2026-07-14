@@ -1525,9 +1525,11 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     4 soft-slettede findes → vælger med rigtige navne ("SpaV2 Spa Thermostat…" osv.) + "4 removed
     widgets" → vælg → "Replace setup?" → anvend → listen viser den gendannede config (climate+chip)
     + toast, ingen crash. **Purge (30d) ikke live-testet** (kan ikke vente 30 dage; dækket af
-    `reconcileDecision`-unit-test for PURGE-grenen). Device-QA på S23 + `code-review` afventer bruger.
-  - **Kendt lille nit (præeksisterende v0.2.82, ikke rettet):** `import_item_multi_subtitle` viser
-    "1 rows" (ikke ental) — kandidat til plurals.
+    `reconcileDecision`-unit-test for PURGE-grenen). `code-review` kørt (rent). **Device-QA på S23:
+    bruger-bekræftet OK (2026-07-13).** Merged til `main` (`25c83d5`) + pushet.
+- ✅ **v0.2.84 — plurals-fix (2026-07-13):** `import_item_multi_subtitle` ("Multi widget · %d rows")
+  konverteret fra `string` til `plurals` i alle 3 sprog → korrekt "1 row"/"1 række"/"1 rad" ved ét slot
+  (var "1 rows"). Bruger nu `resources.getQuantityString`. Ren copy-fix, ingen adfærdsændring.
 
 ## Næste skridt
 

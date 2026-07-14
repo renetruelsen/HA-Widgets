@@ -257,7 +257,10 @@
         <item quantity="one">%d removed widget</item>
         <item quantity="other">%d removed widgets</item>
     </plurals>
-    <string name="import_item_multi_subtitle">Multi widget · %d rows</string>
+    <plurals name="import_item_multi_subtitle">
+        <item quantity="one">Multi widget · %d row</item>
+        <item quantity="other">Multi widget · %d rows</item>
+    </plurals>
     <string name="import_item_shortcut_subtitle">Dashboard shortcut</string>
     <string name="import_help_row">To import: add a widget, open its settings, and choose Import.</string>
     <string name="import_confirm_title">Replace setup?</string>
