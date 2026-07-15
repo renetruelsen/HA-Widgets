@@ -42,7 +42,16 @@
     <string name="section_getting_started">Kom igång</string>
     <string name="section_settings_title">Inställningar</string>
     <string name="section_appearance">Utseende</string>
+    <string name="section_updates">Uppdatering</string>
     <string name="section_troubleshooting">Felsökning</string>
+    <string name="sync_interval_label">Uppdateringsintervall</string>
+    <string name="sync_interval_hint">Mindre frekvent uppdatering sparar batteri. Widgetar uppdateras alltid när du trycker på dem.</string>
+    <string name="sync_interval_15m">Var 15:e minut</string>
+    <string name="sync_interval_30m">Var 30:e minut</string>
+    <string name="sync_interval_1h">Varje timme</string>
+    <string name="sync_interval_3h">Var 3:e timme</string>
+    <string name="sync_interval_6h">Var 6:e timme</string>
+    <string name="sync_interval_manual">Endast vid tryck</string>
     <string name="settings_open">Öppna</string>
     <string name="cd_close_settings">Stäng</string>
 

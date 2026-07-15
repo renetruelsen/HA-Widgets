@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenu
@@ -85,6 +86,7 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.widget.ShortcutWidget
 import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
 import dk.akait.hawidgets.widget.multientity.MultiEntityWidget
+import dk.akait.hawidgets.worker.SyncWorker
 import dk.akait.hawidgets.widget.common.WIDGET_COLOR_THEMES
 import dk.akait.hawidgets.widget.common.presetFor
 import dk.akait.hawidgets.logging.RemoteLogger
@@ -538,6 +540,37 @@ private fun SettingsSheet(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+            SectionHeader(stringResource(R.string.section_updates))
+
+            var syncInterval by remember { mutableStateOf(store.syncIntervalMinutes) }
+            SyncIntervalRow(currentMinutes = syncInterval) { minutes ->
+                store.syncIntervalMinutes = minutes
+                syncInterval = minutes
+                // Widgets læser IKKE intervallet reaktivt (bor i SecureStore) — gen-planlæg
+                // baggrunds-arbejdet eksplicit, så det nye interval (eller "kun ved tryk") træder
+                // i kraft med det samme. Ingen updateAllWidgets/recreate: rendering er upåvirket.
+                SyncWorker.schedule(context)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    stringResource(R.string.sync_interval_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
             SectionHeader(stringResource(R.string.section_troubleshooting))
 
             val batteryExempted = remember(connected) {
@@ -729,6 +762,25 @@ private fun LanguageRow(currentTag: String?, onSelect: (String?) -> Unit) {
         ),
         selectedKey = currentTag,
         fallbackLabel = stringResource(R.string.language_follow_system),
+        onSelect = onSelect,
+    )
+}
+
+@Composable
+private fun SyncIntervalRow(currentMinutes: Int, onSelect: (Int) -> Unit) {
+    SettingsDropdownRow(
+        icon = Icons.Default.Sync,
+        label = stringResource(R.string.sync_interval_label),
+        options = listOf(
+            15 to stringResource(R.string.sync_interval_15m),
+            30 to stringResource(R.string.sync_interval_30m),
+            60 to stringResource(R.string.sync_interval_1h),
+            180 to stringResource(R.string.sync_interval_3h),
+            360 to stringResource(R.string.sync_interval_6h),
+            SecureStore.SYNC_MANUAL to stringResource(R.string.sync_interval_manual),
+        ),
+        selectedKey = currentMinutes,
+        fallbackLabel = stringResource(R.string.sync_interval_30m),
         onSelect = onSelect,
     )
 }

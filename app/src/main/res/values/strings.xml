@@ -42,7 +42,16 @@
     <string name="section_getting_started">Getting started</string>
     <string name="section_settings_title">Settings</string>
     <string name="section_appearance">Appearance</string>
+    <string name="section_updates">Updates</string>
     <string name="section_troubleshooting">Troubleshooting</string>
+    <string name="sync_interval_label">Update interval</string>
+    <string name="sync_interval_hint">Less frequent updates save battery. Widgets always refresh when you tap them.</string>
+    <string name="sync_interval_15m">Every 15 minutes</string>
+    <string name="sync_interval_30m">Every 30 minutes</string>
+    <string name="sync_interval_1h">Every hour</string>
+    <string name="sync_interval_3h">Every 3 hours</string>
+    <string name="sync_interval_6h">Every 6 hours</string>
+    <string name="sync_interval_manual">Only when tapped</string>
     <string name="settings_open">Open</string>
     <string name="cd_close_settings">Close</string>
 

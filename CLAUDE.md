@@ -1530,6 +1530,37 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 - ✅ **v0.2.84 — plurals-fix (2026-07-13):** `import_item_multi_subtitle` ("Multi widget · %d rows")
   konverteret fra `string` til `plurals` i alle 3 sprog → korrekt "1 row"/"1 række"/"1 rad" ved ét slot
   (var "1 rows"). Bruger nu `resources.getQuantityString`. Ren copy-fix, ingen adfærdsændring.
+- ✅ **v0.2.85 — globalt, brugervalgt pull-interval (2026-07-15, brugerønske, direkte
+  implementering efter afklarende spørgsmål):**
+  - **Baggrund:** før Play Store-release ville brugeren give en "tryghedsknap" så folk selv kan
+    styre hvor ofte widgets henter data (batteri-bekymring). Global dropdown med presets,
+    gælder ALLE widgets.
+  - **Vigtig begrænsning afklaret:** WorkManager `PeriodicWorkRequest` har et hårdt
+    15-minutters gulv — presets under 15 min er teknisk umulige (og passer med batteriformålet).
+  - **Presets (afklaret med bruger):** 15 min / 30 min / 1 time / 3 timer / 6 timer / **Kun ved
+    tryk**. Default **30 min** (lidt mere batterivenligt end den historiske 15). Tryk-på-widget
+    (`SyncWorker.runNow`, `ha_entity_sync_now`) er UAFHÆNGIG af dette og virker altid — også i
+    "Kun ved tryk".
+  - **Data:** ny `SecureStore.syncIntervalMinutes` (Int-pref, minutter; `SYNC_MANUAL=0`,
+    `SYNC_DEFAULT_MINUTES=30`). Ingen Room-migration (SharedPreferences-værdi, default via
+    `getInt`-fallback → eksisterende installs får 30 uden datamigrering).
+  - **`SyncWorker.schedule()` omskrevet** til at læse intervallet: `SYNC_MANUAL` →
+    `cancelUniqueWork(ha_entity_sync)`; ellers `enqueueUniquePeriodicWork` med
+    **`ExistingPeriodicWorkPolicy.UPDATE`** (var `KEEP`) — UPDATE (WorkManager 2.8+, vi har 2.9.1)
+    lader et NYT interval træde i kraft uden at nulstille tidsplanen når intervallet er uændret;
+    KEEP ville have ignoreret et skift, REPLACE ville nulstille timeren ved hver app-start. Samme
+    idempotente `schedule()` kaldes både ved app-start (`HaWidgetsApp`) og config-save — og nu ved
+    interval-skift i indstillingerne.
+  - **UI:** ny "Opdatering"-sektion i indstillings-arket (mellem "Udseende" og "Fejlfinding") med
+    `SyncIntervalRow` (genbruger delt `SettingsDropdownRow<Int>`) + en batteri-hint-linje. `onSelect`
+    gemmer prefen + kalder `SyncWorker.schedule(context)` (ingen `updateAllWidgets`/`recreate` —
+    rendering er upåvirket). Nye `sync_interval_*`/`section_updates`-strenge på alle 3 sprog.
+  - **QA (emulator `pixel_test`, ægte HA, EKSISTERENDE data):** build grøn. Verificeret via
+    WorkManager-diagnostik-broadcast + jobscheduler: install → `ha_entity_sync` ENQUEUED (default
+    30 min); "Kun ved tryk" → `ha_entity_sync` CANCELLED, `ha_entity_sync_now` upåvirket; "Hver
+    time" → `ha_entity_sync` re-ENQUEUED med `Minimum latency: +59m59s` (≈60 min bekræftet);
+    persistens bekræftet (værdi overlevede dropdown-genåbning); dropdown viser alle 6 presets;
+    ingen crashes i logcat. **Device-QA på S23 + `code-review` inden merge afventer bruger.**
 
 ## Næste skridt
 

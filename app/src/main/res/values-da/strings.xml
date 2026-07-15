@@ -42,7 +42,16 @@
     <string name="section_getting_started">Kom i gang</string>
     <string name="section_settings_title">Indstillinger</string>
     <string name="section_appearance">Udseende</string>
+    <string name="section_updates">Opdatering</string>
     <string name="section_troubleshooting">Fejlfinding</string>
+    <string name="sync_interval_label">Opdateringsinterval</string>
+    <string name="sync_interval_hint">Sjældnere opdatering sparer batteri. Widgets opdaterer altid, når du trykker på dem.</string>
+    <string name="sync_interval_15m">Hvert 15. minut</string>
+    <string name="sync_interval_30m">Hvert 30. minut</string>
+    <string name="sync_interval_1h">Hver time</string>
+    <string name="sync_interval_3h">Hver 3. time</string>
+    <string name="sync_interval_6h">Hver 6. time</string>
+    <string name="sync_interval_manual">Kun ved tryk</string>
     <string name="settings_open">Åbn</string>
     <string name="cd_close_settings">Luk</string>
 

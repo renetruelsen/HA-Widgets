@@ -48,6 +48,17 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         get() = prefs.getString(KEY_WIDGET_COLOR_THEME, COLOR_BLUE) ?: COLOR_BLUE
         set(value) = prefs.edit().putString(KEY_WIDGET_COLOR_THEME, value).apply()
 
+    /**
+     * Global baggrunds-pull-frekvens i minutter for ALLE widgets ([dk.akait.hawidgets.worker.SyncWorker]).
+     * [SYNC_MANUAL] (0) = ingen periodisk pull; widgets opdaterer kun når man trykker på dem. Ellers er
+     * værdien det periodiske interval i minutter (WorkManager-gulv er 15 min — alle presets ≥ 15).
+     * Default [SYNC_DEFAULT_MINUTES] (30). Ikke-reaktiv: et skift skal følges op af
+     * `SyncWorker.schedule(context)` for at træde i kraft (samme mønster som tema, ADR-5).
+     */
+    var syncIntervalMinutes: Int
+        get() = prefs.getInt(KEY_SYNC_INTERVAL, SYNC_DEFAULT_MINUTES)
+        set(value) = prefs.edit().putInt(KEY_SYNC_INTERVAL, value).apply()
+
     /** Sat af [dk.akait.hawidgets.logging.RemoteLogger.installCrashHandler] hvis forrige proces
      * crashede — throwable.toString(), null = intet ventende. Læses af `MainActivity` ved næste
      * app-åbning for at auto-åbne rapport-dialogen. Ryddes af [clearPendingCrash]. */
@@ -134,7 +145,13 @@ class SecureStore private constructor(private val prefs: SharedPreferences) {
         private const val KEY_WIDGET_COLOR_THEME = "widget_color_theme"
         private const val KEY_PENDING_CRASH_SUMMARY = "pending_crash_summary"
         private const val KEY_PENDING_CRASH_LOG = "pending_crash_log"
+        private const val KEY_SYNC_INTERVAL = "sync_interval_minutes"
         private fun keyDashboard(id: Int) = "dashboard_path_$id"
+
+        /** Ingen periodisk baggrunds-pull — kun tryk-på-widget opdaterer. */
+        const val SYNC_MANUAL = 0
+        /** Default baggrunds-pull-interval i minutter (batterivenligt udgangspunkt). */
+        const val SYNC_DEFAULT_MINUTES = 30
 
         const val THEME_LIGHT = "light"
         const val THEME_DARK = "dark"

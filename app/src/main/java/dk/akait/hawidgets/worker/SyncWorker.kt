@@ -13,6 +13,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dk.akait.hawidgets.data.EntityRepository
+import dk.akait.hawidgets.data.SecureStore
 import java.util.concurrent.TimeUnit
 
 class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
@@ -30,17 +31,34 @@ class SyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
         private const val PERIODIC_WORK_NAME = "ha_entity_sync"
         private const val NOW_WORK_NAME = "ha_entity_sync_now"
 
+        /**
+         * (Gen)planlægger den periodiske sync ud fra brugerens valgte interval
+         * ([SecureStore.syncIntervalMinutes]). Idempotent: kaldes både ved app-start og hver gang
+         * brugeren skifter interval i indstillingerne.
+         *
+         * - [SecureStore.SYNC_MANUAL] (0) → aflys det periodiske arbejde helt (kun tryk-på-widget
+         *   opdaterer derefter; [runNow] er upåvirket).
+         * - Ellers enqueue med [ExistingPeriodicWorkPolicy.UPDATE], så et NYT interval træder i kraft
+         *   uden at nulstille den eksisterende tidsplan når intervallet er uændret (modsat KEEP, som
+         *   ville ignorere et skift, og REPLACE, som ville nulstille timeren ved hver app-start).
+         */
         fun schedule(context: Context) {
-            val request = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+            val minutes = SecureStore.get(context).syncIntervalMinutes
+            val workManager = WorkManager.getInstance(context)
+            if (minutes <= SecureStore.SYNC_MANUAL) {
+                workManager.cancelUniqueWork(PERIODIC_WORK_NAME)
+                return
+            }
+            val request = PeriodicWorkRequestBuilder<SyncWorker>(minutes.toLong(), TimeUnit.MINUTES)
                 .setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
                 )
                 .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            workManager.enqueueUniquePeriodicWork(
                 PERIODIC_WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
         }
