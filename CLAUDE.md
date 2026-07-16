@@ -1561,6 +1561,57 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     time" → `ha_entity_sync` re-ENQUEUED med `Minimum latency: +59m59s` (≈60 min bekræftet);
     persistens bekræftet (værdi overlevede dropdown-genåbning); dropdown viser alle 6 presets;
     ingen crashes i logcat. **Device-QA på S23 + `code-review` inden merge afventer bruger.**
+- ✅ **v0.2.86-88 — MultiEntityWidget: chips-only rækker + ubegrænsede chips + rå skyder-værdi
+  (2026-07-16, brainstorm m. visual-companion-mockups → direkte implementering efter brugerønske
+  "implementer direkte"):**
+  - **Baggrund:** 3 brugerønsker — (1) auto-scroll til nyeste chip ved tilføjelse, (2) mulighed for
+    en række UDEN hoved-entitet (kun sekundær-chips), (3) valgfri visning af RANGE-domæners rå
+    værdi (fx "45%") i stedet for `formatEntityState`s faste tekst ("Tændt"/"Åben"/"Varme").
+    Punkt 2 rejste undervejs et opfølgende brugerspørgsmål ("kan man senere tilføje en
+    hoved-entitet til en chips-only række?") der ændrede designet til fuldt reversibelt, samt en
+    kant-case (5 chips i en chips-only række + tilføjet hoved-entitet ville overskride den gamle
+    4-chip-grænse) løst ved at fjerne special-reglen og bruge samme loft alle steder.
+  - **Dataskema (Room v14→v15):** ny tabel `multi_widget_chip` (`MultiWidgetChipEntity`, ét chip
+    pr. række, sammensat nøgle `appWidgetId`+`slotIndex`+`chipIndex`) erstatter de flade
+    `secondary1-4*`-kolonner på `multi_widget_slot` (fuld tabel-genskabelse, samme teknik som
+    `MIGRATION_8_9`, data kopieret over). `multi_widget_slot`s `displayEntityId`/`displayDomain`/
+    `actionEntityId`/`actionDomain`/`action` er nu nullable — alle null samtidig = "chips-only
+    række". Ny nullable `showRangeValue`-kolonne på både hoved-slot og chip.
+  - **Reversibilitet:** `SlotEditorScreen`s Visning-sektion har nu to tilstande — ingen
+    hoved-entitet ("+ Vælg hoved-entitet") og med hoved-entitet ("Skift entitet" + "Fjern
+    hoved-entitet") — konvertering mellem dem sker ved almindelig redigering, chips upåvirket.
+    "Tilføj slot" åbner stadig entity-picker'en direkte (uændret for det almindelige tilfælde);
+    picker'en fik en ny "Spring over"-linje for den sjældne chips-only-vej.
+  - **Vis rå skyder-værdi:** ny toggle i Visning-sektionen for `light`/`cover`/`climate`
+    (`RANGE_VALUE_DOMAINS`), uafhængig af valgt handling, default fra. `rangeCurrentValue`/
+    `rangeMin`/`rangeMax` flyttet fra `MultiEntityClickModifier.kt` til delt
+    `widget/common/RangeValues.kt` (ny `formatRangeValue`), så klik-dialogen og visningen bruger
+    samme udtræknings-logik.
+  - **Grænser afklaret undervejs med bruger (2 omgange):** første forslag var 5 chips kun for
+    chips-only rækker / 4 for normale — bruger bad om ÉT fælles loft for alle rækker (fjerner
+    special-reglen) og først 10, men rettede efterfølgende til **5 chips / 10 rækker** (den
+    modsatte fordeling af hvad der oprindeligt var kodet) — chip-loft er en UI-grænse
+    (`MAX_SECONDARY_ENTITIES`), ingen tilsvarende grænse i databaseskemaet.
+  - **Layout:** række med hoved-entitet — chips forbliver højre-justeret (uændret). Chips-only
+    række — chips centreres og fordeles jævnt ud over hele bredden via lige store vægtede
+    `Spacer`'e (Glance's `Row` har ingen `Arrangement.SpaceEvenly`).
+  - **Fund fra S23-QA, rettet samme session:** `ChipsOnlyRow`s ydre ramme havde BÅDE en fast
+    `.height(48dp)` OG `.padding(6dp)` på samme `Box` — paddingen åd af den faste højde, så kun
+    36dp reelt var tilbage til indholdet, mens selve chippen (som selv kræver 48dp) blev skåret af
+    foroven/forneden (så ud som skarpe hjørner i stedet for runde) — og rækkens totale højde
+    (48dp) var lavere end normale rækkers (48+6+6=60dp). Fix: højden sat på INDHOLDS-rowet (som i
+    `SlotRow`), ikke på rammen — rammen sizer nu naturligt til indhold+padding, identisk med
+    normale rækker.
+  - **QA:** build + 117 unit-tests grønne (14 nye — `RangeValuesTest`, `MultiEntityDraftsTest`,
+    dækker `toSlotWithChips`/`draftFromSlotWithChips`-roundtrip + range-værdi-formattering).
+    Migration v14→v15 verificeret direkte i DB på emulatorens EKSISTERENDE data (`user_version=15`,
+    alle 14 slots + 4 chip-rækker korrekt migreret, 48 gamle secondary-kolonner væk, ingen
+    datatab). Emulator-interaktion (tilføj/fjern chips, entity-picker) kunne IKKE testes denne
+    session — emulatoren havde ingen DNS-rute til `home.rtr.dk` (kendt, gentaget quirk). **Fuld
+    interaktiv test kørt af bruger på Galaxy S23** (rigtig HA-forbindelse): chips-only-oprettelse,
+    højde/hjørne-fix bekræftet, resten af flowet (reversibilitet, auto-scroll, "vis
+    skyderværdi") bekræftet OK. Merged til `main` (`6b4dea1`) + pushet.
+  - Spec: `docs/superpowers/specs/2026-07-16-multi-entity-widget-enhancements-design.md`.
 
 ## Næste skridt
 
