@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -148,9 +150,7 @@ private fun SlotCard(
     onMoveDown: () -> Unit,
 ) {
     val slot = row.slot
-    val name = slot.label.ifEmpty {
-        slot.displayEntityId ?: pluralStringResource(R.plurals.chips_only_row_name, row.chips.size, row.chips.size)
-    }
+    val name = slotDisplayName(row)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -248,6 +248,29 @@ private fun SlotCard(
             }
         }
     }
+}
+
+/** Slottens visningsnavn: label > hoved-entitetens id > "N chips" (chips-only række). Delt mellem
+ * [SlotCard] og fjern-bekræft-dialogen, så begge viser samme navn for samme slot. */
+@Composable
+internal fun slotDisplayName(row: MultiSlotWithChips): String {
+    val slot = row.slot
+    return slot.label.ifEmpty {
+        slot.displayEntityId ?: pluralStringResource(R.plurals.chips_only_row_name, row.chips.size, row.chips.size)
+    }
+}
+
+/** Bekræft-dialog før en slot fjernes fra widgetten — navngiver den konkrete entitet/slot,
+ * så et fejltryk på skraldespanden ikke længere sletter uden varsel. */
+@Composable
+internal fun ConfirmRemoveSlotDialog(name: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.remove_slot_confirm_title)) },
+        text = { Text(stringResource(R.string.remove_slot_confirm_message, name)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.remove_slot_confirm_button)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 /** (ikon, "navn — handlingslabel") for hver konfigureret sekundær-chip på sloten. */

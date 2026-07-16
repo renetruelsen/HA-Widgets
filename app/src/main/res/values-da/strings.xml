@@ -151,6 +151,9 @@
     <string name="add_slot">+ Tilføj slot</string>
     <string name="cd_edit">Rediger</string>
     <string name="cd_remove">Fjern %1$s</string>
+    <string name="remove_slot_confirm_title">Fjern entitet?</string>
+    <string name="remove_slot_confirm_message">\"%1$s\" bliver fjernet fra denne widget.</string>
+    <string name="remove_slot_confirm_button">Fjern</string>
     <string name="cd_move_up">Flyt %1$s op</string>
     <string name="cd_move_down">Flyt %1$s ned</string>
     <string name="slot_editor_title">Tilpas entitet</string>

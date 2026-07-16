@@ -1612,6 +1612,15 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     højde/hjørne-fix bekræftet, resten af flowet (reversibilitet, auto-scroll, "vis
     skyderværdi") bekræftet OK. Merged til `main` (`6b4dea1`) + pushet.
   - Spec: `docs/superpowers/specs/2026-07-16-multi-entity-widget-enhancements-design.md`.
+- ✅ **v0.2.89 — MultiEntityWidget: bekræft-dialog før slot fjernes (2026-07-16, brugerrapport
+  "sletter uden bekræftelse"):** skraldespand-tryk på en slot i config-listen sletter ikke længere
+  øjeblikkeligt — åbner nu en `ConfirmRemoveSlotDialog` (AlertDialog, samme mønster som
+  `ConfirmReplaceDialog` for import) der navngiver den konkrete entitet/label, med Annullér/Fjern.
+  Slot-navnelogikken (label > displayEntityId > "N chips") delt mellem `SlotCard` og dialogen via
+  ny `slotDisplayName()`. Nye strenge på alle 3 sprog. **QA:** build grønt. Emulator (`pixel_test`,
+  widget 15, ægte HA-data): dialog navngiver korrekt entiteten, Annullér bevarer sloten (verificeret
+  i DB), Fjern sletter den fra den in-memory liste (ikke gemt, DB fortsat urørt efter back uden
+  gem). **Device-QA på S23: bruger-bekræftet OK.**
 
 ## Næste skridt
 

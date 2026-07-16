@@ -151,6 +151,9 @@
     <string name="add_slot">+ Lägg till plats</string>
     <string name="cd_edit">Redigera</string>
     <string name="cd_remove">Ta bort %1$s</string>
+    <string name="remove_slot_confirm_title">Ta bort enhet?</string>
+    <string name="remove_slot_confirm_message">\"%1$s\" tas bort från den här widgeten.</string>
+    <string name="remove_slot_confirm_button">Ta bort</string>
     <string name="cd_move_up">Flytta %1$s upp</string>
     <string name="cd_move_down">Flytta %1$s ner</string>
     <string name="slot_editor_title">Anpassa enhet</string>

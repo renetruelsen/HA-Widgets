@@ -151,6 +151,9 @@
     <string name="add_slot">+ Add slot</string>
     <string name="cd_edit">Edit</string>
     <string name="cd_remove">Remove %1$s</string>
+    <string name="remove_slot_confirm_title">Remove entity?</string>
+    <string name="remove_slot_confirm_message">\"%1$s\" will be removed from this widget.</string>
+    <string name="remove_slot_confirm_button">Remove</string>
     <string name="cd_move_up">Move %1$s up</string>
     <string name="cd_move_down">Move %1$s down</string>
     <string name="slot_editor_title">Customize entity</string>

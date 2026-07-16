@@ -119,6 +119,8 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     // DENNE widget. recoverChoices = åben gendan-vælger (genbruger samme picker/confirm/apply-flow).
     var recoverable by remember { mutableStateOf<List<TransferConfig.Multi>>(emptyList()) }
     var recoverChoices by remember { mutableStateOf<List<TransferConfig.Multi>?>(null) }
+    // Index i `rows` der afventer bekræftelse før den fjernes (skraldespand-tryk i ListScreen).
+    var pendingRemoveIndex by remember { mutableStateOf<Int?>(null) }
     val importLauncher = rememberImportLauncher { bundle ->
         val multi = bundle.multiConfigs
         if (multi.isEmpty()) {
@@ -184,9 +186,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onShowRefreshIconChange = { showRefreshIcon = it },
             onAddSlot = { step = Step.EntityPicker(PickerTarget.Display, null, SlotDraft()) },
             onEditSlot = { index -> step = Step.SlotEditor(index, draftFromSlotWithChips(rows[index], allEntities)) },
-            onRemoveSlot = { index ->
-                rows = rows.filterIndexed { i, _ -> i != index }.mapIndexed { i, row -> row.reindexed(i) }
-            },
+            onRemoveSlot = { index -> pendingRemoveIndex = index },
             onMoveSlot = { index, delta ->
                 val target = index + delta
                 if (target in rows.indices) {
@@ -403,6 +403,18 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         )
     }
 
+    // Fjern slot: bekræft-dialog før den faktiske fjernelse — undgår utilsigtet sletning ved
+    // fejltryk på skraldespand-ikonet.
+    pendingRemoveIndex?.let { index ->
+        ConfirmRemoveSlotDialog(
+            name = slotDisplayName(rows[index]),
+            onConfirm = {
+                rows = rows.filterIndexed { i, _ -> i != index }.mapIndexed { i, row -> row.reindexed(i) }
+                pendingRemoveIndex = null
+            },
+            onDismiss = { pendingRemoveIndex = null },
+        )
+    }
     // Import: vælger over filens multi-configs → bekræft → erstat den nuværende in-memory opsætning.
     importChoices?.let { choices ->
         ImportPickerDialog(
