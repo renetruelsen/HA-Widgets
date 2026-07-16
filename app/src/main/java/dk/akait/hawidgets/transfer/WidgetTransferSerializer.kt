@@ -1,10 +1,9 @@
 package dk.akait.hawidgets.transfer
 
 import dk.akait.hawidgets.data.WidgetConfig
+import dk.akait.hawidgets.data.db.MultiSlotWithChips
+import dk.akait.hawidgets.data.db.MultiWidgetChipEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
-import dk.akait.hawidgets.widget.multientity.SecondaryColumns
-import dk.akait.hawidgets.widget.multientity.secondaryColumns
-import dk.akait.hawidgets.widget.multientity.withSecondaryColumns
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -49,35 +48,33 @@ private fun TransferConfig.toJson(): JSONObject = when (this) {
         .put("config", JSONObject(config.toJson()))
 }
 
-private fun MultiWidgetSlotEntity.toJson(): JSONObject {
+private fun MultiSlotWithChips.toJson(): JSONObject {
     val secondaries = JSONArray()
-    // Kun ikke-tomme sekundær-pladser eksporteres (en tom plads har null-visnings-entitet).
-    secondaryColumns()
-        .filter { it.displayEntityId != null }
-        .forEach { secondaries.put(it.toJson()) }
+    chips.sortedBy { it.chipIndex }.forEach { secondaries.put(it.toJson()) }
     return JSONObject()
-        .put("slotIndex", slotIndex)
-        .put("displayEntityId", displayEntityId)
-        .put("displayDomain", displayDomain)
-        .put("actionEntityId", actionEntityId)
-        .put("actionDomain", actionDomain)
-        .put("action", action)
-        .put("label", label)
-        .put("confirmAction", confirmAction)
-        .put("showIcon", showIcon)
-        .putOpt("displayPrecision", displayPrecision)
-        .putOpt("datetimeFormat", datetimeFormat)
-        .putOpt("rangeInputMode", rangeInputMode)
-        .putOpt("actionPackageName", actionPackageName)
+        .put("slotIndex", slot.slotIndex)
+        .putOpt("displayEntityId", slot.displayEntityId)
+        .putOpt("displayDomain", slot.displayDomain)
+        .putOpt("actionEntityId", slot.actionEntityId)
+        .putOpt("actionDomain", slot.actionDomain)
+        .putOpt("action", slot.action)
+        .put("label", slot.label)
+        .put("confirmAction", slot.confirmAction)
+        .put("showIcon", slot.showIcon)
+        .putOpt("displayPrecision", slot.displayPrecision)
+        .putOpt("datetimeFormat", slot.datetimeFormat)
+        .putOpt("rangeInputMode", slot.rangeInputMode)
+        .putOpt("actionPackageName", slot.actionPackageName)
+        .putOpt("showRangeValue", slot.showRangeValue)
         .put("secondaries", secondaries)
 }
 
-private fun SecondaryColumns.toJson(): JSONObject = JSONObject()
-    .putOpt("displayEntityId", displayEntityId)
-    .putOpt("displayDomain", displayDomain)
-    .putOpt("actionEntityId", actionEntityId)
-    .putOpt("actionDomain", actionDomain)
-    .putOpt("action", action)
+private fun MultiWidgetChipEntity.toJson(): JSONObject = JSONObject()
+    .put("displayEntityId", displayEntityId)
+    .put("displayDomain", displayDomain)
+    .put("actionEntityId", actionEntityId)
+    .put("actionDomain", actionDomain)
+    .put("action", action)
     .putOpt("showValue", showValue)
     .putOpt("confirmAction", confirmAction)
     .putOpt("displayPrecision", displayPrecision)
@@ -85,6 +82,7 @@ private fun SecondaryColumns.toJson(): JSONObject = JSONObject()
     .putOpt("rangeInputMode", rangeInputMode)
     .putOpt("label", label)
     .putOpt("showIcon", showIcon)
+    .putOpt("showRangeValue", showRangeValue)
 
 // ── Parse ────────────────────────────────────────────────────────────────────
 
@@ -131,25 +129,29 @@ private fun parseConfig(obj: JSONObject): TransferConfig? = when (obj.optString(
     else -> null
 }
 
-private fun JSONArray?.parseSlots(): List<MultiWidgetSlotEntity> {
+private fun JSONArray?.parseSlots(): List<MultiSlotWithChips> {
     if (this == null) return emptyList()
     return buildList {
         for (i in 0 until length()) {
-            optJSONObject(i)?.let { add(it.parseSlot(fallbackIndex = i)) }
+            optJSONObject(i)?.let { add(it.parseSlotWithChips(fallbackIndex = i)) }
         }
     }
 }
 
-private fun JSONObject.parseSlot(fallbackIndex: Int): MultiWidgetSlotEntity {
-    val secondaries = optJSONArray("secondaries").parseSecondaryColumns()
-    return MultiWidgetSlotEntity(
+private fun JSONObject.parseSlotWithChips(fallbackIndex: Int): MultiSlotWithChips {
+    val slotIndex = optInt("slotIndex", fallbackIndex)
+    val displayEntityId = optStringOrNull("displayEntityId")
+    val slot = MultiWidgetSlotEntity(
         appWidgetId = 0, // placeholder — sættes ved anvendelse
-        slotIndex = optInt("slotIndex", fallbackIndex),
-        displayEntityId = optString("displayEntityId"),
-        displayDomain = optString("displayDomain"),
-        actionEntityId = optString("actionEntityId"),
-        actionDomain = optString("actionDomain"),
-        action = optString("action", "NONE"),
+        slotIndex = slotIndex,
+        displayEntityId = displayEntityId,
+        displayDomain = optStringOrNull("displayDomain"),
+        actionEntityId = optStringOrNull("actionEntityId"),
+        actionDomain = optStringOrNull("actionDomain"),
+        // En slot med en hoved-entitet men uden gemt action (ældre/minimal fil) defaulter til
+        // NONE (uændret fra den gamle flade models NOT NULL DEFAULT-adfærd). Ingen hoved-entitet
+        // ⇒ ingen action (chips-only).
+        action = if (displayEntityId == null) null else (optStringOrNull("action") ?: "NONE"),
         label = optString("label"),
         confirmAction = optBoolean("confirmAction", false),
         showIcon = optBoolean("showIcon", true),
@@ -157,32 +159,47 @@ private fun JSONObject.parseSlot(fallbackIndex: Int): MultiWidgetSlotEntity {
         datetimeFormat = optStringOrNull("datetimeFormat"),
         rangeInputMode = optStringOrNull("rangeInputMode"),
         actionPackageName = optStringOrNull("actionPackageName"),
-    ).withSecondaryColumns(secondaries)
+        showRangeValue = optBooleanOrNull("showRangeValue"),
+    )
+    val chips = optJSONArray("secondaries").parseChips(appWidgetId = 0, slotIndex = slotIndex)
+    return MultiSlotWithChips(slot, chips)
 }
 
-private fun JSONArray?.parseSecondaryColumns(): List<SecondaryColumns> {
+private fun JSONArray?.parseChips(appWidgetId: Int, slotIndex: Int): List<MultiWidgetChipEntity> {
     if (this == null) return emptyList()
     return buildList {
         for (i in 0 until length()) {
-            optJSONObject(i)?.let { add(it.parseSecondaryColumns()) }
+            val obj = optJSONObject(i) ?: continue
+            obj.parseChip(appWidgetId, slotIndex, chipIndex = size)?.let(::add)
         }
     }
 }
 
-private fun JSONObject.parseSecondaryColumns(): SecondaryColumns = SecondaryColumns(
-    displayEntityId = optStringOrNull("displayEntityId"),
-    displayDomain = optStringOrNull("displayDomain"),
-    actionEntityId = optStringOrNull("actionEntityId"),
-    actionDomain = optStringOrNull("actionDomain"),
-    action = optStringOrNull("action"),
-    showValue = optBooleanOrNull("showValue"),
-    confirmAction = optBooleanOrNull("confirmAction"),
-    displayPrecision = optIntOrNull("displayPrecision"),
-    datetimeFormat = optStringOrNull("datetimeFormat"),
-    rangeInputMode = optStringOrNull("rangeInputMode"),
-    label = optStringOrNull("label"),
-    showIcon = optBooleanOrNull("showIcon"),
-)
+private fun JSONObject.parseChip(appWidgetId: Int, slotIndex: Int, chipIndex: Int): MultiWidgetChipEntity? {
+    val displayEntityId = optStringOrNull("displayEntityId") ?: return null
+    val displayDomain = optStringOrNull("displayDomain") ?: return null
+    val actionEntityId = optStringOrNull("actionEntityId") ?: displayEntityId
+    val actionDomain = optStringOrNull("actionDomain") ?: displayDomain
+    val action = optStringOrNull("action") ?: "NONE"
+    return MultiWidgetChipEntity(
+        appWidgetId = appWidgetId,
+        slotIndex = slotIndex,
+        chipIndex = chipIndex,
+        displayEntityId = displayEntityId,
+        displayDomain = displayDomain,
+        actionEntityId = actionEntityId,
+        actionDomain = actionDomain,
+        action = action,
+        showValue = optBooleanOrNull("showValue"),
+        confirmAction = optBooleanOrNull("confirmAction"),
+        displayPrecision = optIntOrNull("displayPrecision"),
+        datetimeFormat = optStringOrNull("datetimeFormat"),
+        rangeInputMode = optStringOrNull("rangeInputMode"),
+        label = optStringOrNull("label"),
+        showIcon = optBooleanOrNull("showIcon"),
+        showRangeValue = optBooleanOrNull("showRangeValue"),
+    )
+}
 
 // ── Nullable JSON-helpers ────────────────────────────────────────────────────
 // org.json udelader/normaliserer null forskelligt; disse giver konsekvent null-tilbagefald.

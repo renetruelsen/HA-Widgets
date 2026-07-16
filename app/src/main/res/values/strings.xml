@@ -158,6 +158,12 @@
     <string name="section_action">Action</string>
     <string name="change_entity">Change entity</string>
     <string name="change">Change</string>
+    <string name="chips_only_hint">No main entity — this row only shows chips</string>
+    <string name="add_main_entity">+ Choose main entity</string>
+    <string name="remove_main_entity">Remove main entity</string>
+    <string name="skip_main_entity">Skip — no main entity for this row</string>
+    <string name="show_range_value_label">Show slider value</string>
+    <string name="show_range_value_hint">Show the raw value (e.g. 45%) instead of text</string>
     <string name="action_invalid_target">This entity cannot be acted on — choose another target.</string>
     <string name="action_read_only">This entity can only be displayed — nothing happens on tap.</string>
     <string name="reacts_on_tap">React on tap</string>
@@ -269,6 +275,10 @@
     <plurals name="import_item_multi_subtitle">
         <item quantity="one">Multi widget · %d row</item>
         <item quantity="other">Multi widget · %d rows</item>
+    </plurals>
+    <plurals name="chips_only_row_name">
+        <item quantity="one">%d chip</item>
+        <item quantity="other">%d chips</item>
     </plurals>
     <string name="import_item_shortcut_subtitle">Dashboard shortcut</string>
     <string name="import_help_row">To import: add a widget, open its settings, and choose Import.</string>

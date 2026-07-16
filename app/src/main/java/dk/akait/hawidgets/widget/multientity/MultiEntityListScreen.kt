@@ -36,19 +36,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.R
-import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.data.db.MultiSlotWithChips
+import dk.akait.hawidgets.data.db.MultiWidgetChipEntity
 import dk.akait.hawidgets.widget.common.AppSettingsHint
 import dk.akait.hawidgets.widget.common.domainIconResId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ListScreen(
-    slots: List<MultiWidgetSlotEntity>,
+    rows: List<MultiSlotWithChips>,
     showRefreshIcon: Boolean,
     onShowRefreshIconChange: (Boolean) -> Unit,
     onAddSlot: () -> Unit,
@@ -86,7 +88,7 @@ internal fun ListScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            if (slots.isEmpty()) {
+            if (rows.isEmpty()) {
                 Text(
                     stringResource(R.string.multi_entity_empty_hint),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -98,11 +100,11 @@ internal fun ListScreen(
                     Text(stringResource(R.string.import_config))
                 }
             } else {
-                slots.sortedBy { it.slotIndex }.forEachIndexed { index, slot ->
+                rows.sortedBy { it.slot.slotIndex }.forEachIndexed { index, row ->
                     SlotCard(
-                        slot = slot,
+                        row = row,
                         canMoveUp = index > 0,
-                        canMoveDown = index < slots.size - 1,
+                        canMoveDown = index < rows.size - 1,
                         onClick = { onEditSlot(index) },
                         onRemove = { onRemoveSlot(index) },
                         onMoveUp = { onMoveSlot(index, -1) },
@@ -120,11 +122,11 @@ internal fun ListScreen(
                 Switch(checked = showRefreshIcon, onCheckedChange = onShowRefreshIconChange)
             }
             Spacer(Modifier.padding(4.dp))
-            Button(onClick = onAddSlot, enabled = slots.size < 5, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onAddSlot, enabled = rows.size < 10, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.add_slot))
             }
             Spacer(Modifier.padding(4.dp))
-            Button(onClick = onSave, enabled = slots.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onSave, enabled = rows.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.save_widget))
             }
         }
@@ -137,7 +139,7 @@ internal fun ListScreen(
  * synligt — ingen skjult "+N"-optælling. */
 @Composable
 private fun SlotCard(
-    slot: MultiWidgetSlotEntity,
+    row: MultiSlotWithChips,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onClick: () -> Unit,
@@ -145,7 +147,10 @@ private fun SlotCard(
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
 ) {
-    val name = slot.label.ifEmpty { slot.displayEntityId }
+    val slot = row.slot
+    val name = slot.label.ifEmpty {
+        slot.displayEntityId ?: pluralStringResource(R.plurals.chips_only_row_name, row.chips.size, row.chips.size)
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -161,7 +166,7 @@ private fun SlotCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    painter = painterResource(domainIconResId(slot.displayDomain)),
+                    painter = painterResource(slot.displayDomain?.let { domainIconResId(it) } ?: R.drawable.ic_multi_entity),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )
@@ -180,20 +185,22 @@ private fun SlotCard(
                     modifier = Modifier.size(18.dp),
                 )
             }
-            val actionSummary = if (slot.actionEntityId == slot.displayEntityId) {
-                actionLabel(slot.action)
-            } else {
-                stringResource(R.string.label_with_target, actionLabel(slot.action), slot.actionEntityId)
+            if (slot.displayEntityId != null) {
+                val actionSummary = if (slot.actionEntityId == slot.displayEntityId) {
+                    actionLabel(slot.action ?: "NONE")
+                } else {
+                    stringResource(R.string.label_with_target, actionLabel(slot.action ?: "NONE"), slot.actionEntityId.orEmpty())
+                }
+                Text(
+                    actionSummary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 30.dp, top = 2.dp),
+                )
             }
-            Text(
-                actionSummary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 30.dp, top = 2.dp),
-            )
-            val secondarySummaries = secondarySlotSummaries(slot)
+            val secondarySummaries = secondarySlotSummaries(row.chips)
             if (secondarySummaries.isNotEmpty()) {
                 Column(modifier = Modifier.padding(start = 30.dp, top = 6.dp)) {
                     secondarySummaries.forEach { (iconResId, text) ->
@@ -245,23 +252,12 @@ private fun SlotCard(
 
 /** (ikon, "navn — handlingslabel") for hver konfigureret sekundær-chip på sloten. */
 @Composable
-private fun secondarySlotSummaries(slot: MultiWidgetSlotEntity): List<Pair<Int, String>> {
-    @Composable
-    fun summaryFor(
-        displayId: String?, displayDomain: String?, actionId: String?, action: String?,
-    ): Pair<Int, String>? {
-        if (displayId == null || displayDomain == null || action == null) return null
-        val label = if (actionId != null && actionId != displayId) {
-            stringResource(R.string.label_dash_with_target, displayId, actionShortLabel(action), actionId)
+private fun secondarySlotSummaries(chips: List<MultiWidgetChipEntity>): List<Pair<Int, String>> =
+    chips.sortedBy { it.chipIndex }.map { chip ->
+        val label = if (chip.actionEntityId != chip.displayEntityId) {
+            stringResource(R.string.label_dash_with_target, chip.displayEntityId, actionShortLabel(chip.action), chip.actionEntityId)
         } else {
-            stringResource(R.string.label_dash, displayId, actionShortLabel(action))
+            stringResource(R.string.label_dash, chip.displayEntityId, actionShortLabel(chip.action))
         }
-        return domainIconResId(displayDomain) to label
+        domainIconResId(chip.displayDomain) to label
     }
-    return listOfNotNull(
-        summaryFor(slot.secondary1DisplayEntityId, slot.secondary1DisplayDomain, slot.secondary1ActionEntityId, slot.secondary1Action),
-        summaryFor(slot.secondary2DisplayEntityId, slot.secondary2DisplayDomain, slot.secondary2ActionEntityId, slot.secondary2Action),
-        summaryFor(slot.secondary3DisplayEntityId, slot.secondary3DisplayDomain, slot.secondary3ActionEntityId, slot.secondary3Action),
-        summaryFor(slot.secondary4DisplayEntityId, slot.secondary4DisplayDomain, slot.secondary4ActionEntityId, slot.secondary4Action),
-    )
-}

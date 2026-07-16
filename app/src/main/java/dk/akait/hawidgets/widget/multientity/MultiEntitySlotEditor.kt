@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +48,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.R
+import dk.akait.hawidgets.widget.common.RANGE_VALUE_DOMAINS
 import dk.akait.hawidgets.widget.common.domainIconResId
 
 @Composable
@@ -87,6 +89,23 @@ private fun ActionModeRow(selected: Boolean, label: String, onClick: () -> Unit)
     }
 }
 
+/** "Vis rå skyder-værdi" (fx "45%"/"21.5°") i stedet for state-tekst — kun for domæner i
+ * [RANGE_VALUE_DOMAINS] (light/cover/climate), uafhængig af valgt handling. */
+@Composable
+private fun RangeValueToggle(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.show_range_value_label), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        }
+        Text(
+            stringResource(R.string.show_range_value_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SlotEditorScreen(
@@ -94,6 +113,7 @@ internal fun SlotEditorScreen(
     isEditing: Boolean,
     attrsByEntityId: Map<String, String>,
     onChangeDisplay: () -> Unit,
+    onRemoveMainEntity: () -> Unit,
     onChangeTarget: () -> Unit,
     onChooseApp: () -> Unit,
     onActionChange: (String) -> Unit,
@@ -103,6 +123,7 @@ internal fun SlotEditorScreen(
     onDisplayPrecisionChange: (Int?) -> Unit,
     onDatetimeFormatChange: (String?) -> Unit,
     onShowIconChange: (Boolean) -> Unit,
+    onShowRangeValueChange: (Boolean) -> Unit,
     onAddSecondary: () -> Unit,
     onRemoveSecondary: (Int) -> Unit,
     onMoveSecondaryUp: (Int) -> Unit,
@@ -116,22 +137,23 @@ internal fun SlotEditorScreen(
     onSecondaryDisplayPrecisionChange: (Int, Int?) -> Unit,
     onSecondaryDatetimeFormatChange: (Int, String?) -> Unit,
     onSecondaryShowIconChange: (Int, Boolean) -> Unit,
+    onSecondaryShowRangeValueChange: (Int, Boolean) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val display = draft.displayEntity ?: return
+    val display = draft.displayEntity
     val action = draft.actionEntity ?: display
     val context = LocalContext.current
 
     // "Åbn app": handlingen peger på en app, ikke en HA-entitet — mål-relateret UI (targetDiffers,
     // invalidTarget, "handl på anden entitet") er derfor undertrykt i denne tilstand.
     val isAppMode = draft.action == "OPEN_APP"
-    val targetDiffers = !isAppMode && action.entityId != display.entityId
-    val opts = actionOptionsFor(action.domain)
+    val targetDiffers = display != null && !isAppMode && action != null && action.entityId != display.entityId
+    val opts = action?.let { actionOptionsFor(it.domain) } ?: emptyList()
     val canControlHa = opts.isNotEmpty()
     val readOnly = opts.isEmpty()
     // Ugyldigt: bruger valgte et andet mål der ikke kan handles på (fx en sensor) → bloker gem.
-    val invalidTarget = !isAppMode && targetDiffers && readOnly
+    val invalidTarget = display != null && !isAppMode && targetDiffers && readOnly
     // App-handling valgt men ingen app endnu → bloker gem.
     val invalidAppChoice = isAppMode && draft.packageName == null
     val reactsToTap = draft.action != "NONE"
@@ -147,8 +169,18 @@ internal fun SlotEditorScreen(
     // Husk seneste rigtige HA-handling (ikke NONE/OPEN_APP), så kontakt/meta-skift genopretter
     // brugerens valg (fx RANGE) i stedet for altid at nulstille til opts.first() (code-review-fund).
     // Nulstilles når mål/visning skifter (remember-keys), hvor opts alligevel genberegnes.
-    var rememberedAction by remember(display.entityId, action.entityId) {
+    var rememberedAction by remember(display?.entityId, action?.entityId) {
         mutableStateOf(draft.action.takeIf { it != "NONE" && it != "OPEN_APP" })
+    }
+
+    val scrollState = rememberScrollState()
+    // Auto-scroll til den nyeste chip når en tilføjes (brugerønske) — kun ved vækst, ikke fjernelse.
+    var prevChipCount by remember { mutableStateOf(draft.secondaryEntities.size) }
+    LaunchedEffect(draft.secondaryEntities.size) {
+        if (draft.secondaryEntities.size > prevChipCount) {
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+        prevChipCount = draft.secondaryEntities.size
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.slot_editor_title)) }) }) { padding ->
@@ -157,207 +189,233 @@ internal fun SlotEditorScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
         ) {
-            OutlinedTextField(
-                value = draft.label,
-                onValueChange = { if (it.length <= 22) onLabelChange(it) },
-                label = { Text(stringResource(R.string.short_label_field)) },
-                placeholder = { Text(stringResource(R.string.short_label_placeholder)) },
-                supportingText = { Text(stringResource(R.string.short_label_supporting)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            Spacer(Modifier.padding(8.dp))
+            if (display != null) {
+                OutlinedTextField(
+                    value = draft.label,
+                    onValueChange = { if (it.length <= 22) onLabelChange(it) },
+                    label = { Text(stringResource(R.string.short_label_field)) },
+                    placeholder = { Text(stringResource(R.string.short_label_placeholder)) },
+                    supportingText = { Text(stringResource(R.string.short_label_supporting)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                Spacer(Modifier.padding(8.dp))
+            }
 
             // ── VISNING ──
             SectionCard(title = stringResource(R.string.section_view)) {
-                Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
-                Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change_entity)) }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(R.string.show_icon), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Checkbox(checked = draft.showIcon, onCheckedChange = onShowIconChange)
+                if (display == null) {
+                    Text(
+                        stringResource(R.string.chips_only_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.padding(top = 4.dp))
+                    TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) {
+                        Text(stringResource(R.string.add_main_entity))
+                    }
+                } else {
+                    Text(display.friendlyName, style = MaterialTheme.typography.titleMedium)
+                    Text(display.entityId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(modifier = Modifier.padding(top = 2.dp)) {
+                        TextButton(onClick = onChangeDisplay, contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.change_entity)) }
+                        Spacer(Modifier.width(12.dp))
+                        TextButton(onClick = onRemoveMainEntity, contentPadding = PaddingValues(0.dp)) {
+                            Text(stringResource(R.string.remove_main_entity), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.show_icon), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        Checkbox(checked = draft.showIcon, onCheckedChange = onShowIconChange)
+                    }
+                    ValueFormattingControls(
+                        domain = display.domain,
+                        attributesJson = attrsByEntityId[display.entityId],
+                        currentState = display.state,
+                        displayPrecision = draft.displayPrecision,
+                        datetimeFormat = draft.datetimeFormat,
+                        onDisplayPrecisionChange = onDisplayPrecisionChange,
+                        onDatetimeFormatChange = onDatetimeFormatChange,
+                    )
+                    if (display.domain in RANGE_VALUE_DOMAINS) {
+                        RangeValueToggle(checked = draft.showRangeValue, onCheckedChange = onShowRangeValueChange)
+                    }
                 }
-                ValueFormattingControls(
-                    domain = display.domain,
-                    attributesJson = attrsByEntityId[display.entityId],
-                    currentState = display.state,
-                    displayPrecision = draft.displayPrecision,
-                    datetimeFormat = draft.datetimeFormat,
-                    onDisplayPrecisionChange = onDisplayPrecisionChange,
-                    onDatetimeFormatChange = onDatetimeFormatChange,
-                )
             }
             Spacer(Modifier.padding(8.dp))
 
-            // ── HANDLING ──
-            SectionCard(title = stringResource(R.string.section_action)) {
-                if (invalidTarget) {
-                    Text(
-                        stringResource(R.string.action_invalid_target),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                } else {
-                    // "Reagér på tryk"-kontakt: kun når mål == visning. Ved andet mål er en
-                    // handling altid underforstået, så kontakten (og dermed NONE) findes ikke.
-                    // Vises nu OGSÅ for read-only visnings-entiteter (fx en sensor), fordi
-                    // "Åbn app" er en gyldig handling uanset domæne.
-                    if (!targetDiffers) {
+            // ── HANDLING ── (kun relevant med en hoved-entitet — chips-only rækker har ingen
+            // klikbar hoved-række; hver chip har sin egen uafhængige handling i "Ekstra info".)
+            if (display != null) {
+                SectionCard(title = stringResource(R.string.section_action)) {
+                    if (invalidTarget) {
+                        Text(
+                            stringResource(R.string.action_invalid_target),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    } else {
+                        // "Reagér på tryk"-kontakt: kun når mål == visning. Ved andet mål er en
+                        // handling altid underforstået, så kontakten (og dermed NONE) findes ikke.
+                        // Vises nu OGSÅ for read-only visnings-entiteter (fx en sensor), fordi
+                        // "Åbn app" er en gyldig handling uanset domæne.
+                        if (!targetDiffers) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Checkbox(
+                                    checked = reactsToTap,
+                                    onCheckedChange = { on ->
+                                        onActionChange(
+                                            when {
+                                                !on -> "NONE"
+                                                canControlHa -> rememberedAction?.takeIf { it in opts } ?: opts.first()
+                                                else -> "OPEN_APP"
+                                            }
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                        val showActionChoice = targetDiffers || reactsToTap
+                        if (showActionChoice) {
+                            // Selve under-valget (HA-handlinger eller app-vælgeren) — hvad der vises
+                            // afhænger af den aktuelle tilstand (isAppMode).
+                            val subChoice: @Composable () -> Unit = {
+                                if (isAppMode) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                appLabel ?: stringResource(R.string.no_app_selected),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                            )
+                                            if (draft.packageName != null) {
+                                                Text(
+                                                    stringResource(R.string.selected_app),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                        TextButton(onClick = onChooseApp) {
+                                            Text(stringResource(if (draft.packageName == null) R.string.choose_app else R.string.change_app))
+                                        }
+                                    }
+                                } else if (opts.size == 1) {
+                                    Text(
+                                        stringResource(R.string.on_tap_label, actionShortLabel(opts[0])),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                    )
+                                } else {
+                                    opts.forEach { actionType ->
+                                        val pick = {
+                                            rememberedAction = actionType
+                                            onActionChange(actionType)
+                                        }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable(onClick = pick),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            RadioButton(selected = draft.action == actionType, onClick = pick)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(actionShortLabel(actionType))
+                                        }
+                                    }
+                                }
+                            }
+                            // Rykket ind med en lodret streg, så det tydeligt hører til meta-valget ovenfor.
+                            val indentedSubChoice: @Composable () -> Unit = {
+                                Row(modifier = Modifier.height(IntrinsicSize.Min).padding(start = 14.dp)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .width(2.dp)
+                                            .fillMaxHeight()
+                                            .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(1.dp)),
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) { subChoice() }
+                                }
+                            }
+                            // Meta-valg: styr Home Assistant vs. åbn en app. Under-valget foldes ud LIGE
+                            // under sit eget meta-punkt. Kun vist når HA-styring overhovedet er mulig for
+                            // målet; ellers er "Åbn app" det eneste (og underforståede) valg.
+                            if (canControlHa) {
+                                ActionModeRow(
+                                    selected = !isAppMode,
+                                    label = stringResource(R.string.action_control_ha),
+                                    onClick = {
+                                        val ha = rememberedAction?.takeIf { it in opts } ?: opts.first()
+                                        rememberedAction = ha
+                                        onActionChange(ha)
+                                    },
+                                )
+                                if (!isAppMode) indentedSubChoice()
+                                ActionModeRow(
+                                    selected = isAppMode,
+                                    label = stringResource(R.string.action_open_app_option),
+                                    onClick = { onActionChange("OPEN_APP") },
+                                )
+                                if (isAppMode) indentedSubChoice()
+                            } else {
+                                subChoice()
+                            }
+                        } else {
+                            // Kontakt FRA (mål == visning): slotten viser kun status.
+                            Text(
+                                stringResource(R.string.slot_view_only_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 2.dp),
+                            )
+                        }
+                    }
+                    if (draft.action == "TOGGLE" || draft.action == "TRIGGER") {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(stringResource(R.string.reacts_on_tap), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                            Checkbox(
-                                checked = reactsToTap,
-                                onCheckedChange = { on ->
-                                    onActionChange(
-                                        when {
-                                            !on -> "NONE"
-                                            canControlHa -> rememberedAction?.takeIf { it in opts } ?: opts.first()
-                                            else -> "OPEN_APP"
-                                        }
-                                    )
-                                },
-                            )
+                            Text(stringResource(R.string.confirm_action_switch), modifier = Modifier.weight(1f))
+                            Checkbox(checked = draft.confirmAction, onCheckedChange = onConfirmActionChange)
                         }
                     }
-                    val showActionChoice = targetDiffers || reactsToTap
-                    if (showActionChoice) {
-                        // Selve under-valget (HA-handlinger eller app-vælgeren) — hvad der vises
-                        // afhænger af den aktuelle tilstand (isAppMode).
-                        val subChoice: @Composable () -> Unit = {
-                            if (isAppMode) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            appLabel ?: stringResource(R.string.no_app_selected),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                        if (draft.packageName != null) {
-                                            Text(
-                                                stringResource(R.string.selected_app),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                    TextButton(onClick = onChooseApp) {
-                                        Text(stringResource(if (draft.packageName == null) R.string.choose_app else R.string.change_app))
-                                    }
-                                }
-                            } else if (opts.size == 1) {
-                                Text(
-                                    stringResource(R.string.on_tap_label, actionShortLabel(opts[0])),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(vertical = 4.dp),
-                                )
-                            } else {
-                                opts.forEach { actionType ->
-                                    val pick = {
-                                        rememberedAction = actionType
-                                        onActionChange(actionType)
-                                    }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable(onClick = pick),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        RadioButton(selected = draft.action == actionType, onClick = pick)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(actionShortLabel(actionType))
-                                    }
-                                }
-                            }
-                        }
-                        // Rykket ind med en lodret streg, så det tydeligt hører til meta-valget ovenfor.
-                        val indentedSubChoice: @Composable () -> Unit = {
-                            Row(modifier = Modifier.height(IntrinsicSize.Min).padding(start = 14.dp)) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(2.dp)
-                                        .fillMaxHeight()
-                                        .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(1.dp)),
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) { subChoice() }
-                            }
-                        }
-                        // Meta-valg: styr Home Assistant vs. åbn en app. Under-valget foldes ud LIGE
-                        // under sit eget meta-punkt. Kun vist når HA-styring overhovedet er mulig for
-                        // målet; ellers er "Åbn app" det eneste (og underforståede) valg.
-                        if (canControlHa) {
-                            ActionModeRow(
-                                selected = !isAppMode,
-                                label = stringResource(R.string.action_control_ha),
-                                onClick = {
-                                    val ha = rememberedAction?.takeIf { it in opts } ?: opts.first()
-                                    rememberedAction = ha
-                                    onActionChange(ha)
-                                },
-                            )
-                            if (!isAppMode) indentedSubChoice()
-                            ActionModeRow(
-                                selected = isAppMode,
-                                label = stringResource(R.string.action_open_app_option),
-                                onClick = { onActionChange("OPEN_APP") },
-                            )
-                            if (isAppMode) indentedSubChoice()
-                        } else {
-                            subChoice()
-                        }
-                    } else {
-                        // Kontakt FRA (mål == visning): slotten viser kun status.
-                        Text(
-                            stringResource(R.string.slot_view_only_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 2.dp),
+                    if (draft.action == "RANGE") {
+                        RangeInputModeControl(
+                            selected = draft.rangeInputMode,
+                            onSelected = onRangeInputModeChange,
                         )
                     }
-                }
-                if (draft.action == "TOGGLE" || draft.action == "TRIGGER") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(stringResource(R.string.confirm_action_switch), modifier = Modifier.weight(1f))
-                        Checkbox(checked = draft.confirmAction, onCheckedChange = onConfirmActionChange)
+                    if (targetDiffers && action != null) {
+                        Text(
+                            stringResource(R.string.target_label, action.friendlyName),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                    // "Handl på en anden entitet" giver ikke mening i app-tilstand (handlingen peger
+                    // på en app) — skjult dér.
+                    if (!isAppMode) {
+                        TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) {
+                            Text(if (targetDiffers) stringResource(R.string.choose_other_target) else stringResource(R.string.act_on_other_entity))
+                        }
                     }
                 }
-                if (draft.action == "RANGE") {
-                    RangeInputModeControl(
-                        selected = draft.rangeInputMode,
-                        onSelected = onRangeInputModeChange,
-                    )
-                }
-                if (targetDiffers) {
-                    Text(
-                        stringResource(R.string.target_label, action.friendlyName),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
-                // "Handl på en anden entitet" giver ikke mening i app-tilstand (handlingen peger
-                // på en app) — skjult dér.
-                if (!isAppMode) {
-                    TextButton(onClick = onChangeTarget, contentPadding = PaddingValues(0.dp)) {
-                        Text(if (targetDiffers) stringResource(R.string.choose_other_target) else stringResource(R.string.act_on_other_entity))
-                    }
-                }
+                Spacer(Modifier.padding(8.dp))
             }
-            Spacer(Modifier.padding(8.dp))
 
-            // ── EKSTRA INFO ──
+            // ── EKSTRA INFO ── (altid tilgængelig — også for chips-only rækker)
             SectionCard(title = stringResource(R.string.extra_info_section, draft.secondaryEntities.size, MAX_SECONDARY_ENTITIES)) {
                 draft.secondaryEntities.forEachIndexed { index, secondary ->
                     SecondaryEntityRow(
@@ -377,6 +435,7 @@ internal fun SlotEditorScreen(
                         onDisplayPrecisionChange = { precision -> onSecondaryDisplayPrecisionChange(index, precision) },
                         onDatetimeFormatChange = { pattern -> onSecondaryDatetimeFormatChange(index, pattern) },
                         onShowIconChange = { showIcon -> onSecondaryShowIconChange(index, showIcon) },
+                        onShowRangeValueChange = { show -> onSecondaryShowRangeValueChange(index, show) },
                     )
                     if (index < draft.secondaryEntities.size - 1) Spacer(Modifier.padding(vertical = 4.dp))
                 }
@@ -400,7 +459,11 @@ internal fun SlotEditorScreen(
 
             TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cancel)) }
             Spacer(Modifier.padding(2.dp))
-            Button(onClick = onSave, enabled = !invalidTarget && !invalidAppChoice, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onSave,
+                enabled = !invalidTarget && !invalidAppChoice && (display != null || draft.secondaryEntities.isNotEmpty()),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(stringResource(if (isEditing) R.string.update_slot else R.string.add_to_widget))
             }
         }
@@ -430,6 +493,7 @@ private fun SecondaryEntityRow(
     onDisplayPrecisionChange: (Int?) -> Unit,
     onDatetimeFormatChange: (String?) -> Unit,
     onShowIconChange: (Boolean) -> Unit,
+    onShowRangeValueChange: (Boolean) -> Unit,
 ) {
     val display = secondary.displayEntity
     val action = secondary.actionEntity
@@ -492,6 +556,9 @@ private fun SecondaryEntityRow(
             onDisplayPrecisionChange = onDisplayPrecisionChange,
             onDatetimeFormatChange = onDatetimeFormatChange,
         )
+        if (display.domain in RANGE_VALUE_DOMAINS) {
+            RangeValueToggle(checked = secondary.showRangeValue, onCheckedChange = onShowRangeValueChange)
+        }
         Spacer(Modifier.padding(top = 6.dp))
         Text(stringResource(R.string.section_action), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         val reactsToTap = secondary.action != "NONE"

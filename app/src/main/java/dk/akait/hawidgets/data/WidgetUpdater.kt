@@ -14,7 +14,7 @@ object WidgetUpdater {
     /** Opdatér alle multi-widgets der viser/handler på [entityId]. */
     suspend fun updateForEntity(context: Context, entityId: String) {
         val db = AppDatabase.get(context)
-        if (db.multiWidgetDao().slotsForEntity(entityId).isEmpty()) return
+        if (!db.multiWidgetDao().isEntityUsed(entityId)) return
 
         val manager = GlanceAppWidgetManager(context)
         val multiWidget = MultiEntityWidget()

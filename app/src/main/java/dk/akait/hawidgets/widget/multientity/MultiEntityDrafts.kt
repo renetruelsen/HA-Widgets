@@ -1,11 +1,14 @@
 package dk.akait.hawidgets.widget.multientity
 
 import dk.akait.hawidgets.data.HaApiClient
+import dk.akait.hawidgets.data.db.MultiSlotWithChips
+import dk.akait.hawidgets.data.db.MultiWidgetChipEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.widget.common.compatibleActionsFor
 import dk.akait.hawidgets.widget.common.defaultShowValueFor
 
-internal const val MAX_SECONDARY_ENTITIES = 4
+/** Praktisk UI-loft på antal chips pr. række (intet tilsvarende loft i databaseskemaet). */
+internal const val MAX_SECONDARY_ENTITIES = 5
 
 /** Samme visning/handling-uafhængighed som [SlotDraft] selv — se docs/widget-settings-spec.md §9. */
 internal data class SecondarySlotDraft(
@@ -25,6 +28,9 @@ internal data class SecondarySlotDraft(
     val label: String = "",
     /** Skjul domæne-ikonet på chippen — brugervalgt, default vist. */
     val showIcon: Boolean = true,
+    /** Vis rå skyder-værdi (fx "45%") i stedet for state-tekst — kun relevant for domæner i
+     * RANGE_VALUE_DOMAINS (light/cover/climate), uafhængig af valgt handling. Default fra. */
+    val showRangeValue: Boolean = false,
 )
 
 internal data class SlotDraft(
@@ -44,90 +50,16 @@ internal data class SlotDraft(
     val showIcon: Boolean = true,
     /** Pakkenavn for "Åbn app"-handlingen ([action] == "OPEN_APP"). Null ellers. Kun hoved-slotten. */
     val packageName: String? = null,
+    /** Vis rå skyder-værdi (fx "45%"/"21.5°") i stedet for state-tekst — kun relevant for domæner i
+     * RANGE_VALUE_DOMAINS (light/cover/climate), uafhængig af valgt handling. Default fra. */
+    val showRangeValue: Boolean = false,
 )
 
-/**
- * Flad repræsentation af ÉN sekundær-chips kolonner (index 0..2). Findes udelukkende for at
- * samle den ellers 3×-gentagne `secondary1/2/3…`-udrulning ét sted ([secondaryColumns] læser,
- * [withSecondaryColumns] skriver), så resten af koden kan iterere over en liste i stedet for at
- * kopiere de ~11 felter tre gange (pragmatisk DRY — det flade Room-skema bevares uændret).
- */
-internal data class SecondaryColumns(
-    val displayEntityId: String?,
-    val displayDomain: String?,
-    val actionEntityId: String?,
-    val actionDomain: String?,
-    val action: String?,
-    val showValue: Boolean?,
-    val confirmAction: Boolean?,
-    val displayPrecision: Int?,
-    val datetimeFormat: String?,
-    val rangeInputMode: String?,
-    val label: String?,
-    val showIcon: Boolean?,
-)
-
-/** Fælles udlednings-regler for "uset kolonne"-defaults, delt af render-siden ([toChipData]) og
- * config-siden ([toDraft]) så de to aldrig kan divergere på hvad en null-kolonne betyder
- * (v0.2.44-cleanup). Kaldes altid efter at [action] er verificeret ikke-null. */
-internal fun SecondaryColumns.showValueOrDefault(): Boolean = showValue ?: defaultShowValueFor(action ?: "NONE")
-internal fun SecondaryColumns.confirmActionOrDefault(): Boolean = confirmAction ?: false
-internal fun SecondaryColumns.labelOrEmpty(): String = label?.trim() ?: ""
-internal fun SecondaryColumns.showIconOrDefault(): Boolean = showIcon ?: true
-
-/** De 3 sekundær-pladser som liste (i rækkefølge) — tomme pladser har null-felter. */
-internal fun MultiWidgetSlotEntity.secondaryColumns(): List<SecondaryColumns> = listOf(
-    SecondaryColumns(
-        secondary1DisplayEntityId, secondary1DisplayDomain, secondary1ActionEntityId, secondary1ActionDomain,
-        secondary1Action, secondary1ShowValue, secondary1ConfirmAction, secondary1DisplayPrecision,
-        secondary1DatetimeFormat, secondary1RangeInputMode, secondary1Label, secondary1ShowIcon,
-    ),
-    SecondaryColumns(
-        secondary2DisplayEntityId, secondary2DisplayDomain, secondary2ActionEntityId, secondary2ActionDomain,
-        secondary2Action, secondary2ShowValue, secondary2ConfirmAction, secondary2DisplayPrecision,
-        secondary2DatetimeFormat, secondary2RangeInputMode, secondary2Label, secondary2ShowIcon,
-    ),
-    SecondaryColumns(
-        secondary3DisplayEntityId, secondary3DisplayDomain, secondary3ActionEntityId, secondary3ActionDomain,
-        secondary3Action, secondary3ShowValue, secondary3ConfirmAction, secondary3DisplayPrecision,
-        secondary3DatetimeFormat, secondary3RangeInputMode, secondary3Label, secondary3ShowIcon,
-    ),
-    SecondaryColumns(
-        secondary4DisplayEntityId, secondary4DisplayDomain, secondary4ActionEntityId, secondary4ActionDomain,
-        secondary4Action, secondary4ShowValue, secondary4ConfirmAction, secondary4DisplayPrecision,
-        secondary4DatetimeFormat, secondary4RangeInputMode, secondary4Label, secondary4ShowIcon,
-    ),
-)
-
-/** Skriver op til 4 sekundær-pladser tilbage til de flade kolonner (resten nulstilles). */
-internal fun MultiWidgetSlotEntity.withSecondaryColumns(cols: List<SecondaryColumns>): MultiWidgetSlotEntity {
-    val c0 = cols.getOrNull(0)
-    val c1 = cols.getOrNull(1)
-    val c2 = cols.getOrNull(2)
-    val c3 = cols.getOrNull(3)
-    return copy(
-        secondary1DisplayEntityId = c0?.displayEntityId, secondary1DisplayDomain = c0?.displayDomain,
-        secondary1ActionEntityId = c0?.actionEntityId, secondary1ActionDomain = c0?.actionDomain,
-        secondary1Action = c0?.action, secondary1ShowValue = c0?.showValue, secondary1ConfirmAction = c0?.confirmAction,
-        secondary1DisplayPrecision = c0?.displayPrecision, secondary1DatetimeFormat = c0?.datetimeFormat,
-        secondary1RangeInputMode = c0?.rangeInputMode, secondary1Label = c0?.label, secondary1ShowIcon = c0?.showIcon,
-        secondary2DisplayEntityId = c1?.displayEntityId, secondary2DisplayDomain = c1?.displayDomain,
-        secondary2ActionEntityId = c1?.actionEntityId, secondary2ActionDomain = c1?.actionDomain,
-        secondary2Action = c1?.action, secondary2ShowValue = c1?.showValue, secondary2ConfirmAction = c1?.confirmAction,
-        secondary2DisplayPrecision = c1?.displayPrecision, secondary2DatetimeFormat = c1?.datetimeFormat,
-        secondary2RangeInputMode = c1?.rangeInputMode, secondary2Label = c1?.label, secondary2ShowIcon = c1?.showIcon,
-        secondary3DisplayEntityId = c2?.displayEntityId, secondary3DisplayDomain = c2?.displayDomain,
-        secondary3ActionEntityId = c2?.actionEntityId, secondary3ActionDomain = c2?.actionDomain,
-        secondary3Action = c2?.action, secondary3ShowValue = c2?.showValue, secondary3ConfirmAction = c2?.confirmAction,
-        secondary3DisplayPrecision = c2?.displayPrecision, secondary3DatetimeFormat = c2?.datetimeFormat,
-        secondary3RangeInputMode = c2?.rangeInputMode, secondary3Label = c2?.label, secondary3ShowIcon = c2?.showIcon,
-        secondary4DisplayEntityId = c3?.displayEntityId, secondary4DisplayDomain = c3?.displayDomain,
-        secondary4ActionEntityId = c3?.actionEntityId, secondary4ActionDomain = c3?.actionDomain,
-        secondary4Action = c3?.action, secondary4ShowValue = c3?.showValue, secondary4ConfirmAction = c3?.confirmAction,
-        secondary4DisplayPrecision = c3?.displayPrecision, secondary4DatetimeFormat = c3?.datetimeFormat,
-        secondary4RangeInputMode = c3?.rangeInputMode, secondary4Label = c3?.label, secondary4ShowIcon = c3?.showIcon,
-    )
-}
+internal fun MultiWidgetChipEntity.showValueOrDefault(): Boolean = showValue ?: defaultShowValueFor(action)
+internal fun MultiWidgetChipEntity.confirmActionOrDefault(): Boolean = confirmAction ?: false
+internal fun MultiWidgetChipEntity.labelOrEmpty(): String = label?.trim() ?: ""
+internal fun MultiWidgetChipEntity.showIconOrDefault(): Boolean = showIcon ?: true
+internal fun MultiWidgetChipEntity.showRangeValueOrDefault(): Boolean = showRangeValue ?: false
 
 /** Handlings-typer (ex. NONE) et domæne understøtter som action-mål. Tom = read-only. */
 internal fun actionOptionsFor(domain: String): List<String> =
@@ -140,7 +72,7 @@ internal fun defaultActionFor(domain: String): String =
     actionOptionsFor(domain).firstOrNull() ?: "NONE"
 
 /** Slår en entitet op i den indlæste liste, eller returnerer en placeholder (bruges når en gemt
- * slot refererer en entitet der ikke længere findes i cachen). */
+ * slot/chip refererer en entitet der ikke længere findes i cachen). */
 internal fun entityOrPlaceholder(
     allEntities: List<HaApiClient.EntityBrief>,
     entityId: String,
@@ -149,10 +81,8 @@ internal fun entityOrPlaceholder(
     allEntities.find { it.entityId == entityId }
         ?: HaApiClient.EntityBrief(entityId, entityId, "unknown", domain)
 
-/** Én sekundær-plads (kolonner) → draft, eller null hvis pladsen er tom. */
-private fun SecondaryColumns.toDraft(allEntities: List<HaApiClient.EntityBrief>): SecondarySlotDraft? {
-    if (displayEntityId == null || displayDomain == null || actionEntityId == null || actionDomain == null || action == null) return null
-    return SecondarySlotDraft(
+private fun MultiWidgetChipEntity.toDraft(allEntities: List<HaApiClient.EntityBrief>): SecondarySlotDraft =
+    SecondarySlotDraft(
         displayEntity = entityOrPlaceholder(allEntities, displayEntityId, displayDomain),
         actionEntity = entityOrPlaceholder(allEntities, actionEntityId, actionDomain),
         action = action,
@@ -163,65 +93,85 @@ private fun SecondaryColumns.toDraft(allEntities: List<HaApiClient.EntityBrief>)
         rangeInputMode = rangeInputMode,
         label = labelOrEmpty(),
         showIcon = showIconOrDefault(),
+        showRangeValue = showRangeValueOrDefault(),
     )
-}
 
-/** Draft → sekundær-plads (kolonner) til persistering. */
-private fun SecondarySlotDraft.toColumns(): SecondaryColumns = SecondaryColumns(
-    displayEntityId = displayEntity.entityId,
-    displayDomain = displayEntity.domain,
-    actionEntityId = actionEntity.entityId,
-    actionDomain = actionEntity.domain,
-    action = action,
-    showValue = showValue,
-    confirmAction = confirmAction,
-    displayPrecision = displayPrecision,
-    datetimeFormat = datetimeFormat,
-    rangeInputMode = rangeInputMode,
-    label = label.trim().ifEmpty { null },
-    showIcon = showIcon,
-)
+private fun SecondarySlotDraft.toChipEntity(appWidgetId: Int, slotIndex: Int, chipIndex: Int): MultiWidgetChipEntity =
+    MultiWidgetChipEntity(
+        appWidgetId = appWidgetId,
+        slotIndex = slotIndex,
+        chipIndex = chipIndex,
+        displayEntityId = displayEntity.entityId,
+        displayDomain = displayEntity.domain,
+        actionEntityId = actionEntity.entityId,
+        actionDomain = actionEntity.domain,
+        action = action,
+        showValue = showValue,
+        confirmAction = confirmAction,
+        displayPrecision = displayPrecision,
+        datetimeFormat = datetimeFormat,
+        rangeInputMode = rangeInputMode,
+        label = label.trim().ifEmpty { null },
+        showIcon = showIcon,
+        showRangeValue = showRangeValue,
+    )
 
-internal fun draftFromSlot(
-    slot: MultiWidgetSlotEntity,
+/** [data]s slot + chips → redigerbar draft. En slot uden hoved-entitet (chips-only, se
+ * [MultiWidgetSlotEntity]) giver en draft med `displayEntity == null` og `action == "NONE"`. */
+internal fun draftFromSlotWithChips(
+    data: MultiSlotWithChips,
     allEntities: List<HaApiClient.EntityBrief>,
 ): SlotDraft {
-    val display = entityOrPlaceholder(allEntities, slot.displayEntityId, slot.displayDomain)
-    val actionEntity = entityOrPlaceholder(allEntities, slot.actionEntityId, slot.actionDomain)
+    val slot = data.slot
+    val display = slot.displayEntityId?.let { id -> entityOrPlaceholder(allEntities, id, slot.displayDomain!!) }
+    val actionEntity = slot.actionEntityId?.let { id -> entityOrPlaceholder(allEntities, id, slot.actionDomain!!) }
     // Normalisér gammelt data: en slot gemt med action=NONE men et ANDET mål var muligt i den
     // gamle UI, men er ugyldigt i den nye model (mål ≠ visning ⇒ altid en handling, ingen
     // "Kun visning"-radio at vælge). Snap til første gyldige handling, så en radio er valgt.
     // "OPEN_APP" er domæne-uafhængig og peger på en app (ikke actionEntity) — springer normalisering over.
-    val targetDiffers = actionEntity.entityId != display.entityId
-    val opts = actionOptionsFor(actionEntity.domain)
     val normalizedAction = when {
+        display == null -> "NONE"
         slot.action == "OPEN_APP" -> "OPEN_APP"
-        targetDiffers && slot.action !in opts -> opts.firstOrNull() ?: slot.action
-        else -> slot.action
+        actionEntity != null && actionEntity.entityId != display.entityId &&
+            slot.action !in actionOptionsFor(actionEntity.domain) ->
+            actionOptionsFor(actionEntity.domain).firstOrNull() ?: (slot.action ?: "NONE")
+        else -> slot.action ?: "NONE"
     }
-    val secondaries = slot.secondaryColumns().mapNotNull { it.toDraft(allEntities) }
+    val secondaries = data.chips.sortedBy { it.chipIndex }.map { it.toDraft(allEntities) }
     return SlotDraft(
-        display, actionEntity, normalizedAction, slot.label, secondaries, slot.confirmAction,
-        slot.displayPrecision, slot.datetimeFormat, slot.rangeInputMode, slot.showIcon, slot.actionPackageName,
+        displayEntity = display,
+        actionEntity = actionEntity ?: display,
+        action = normalizedAction,
+        label = slot.label,
+        secondaryEntities = secondaries,
+        confirmAction = slot.confirmAction,
+        displayPrecision = slot.displayPrecision,
+        datetimeFormat = slot.datetimeFormat,
+        rangeInputMode = slot.rangeInputMode,
+        showIcon = slot.showIcon,
+        packageName = slot.actionPackageName,
+        showRangeValue = slot.showRangeValue ?: false,
     )
 }
 
-/** Bygger en persisterbar [MultiWidgetSlotEntity] fra draften. Returnerer null hvis ingen
- * visnings-entitet er valgt (samme guard som den tidligere saveSlot). */
-internal fun SlotDraft.toSlotEntity(appWidgetId: Int, slotIndex: Int): MultiWidgetSlotEntity? {
-    val display = displayEntity ?: return null
+/** Bygger en persisterbar [MultiSlotWithChips] fra draften. Returnerer null hvis hverken en
+ * hoved-entitet ER valgt eller nogen chips er tilføjet (intet at gemme). En chips-only draft
+ * (ingen hoved-entitet, mindst én chip) er gyldig og giver en slot med alle display-/action-felter
+ * null. */
+internal fun SlotDraft.toSlotWithChips(appWidgetId: Int, slotIndex: Int): MultiSlotWithChips? {
+    if (displayEntity == null && secondaryEntities.isEmpty()) return null
     // "OPEN_APP" peger på en app, ikke en HA-entitet — action-mål-kolonnerne sættes til visningens
     // (så de er gyldige og targetDiffers=false ved genindlæsning), og pakkenavnet bæres separat.
     val isApp = action == "OPEN_APP"
-    val target = if (isApp) display else (actionEntity ?: display)
-    return MultiWidgetSlotEntity(
+    val target = displayEntity?.let { d -> if (isApp) d else (actionEntity ?: d) }
+    val slot = MultiWidgetSlotEntity(
         appWidgetId = appWidgetId,
         slotIndex = slotIndex,
-        displayEntityId = display.entityId,
-        displayDomain = display.domain,
-        actionEntityId = target.entityId,
-        actionDomain = target.domain,
-        action = this.action,
+        displayEntityId = displayEntity?.entityId,
+        displayDomain = displayEntity?.domain,
+        actionEntityId = target?.entityId,
+        actionDomain = target?.domain,
+        action = displayEntity?.let { action },
         label = label.trim(),
         confirmAction = confirmAction,
         displayPrecision = displayPrecision,
@@ -229,5 +179,8 @@ internal fun SlotDraft.toSlotEntity(appWidgetId: Int, slotIndex: Int): MultiWidg
         rangeInputMode = rangeInputMode,
         showIcon = showIcon,
         actionPackageName = if (isApp) packageName else null,
-    ).withSecondaryColumns(secondaryEntities.map { it.toColumns() })
+        showRangeValue = showRangeValue,
+    )
+    val chips = secondaryEntities.mapIndexed { index, sec -> sec.toChipEntity(appWidgetId, slotIndex, index) }
+    return MultiSlotWithChips(slot, chips)
 }

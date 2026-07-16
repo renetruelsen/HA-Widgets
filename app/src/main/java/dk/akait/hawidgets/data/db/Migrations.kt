@@ -174,3 +174,91 @@ val MIGRATION_13_14 = object : Migration(13, 14) {
         db.execSQL("ALTER TABLE multi_widget ADD COLUMN removedAt INTEGER")
     }
 }
+
+/** v14 → v15: normaliserer sekundær-chips til deres egen tabel (multi_widget_chip, ét chip pr.
+ * række, intet hardcoded loft) og gør hoved-slottens display-/action-felter nullable (chips-only
+ * rækker, se docs/superpowers/specs/2026-07-16-multi-entity-widget-enhancements-design.md §2).
+ * Kopierer eksisterende secondary1-4-data over i den nye tabel og genskaber multi_widget_slot
+ * uden de 48 gamle secondary1-4*-kolonner (samme teknik som MIGRATION_8_9 — SQLite understøtter
+ * ikke at gøre en NOT NULL-kolonne nullable eller droppe kolonner på alle Android-versioner).
+ * Tilføjer også showRangeValue (punkt 3, hoved-slot + chip). */
+val MIGRATION_14_15 = object : Migration(14, 15) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE `multi_widget_chip` (
+                `appWidgetId` INTEGER NOT NULL,
+                `slotIndex` INTEGER NOT NULL,
+                `chipIndex` INTEGER NOT NULL,
+                `displayEntityId` TEXT NOT NULL,
+                `displayDomain` TEXT NOT NULL,
+                `actionEntityId` TEXT NOT NULL,
+                `actionDomain` TEXT NOT NULL,
+                `action` TEXT NOT NULL,
+                `showValue` INTEGER,
+                `confirmAction` INTEGER,
+                `displayPrecision` INTEGER,
+                `datetimeFormat` TEXT,
+                `rangeInputMode` TEXT,
+                `label` TEXT,
+                `showIcon` INTEGER,
+                `showRangeValue` INTEGER,
+                PRIMARY KEY(`appWidgetId`, `slotIndex`, `chipIndex`)
+            )
+            """.trimIndent()
+        )
+        for (n in 1..4) {
+            db.execSQL(
+                """
+                INSERT INTO `multi_widget_chip`
+                    (appWidgetId, slotIndex, chipIndex, displayEntityId, displayDomain,
+                     actionEntityId, actionDomain, action, showValue, confirmAction,
+                     displayPrecision, datetimeFormat, rangeInputMode, label, showIcon, showRangeValue)
+                SELECT appWidgetId, slotIndex, ${n - 1}, secondary${n}DisplayEntityId, secondary${n}DisplayDomain,
+                       secondary${n}ActionEntityId, secondary${n}ActionDomain, secondary${n}Action,
+                       secondary${n}ShowValue, secondary${n}ConfirmAction, secondary${n}DisplayPrecision,
+                       secondary${n}DatetimeFormat, secondary${n}RangeInputMode, secondary${n}Label,
+                       secondary${n}ShowIcon, NULL
+                FROM `multi_widget_slot`
+                WHERE secondary${n}DisplayEntityId IS NOT NULL
+                """.trimIndent()
+            )
+        }
+        db.execSQL(
+            """
+            CREATE TABLE `multi_widget_slot_new` (
+                `appWidgetId` INTEGER NOT NULL,
+                `slotIndex` INTEGER NOT NULL,
+                `displayEntityId` TEXT,
+                `displayDomain` TEXT,
+                `actionEntityId` TEXT,
+                `actionDomain` TEXT,
+                `action` TEXT,
+                `label` TEXT NOT NULL,
+                `confirmAction` INTEGER NOT NULL DEFAULT 0,
+                `displayPrecision` INTEGER,
+                `datetimeFormat` TEXT,
+                `rangeInputMode` TEXT,
+                `showIcon` INTEGER NOT NULL DEFAULT 1,
+                `actionPackageName` TEXT,
+                `showRangeValue` INTEGER,
+                PRIMARY KEY(`appWidgetId`, `slotIndex`)
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO `multi_widget_slot_new`
+                (appWidgetId, slotIndex, displayEntityId, displayDomain, actionEntityId, actionDomain,
+                 action, label, confirmAction, displayPrecision, datetimeFormat, rangeInputMode,
+                 showIcon, actionPackageName, showRangeValue)
+            SELECT appWidgetId, slotIndex, displayEntityId, displayDomain, actionEntityId, actionDomain,
+                   action, label, confirmAction, displayPrecision, datetimeFormat, rangeInputMode,
+                   showIcon, actionPackageName, NULL
+            FROM `multi_widget_slot`
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE `multi_widget_slot`")
+        db.execSQL("ALTER TABLE `multi_widget_slot_new` RENAME TO `multi_widget_slot`")
+    }
+}

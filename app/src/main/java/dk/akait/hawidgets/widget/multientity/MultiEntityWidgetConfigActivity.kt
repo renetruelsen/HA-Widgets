@@ -21,8 +21,8 @@ import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
 import dk.akait.hawidgets.data.WIDGET_ORPHAN_GRACE_MILLIS
 import dk.akait.hawidgets.data.db.AppDatabase
+import dk.akait.hawidgets.data.db.MultiSlotWithChips
 import dk.akait.hawidgets.data.db.MultiWidgetEntity
-import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import dk.akait.hawidgets.transfer.ConfirmReplaceDialog
 import dk.akait.hawidgets.transfer.ImportError
 import dk.akait.hawidgets.transfer.ImportPickerDialog
@@ -31,6 +31,7 @@ import dk.akait.hawidgets.transfer.TRANSFER_IMPORT_MIME_TYPES
 import dk.akait.hawidgets.transfer.TransferConfig
 import dk.akait.hawidgets.transfer.WidgetTransferIo
 import dk.akait.hawidgets.transfer.importErrorMessage
+import dk.akait.hawidgets.transfer.loadSlotsWithChips
 import dk.akait.hawidgets.transfer.multiTransferConfig
 import dk.akait.hawidgets.transfer.rememberImportLauncher
 import dk.akait.hawidgets.transfer.singleConfigBundle
@@ -83,13 +84,20 @@ internal sealed interface Step {
     data class AppPicker(val editIndex: Int?, val draft: SlotDraft) : Step
 }
 
+/** Reindekserer én rækkes slot + dens chips til [newSlotIndex] — chips er keyed på (appWidgetId,
+ * slotIndex, chipIndex), så en flytning/fjernelse af en anden række skal følge med. */
+private fun MultiSlotWithChips.reindexed(newSlotIndex: Int): MultiSlotWithChips = MultiSlotWithChips(
+    slot = slot.copy(slotIndex = newSlotIndex),
+    chips = chips.map { it.copy(slotIndex = newSlotIndex) },
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var slots by remember { mutableStateOf<List<MultiWidgetSlotEntity>>(emptyList()) }
+    var rows by remember { mutableStateOf<List<MultiSlotWithChips>>(emptyList()) }
     var showRefreshIcon by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(true) }
     var allEntities by remember { mutableStateOf<List<HaApiClient.EntityBrief>>(emptyList()) }
@@ -136,7 +144,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             val client = HaApiClient(store.baseUrl!!, store.token!!)
             allEntities = client.listStatesByDomains(MULTI_ENTITY_DOMAINS.toSet()).sortedBy { it.friendlyName }
             val db = AppDatabase.get(context)
-            slots = db.multiWidgetDao().getSlots(appWidgetId)
+            rows = loadSlotsWithChips(db, appWidgetId)
             showRefreshIcon = db.multiWidgetDao().get(appWidgetId)?.showRefreshIcon ?: true
             attrsByEntityId = allEntities.mapNotNull { entity ->
                 db.entityStateDao().get(entity.entityId)?.attributesJson?.let { entity.entityId to it }
@@ -146,7 +154,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             val now = System.currentTimeMillis()
             recoverable = db.multiWidgetDao().getSoftDeleted()
                 .filter { it.appWidgetId != appWidgetId && it.removedAt != null && now - it.removedAt!! <= WIDGET_ORPHAN_GRACE_MILLIS }
-                .map { multiTransferConfig(db.multiWidgetDao().getSlots(it.appWidgetId), it.showRefreshIcon) }
+                .map { multiTransferConfig(loadSlotsWithChips(db, it.appWidgetId), it.showRefreshIcon) }
             loadError = null
             loaded = true
         } catch (e: Exception) {
@@ -156,9 +164,9 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     }
 
     fun saveSlot(editIndex: Int?, draft: SlotDraft) {
-        val newSlot = draft.toSlotEntity(appWidgetId, editIndex ?: slots.size) ?: return
-        slots = if (editIndex == null) slots + newSlot
-        else slots.toMutableList().also { it[editIndex] = newSlot }
+        val newRow = draft.toSlotWithChips(appWidgetId, editIndex ?: rows.size) ?: return
+        rows = if (editIndex == null) rows + newRow
+        else rows.toMutableList().also { it[editIndex] = newRow }
         step = Step.ListScreen
     }
 
@@ -171,23 +179,23 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
 
     when (val s = step) {
         Step.ListScreen -> ListScreen(
-            slots = slots,
+            rows = rows,
             showRefreshIcon = showRefreshIcon,
             onShowRefreshIconChange = { showRefreshIcon = it },
             onAddSlot = { step = Step.EntityPicker(PickerTarget.Display, null, SlotDraft()) },
-            onEditSlot = { index -> step = Step.SlotEditor(index, draftFromSlot(slots[index], allEntities)) },
+            onEditSlot = { index -> step = Step.SlotEditor(index, draftFromSlotWithChips(rows[index], allEntities)) },
             onRemoveSlot = { index ->
-                slots = slots.filterIndexed { i, _ -> i != index }.mapIndexed { i, sl -> sl.copy(slotIndex = i) }
+                rows = rows.filterIndexed { i, _ -> i != index }.mapIndexed { i, row -> row.reindexed(i) }
             },
             onMoveSlot = { index, delta ->
                 val target = index + delta
-                if (target in slots.indices) {
-                    val mutable = slots.toMutableList()
+                if (target in rows.indices) {
+                    val mutable = rows.toMutableList()
                     val a = mutable[index]
                     val b = mutable[target]
-                    mutable[index] = b.copy(slotIndex = index)
-                    mutable[target] = a.copy(slotIndex = target)
-                    slots = mutable.sortedBy { it.slotIndex }
+                    mutable[index] = b.reindexed(index)
+                    mutable[target] = a.reindexed(target)
+                    rows = mutable.sortedBy { it.slot.slotIndex }
                 }
             },
             onSave = {
@@ -195,7 +203,13 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                     val db = AppDatabase.get(context)
                     db.multiWidgetDao().upsert(MultiWidgetEntity(appWidgetId, showRefreshIcon = showRefreshIcon))
                     db.multiWidgetDao().deleteAllSlots(appWidgetId)
-                    slots.forEachIndexed { i, sl -> db.multiWidgetDao().upsertSlot(sl.copy(slotIndex = i)) }
+                    db.multiWidgetDao().deleteAllChips(appWidgetId)
+                    rows.forEachIndexed { i, row ->
+                        db.multiWidgetDao().upsertSlot(row.slot.copy(slotIndex = i))
+                        row.chips.forEachIndexed { ci, chip ->
+                            db.multiWidgetDao().upsertChip(chip.copy(slotIndex = i, chipIndex = ci))
+                        }
+                    }
                     SyncWorker.runNow(context)
                     SyncWorker.schedule(context)
                     onSaved()
@@ -209,7 +223,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             },
             onExport = {
                 WidgetTransferIo.shareBundle(
-                    context, singleConfigBundle(multiTransferConfig(slots, showRefreshIcon))
+                    context, singleConfigBundle(multiTransferConfig(rows, showRefreshIcon))
                 )
             },
             onImport = { importLauncher.launch(TRANSFER_IMPORT_MIME_TYPES) },
@@ -255,9 +269,16 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 }
                 step = Step.SlotEditor(s.editIndex, updatedDraft)
             },
+            // Kun tilbage til listen når dette er en HELT ny, endnu ikke tilføjet række (editIndex
+            // null) der aldrig fik valgt en hoved-entitet — ellers (fx "+ Vælg hoved-entitet" på en
+            // eksisterende chips-only række) skal Back fortsætte redigeringen af den række.
             onBack = {
-                step = if (s.draft.displayEntity == null) Step.ListScreen else Step.SlotEditor(s.editIndex, s.draft)
+                step = if (s.editIndex == null && s.draft.displayEntity == null) Step.ListScreen else Step.SlotEditor(s.editIndex, s.draft)
             },
+            // "Spring over — kun chips": kun tilbudt når man opretter en helt ny række (ikke ved
+            // "+ Vælg hoved-entitet" på en allerede eksisterende chips-only række, hvor valget
+            // allerede er implicit truffet ved at åbne denne picker).
+            onSkip = if (s.forTarget == PickerTarget.Display && s.editIndex == null) ({ step = Step.SlotEditor(null, SlotDraft()) }) else null,
         )
 
         is Step.AppPicker -> AppPickerScreen(
@@ -272,6 +293,9 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             isEditing = s.editIndex != null,
             attrsByEntityId = attrsByEntityId,
             onChangeDisplay = { step = Step.EntityPicker(PickerTarget.Display, s.editIndex, s.draft) },
+            onRemoveMainEntity = {
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(displayEntity = null, actionEntity = null, action = "NONE", packageName = null))
+            },
             onChangeTarget = { step = Step.EntityPicker(PickerTarget.Action, s.editIndex, s.draft) },
             onChooseApp = { step = Step.AppPicker(s.editIndex, s.draft) },
             onActionChange = { newAction -> step = Step.SlotEditor(s.editIndex, s.draft.copy(action = newAction)) },
@@ -281,6 +305,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onDisplayPrecisionChange = { precision -> step = Step.SlotEditor(s.editIndex, s.draft.copy(displayPrecision = precision)) },
             onDatetimeFormatChange = { pattern -> step = Step.SlotEditor(s.editIndex, s.draft.copy(datetimeFormat = pattern)) },
             onShowIconChange = { showIcon -> step = Step.SlotEditor(s.editIndex, s.draft.copy(showIcon = showIcon)) },
+            onShowRangeValueChange = { show -> step = Step.SlotEditor(s.editIndex, s.draft.copy(showRangeValue = show)) },
             onAddSecondary = {
                 step = Step.EntityPicker(PickerTarget.SecondaryDisplay(s.draft.secondaryEntities.size), s.editIndex, s.draft)
             },
@@ -341,6 +366,11 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                 updated[index] = updated[index].copy(showIcon = showIcon)
                 step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
             },
+            onSecondaryShowRangeValueChange = { index, show ->
+                val updated = s.draft.secondaryEntities.toMutableList()
+                updated[index] = updated[index].copy(showRangeValue = show)
+                step = Step.SlotEditor(s.editIndex, s.draft.copy(secondaryEntities = updated))
+            },
             onSave = { saveSlot(s.editIndex, s.draft) },
             onBack = { step = Step.ListScreen },
         )
@@ -349,9 +379,14 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
     // Delt: multi-config → picker-post med rigtige navne (slot-label > friendly name > entity_id,
     // maks 2 + "+N") + domæne-ikon. Bruges af BÅDE fil-import og gendan-fjernet.
     fun multiPickerItems(configs: List<TransferConfig.Multi>): List<ImportPickerItem> = configs.map { multi ->
-        val names = multi.slots.map { slot ->
-            slot.label.ifBlank {
-                allEntities.firstOrNull { it.entityId == slot.displayEntityId }?.friendlyName ?: slot.displayEntityId
+        val names = multi.slots.map { row ->
+            row.slot.label.ifBlank {
+                val displayId = row.slot.displayEntityId
+                if (displayId == null) {
+                    context.resources.getQuantityString(R.plurals.chips_only_row_name, row.chips.size, row.chips.size)
+                } else {
+                    allEntities.firstOrNull { it.entityId == displayId }?.friendlyName ?: displayId
+                }
             }
         }
         val title = when {
@@ -364,7 +399,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             subtitle = context.resources.getQuantityString(
                 R.plurals.import_item_multi_subtitle, multi.slots.size, multi.slots.size
             ),
-            iconResId = domainIconResId(multi.slots.firstOrNull()?.displayDomain ?: ""),
+            iconResId = multi.slots.firstOrNull()?.slot?.displayDomain?.let { domainIconResId(it) } ?: R.drawable.ic_multi_entity,
         )
     }
 
@@ -391,7 +426,12 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
             onConfirm = {
                 // Sæt den aktuelle widgets appWidgetId + fortløbende slotIndex på de importerede slots
                 // (afsenderens appWidgetId/placeholder-0 kasseres). Gemmes via det eksisterende "Gem"-flow.
-                slots = chosen.slots.mapIndexed { i, sl -> sl.copy(appWidgetId = appWidgetId, slotIndex = i) }
+                rows = chosen.slots.mapIndexed { i, row ->
+                    MultiSlotWithChips(
+                        slot = row.slot.copy(appWidgetId = appWidgetId, slotIndex = i),
+                        chips = row.chips.mapIndexed { ci, chip -> chip.copy(appWidgetId = appWidgetId, slotIndex = i, chipIndex = ci) },
+                    )
+                }
                 showRefreshIcon = chosen.showRefreshIcon
                 pendingImport = null
                 android.widget.Toast.makeText(

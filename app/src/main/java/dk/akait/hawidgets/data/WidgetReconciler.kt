@@ -54,6 +54,7 @@ suspend fun reconcileWidgets(context: Context, now: Long = System.currentTimeMil
             ReconcileAction.STAMP -> dao.upsert(widget.copy(removedAt = now))
             ReconcileAction.CLEAR -> dao.upsert(widget.copy(removedAt = null))
             ReconcileAction.PURGE -> {
+                dao.deleteAllChips(widget.appWidgetId)
                 dao.deleteAllSlots(widget.appWidgetId)
                 dao.delete(widget.appWidgetId)
             }

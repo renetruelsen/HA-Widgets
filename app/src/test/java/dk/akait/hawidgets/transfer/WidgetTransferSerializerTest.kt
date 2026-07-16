@@ -2,6 +2,8 @@ package dk.akait.hawidgets.transfer
 
 import dk.akait.hawidgets.data.DisplayMode
 import dk.akait.hawidgets.data.WidgetConfig
+import dk.akait.hawidgets.data.db.MultiSlotWithChips
+import dk.akait.hawidgets.data.db.MultiWidgetChipEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -10,34 +12,43 @@ import org.junit.Test
 
 class WidgetTransferSerializerTest {
 
-    private fun slot(index: Int) = MultiWidgetSlotEntity(
-        appWidgetId = 42, // eksporteres bevidst IKKE — skal blive 0 ved parse
-        slotIndex = index,
-        displayEntityId = "sensor.termometer_temperature",
-        displayDomain = "sensor",
-        actionEntityId = "light.stuelampe",
-        actionDomain = "light",
-        action = "TOGGLE",
-        label = "Stue",
-        confirmAction = true,
-        displayPrecision = 1,
-        datetimeFormat = "dd/MM",
-        rangeInputMode = null,
-        showIcon = false,
-        actionPackageName = null,
-        secondary1DisplayEntityId = "switch.spa",
-        secondary1DisplayDomain = "switch",
-        secondary1ActionEntityId = "switch.spa",
-        secondary1ActionDomain = "switch",
-        secondary1Action = "TOGGLE",
-        secondary1ShowValue = true,
-        secondary1Label = "Spa",
+    private fun slotWithChips(index: Int) = MultiSlotWithChips(
+        slot = MultiWidgetSlotEntity(
+            appWidgetId = 42, // eksporteres bevidst IKKE — skal blive 0 ved parse
+            slotIndex = index,
+            displayEntityId = "sensor.termometer_temperature",
+            displayDomain = "sensor",
+            actionEntityId = "light.stuelampe",
+            actionDomain = "light",
+            action = "TOGGLE",
+            label = "Stue",
+            confirmAction = true,
+            displayPrecision = 1,
+            datetimeFormat = "dd/MM",
+            rangeInputMode = null,
+            showIcon = false,
+            actionPackageName = null,
+        ),
+        chips = listOf(
+            MultiWidgetChipEntity(
+                appWidgetId = 42,
+                slotIndex = index,
+                chipIndex = 0,
+                displayEntityId = "switch.spa",
+                displayDomain = "switch",
+                actionEntityId = "switch.spa",
+                actionDomain = "switch",
+                action = "TOGGLE",
+                showValue = true,
+                label = "Spa",
+            )
+        ),
     )
 
     private fun bundle() = TransferBundle(
         exported = "2026-07-13T14:00:00Z",
         configs = listOf(
-            TransferConfig.Multi(label = "Multi: Stue", showRefreshIcon = false, slots = listOf(slot(0), slot(1))),
+            TransferConfig.Multi(label = "Multi: Stue", showRefreshIcon = false, slots = listOf(slotWithChips(0), slotWithChips(1))),
             TransferConfig.Shortcut(
                 label = "Hjem",
                 config = WidgetConfig("lovelace-hjem", "Hjem", DisplayMode.OVERLAY, 90, 80),
@@ -60,7 +71,7 @@ class WidgetTransferSerializerTest {
         assertEquals(false, multi.showRefreshIcon)
         assertEquals(2, multi.slots.size)
 
-        val s0 = multi.slots[0]
+        val s0 = multi.slots[0].slot
         assertEquals(0, s0.appWidgetId) // placeholder — ikke afsenderens 42
         assertEquals("sensor.termometer_temperature", s0.displayEntityId)
         assertEquals("light.stuelampe", s0.actionEntityId)
@@ -72,12 +83,12 @@ class WidgetTransferSerializerTest {
         assertEquals(false, s0.showIcon)
         assertNull(s0.rangeInputMode)
         // Sekundær-chip bevaret
-        assertEquals("switch.spa", s0.secondary1DisplayEntityId)
-        assertEquals("TOGGLE", s0.secondary1Action)
-        assertEquals(true, s0.secondary1ShowValue)
-        assertEquals("Spa", s0.secondary1Label)
-        // Tom 2. plads forbliver null
-        assertNull(s0.secondary2DisplayEntityId)
+        val chips0 = multi.slots[0].chips
+        assertEquals(1, chips0.size)
+        assertEquals("switch.spa", chips0[0].displayEntityId)
+        assertEquals("TOGGLE", chips0[0].action)
+        assertEquals(true, chips0[0].showValue)
+        assertEquals("Spa", chips0[0].label)
 
         val shortcut = parsed.shortcutConfigs.single()
         assertEquals("Hjem", shortcut.label)
@@ -120,11 +131,26 @@ class WidgetTransferSerializerTest {
         val multi = parseOk(raw).multiConfigs.single()
         assertEquals(true, multi.showRefreshIcon) // default
         val s = multi.slots.single()
-        assertEquals("NONE", s.action)
-        assertEquals(true, s.showIcon)
-        assertEquals(false, s.confirmAction)
-        assertEquals(0, s.slotIndex) // fallback = array-index
-        assertTrue(s.secondary1DisplayEntityId == null)
+        assertEquals("NONE", s.slot.action)
+        assertEquals(true, s.slot.showIcon)
+        assertEquals(false, s.slot.confirmAction)
+        assertEquals(0, s.slot.slotIndex) // fallback = array-index
+        assertTrue(s.chips.isEmpty())
+    }
+
+    @Test fun chipsOnlySlotHasNullMainEntity() {
+        val raw = """
+            {"version":1,"app":"ha-widgets","exported":"x","configs":[
+              {"type":"multi","label":"M","slots":[{"secondaries":[
+                {"displayEntityId":"lock.front_door","displayDomain":"lock","actionEntityId":"lock.front_door","actionDomain":"lock","action":"TOGGLE"}
+              ]}]}
+            ]}
+        """.trimIndent()
+        val s = parseOk(raw).multiConfigs.single().slots.single()
+        assertNull(s.slot.displayEntityId)
+        assertNull(s.slot.action)
+        assertEquals(1, s.chips.size)
+        assertEquals("lock.front_door", s.chips[0].displayEntityId)
     }
 
     private fun errorOf(raw: String): ImportError {

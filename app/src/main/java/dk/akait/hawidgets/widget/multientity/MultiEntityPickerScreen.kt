@@ -48,6 +48,7 @@ internal fun EntityPickerSubScreen(
     error: String?,
     onSelected: (HaApiClient.EntityBrief) -> Unit,
     onBack: () -> Unit,
+    onSkip: (() -> Unit)? = null,
 ) {
     var query by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -84,6 +85,24 @@ internal fun EntityPickerSubScreen(
                             it.entityId.contains(query, ignoreCase = true)
                     }
                     LazyColumn {
+                        if (onSkip != null) {
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onSkip() }
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        stringResource(R.string.skip_main_entity),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                HorizontalDivider()
+                            }
+                        }
                         items(filtered) { brief ->
                             Row(
                                 modifier = Modifier

@@ -34,12 +34,15 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.data.db.EntityStateEntity
+import dk.akait.hawidgets.data.db.MultiWidgetChipEntity
 import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.widget.common.RANGE_VALUE_DOMAINS
 import dk.akait.hawidgets.widget.common.RefreshEntityAction
 import dk.akait.hawidgets.widget.common.WidgetColors
 import dk.akait.hawidgets.widget.common.domainIconResId
 import dk.akait.hawidgets.widget.common.formatDisplayValue
 import dk.akait.hawidgets.widget.common.formatEntityState
+import dk.akait.hawidgets.widget.common.formatRangeValue
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
 import dk.akait.hawidgets.widget.common.hasOnOffState
 import dk.akait.hawidgets.widget.common.hvacActionFromJson
@@ -164,7 +167,7 @@ private fun StatefulSurface(
     }
 }
 
-/** En konfigureret sekundær-chip klar til rendering — null hvis den slot-plads er tom. */
+/** En konfigureret sekundær-chip klar til rendering. */
 private data class SecondaryChipData(
     val displayEntityId: String,
     val displayDomain: String,
@@ -178,33 +181,37 @@ private data class SecondaryChipData(
     val rangeInputMode: String?,
     val label: String,
     val showIcon: Boolean,
+    val showRangeValue: Boolean,
 )
 
-private fun SecondaryColumns.toChipData(): SecondaryChipData? {
-    if (displayEntityId == null || displayDomain == null || actionEntityId == null || actionDomain == null || action == null) return null
-    return SecondaryChipData(
-        displayEntityId, displayDomain, actionEntityId, actionDomain, action,
-        showValueOrDefault(), confirmActionOrDefault(),
-        displayPrecision, datetimeFormat, rangeInputMode, labelOrEmpty(), showIconOrDefault(),
-    )
-}
+private fun MultiWidgetChipEntity.toChipData(): SecondaryChipData = SecondaryChipData(
+    displayEntityId, displayDomain, actionEntityId, actionDomain, action,
+    showValueOrDefault(), confirmActionOrDefault(),
+    displayPrecision, datetimeFormat, rangeInputMode, labelOrEmpty(), showIconOrDefault(),
+    showRangeValueOrDefault(),
+)
 
-private fun MultiWidgetSlotEntity.secondaryChips(): List<SecondaryChipData> =
-    secondaryColumns().mapNotNull { it.toChipData() }
-
-/** Domain-aware visningsværdi: rå/enheds-bærende domæner (sensor/number/input_* m.fl.) bruger
- * [formatDisplayValue] (precision/datetime-format-override, v0.3.0 C2); øvrige domæner (der har
- * en fast tekst-tabel i [formatEntityState], fx light/switch/climate) samt null/"unavailable"
- * bruger fortsat [formatEntityState] uændret. */
+/** Domain-aware visningsværdi: hvis [showRangeValue] og domænet har en RANGE-værdi ([RANGE_VALUE_DOMAINS])
+ * vises den rå værdi ("45%"/"21.5°") i stedet for den faste tekst. Ellers: rå/enheds-bærende domæner
+ * (sensor/number/input_* m.fl.) bruger [formatDisplayValue] (precision/datetime-format-override,
+ * v0.3.0 C2); øvrige domæner (fast tekst-tabel i [formatEntityState], fx light/switch/climate) samt
+ * null/"unavailable" bruger fortsat [formatEntityState] uændret. */
 private fun displayValueFor(
     context: Context,
     domain: String,
     state: EntityStateEntity?,
     precision: Int?,
     datetimeFormat: String?,
+    showRangeValue: Boolean,
 ): String {
-    if (state == null || state.state == "unavailable" || !isRawValueDomain(domain)) {
+    if (state == null || state.state == "unavailable") {
         return formatEntityState(context, domain, state?.state, state?.attributesJson?.let { unitFromJson(it) })
+    }
+    if (showRangeValue && domain in RANGE_VALUE_DOMAINS) {
+        return formatRangeValue(domain, state)
+    }
+    if (!isRawValueDomain(domain)) {
+        return formatEntityState(context, domain, state.state, state.attributesJson?.let { unitFromJson(it) })
     }
     val locale = context.resources.configuration.locales[0]
     return formatDisplayValue(domain, state.state, state.attributesJson, precision, datetimeFormat, locale)
@@ -214,6 +221,7 @@ private fun displayValueFor(
 internal fun MultiEntityContent(
     context: Context,
     slots: List<MultiWidgetSlotEntity>,
+    chipsBySlot: Map<Int, List<MultiWidgetChipEntity>>,
     states: Map<String, EntityStateEntity?>,
     showRefreshIcon: Boolean,
 ) {
@@ -242,7 +250,7 @@ internal fun MultiEntityContent(
             LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
                 items(sorted, itemId = { it.slotIndex.toLong() }) { slot ->
                     Column {
-                        SlotRow(context, slot, states)
+                        SlotRow(context, slot, chipsBySlot[slot.slotIndex].orEmpty(), states)
                         Spacer(modifier = GlanceModifier.height(ROW_GAP_DP.dp))
                     }
                 }
@@ -292,15 +300,26 @@ private fun RefreshStrip(context: Context) {
 private fun SlotRow(
     context: Context,
     slot: MultiWidgetSlotEntity,
+    chips: List<MultiWidgetChipEntity>,
     states: Map<String, EntityStateEntity?>,
 ) {
-    val displayState = states[slot.displayEntityId]
-    val actionState = states[slot.actionEntityId]
+    val displayEntityId = slot.displayEntityId
+    if (displayEntityId == null) {
+        ChipsOnlyRow(context, chips.map { it.toChipData() }, states)
+        return
+    }
+    val displayDomain = requireNotNull(slot.displayDomain)
+    val actionEntityId = slot.actionEntityId ?: displayEntityId
+    val actionDomain = slot.actionDomain ?: displayDomain
+    val action = slot.action ?: "NONE"
+
+    val displayState = states[displayEntityId]
+    val actionState = states[actionEntityId]
     val isUnavailable = displayState?.state == "unavailable" ||
-        (slot.action != "NONE" && actionState?.state == "unavailable")
-    val isActive = displayState != null && isActiveState(slot.displayDomain, displayState.state)
-    val heating = isHeating(slot.displayDomain, displayState) ||
-        (slot.action != "NONE" && isHeating(slot.actionDomain, actionState))
+        (action != "NONE" && actionState?.state == "unavailable")
+    val isActive = displayState != null && isActiveState(displayDomain, displayState.state)
+    val heating = isHeating(displayDomain, displayState) ||
+        (action != "NONE" && isHeating(actionDomain, actionState))
 
     val tokens = resolveStyle(
         isChip = false,
@@ -315,12 +334,12 @@ private fun SlotRow(
     val statusColor = colorFor(tokens.status, context)
 
     val label = slot.label.ifEmpty {
-        friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: slot.displayEntityId
+        friendlyNameFromJson(displayState?.attributesJson ?: "{}") ?: displayEntityId
     }
-    val statusBase = displayValueFor(context, slot.displayDomain, displayState, slot.displayPrecision, slot.datetimeFormat)
+    val statusBase = displayValueFor(context, displayDomain, displayState, slot.displayPrecision, slot.datetimeFormat, slot.showRangeValue ?: false)
     val statusText = if (displayState != null && displayState.isStale()) "$statusBase ~" else statusBase
 
-    val chips = slot.secondaryChips()
+    val chipData = chips.sortedBy { it.chipIndex }.map { it.toChipData() }
     val rowContent: @Composable () -> Unit = {
         // Højde altid CHIP_HEIGHT_DP (ubetinget, uanset chips.isNotEmpty()) — ellers driver kun
         // ikon/tekst (~33dp) højden på en chipløs række, mens en chip-rækkes tvungne 48dp-chip gør
@@ -331,7 +350,7 @@ private fun SlotRow(
         ) {
             if (slot.showIcon) {
                 Image(
-                    provider = ImageProvider(domainIconResId(slot.displayDomain)),
+                    provider = ImageProvider(domainIconResId(displayDomain)),
                     contentDescription = label,
                     modifier = GlanceModifier.size(24.dp),
                     colorFilter = ColorFilter.tint(iconColor),
@@ -342,10 +361,10 @@ private fun SlotRow(
                 Text(label, style = TextStyle(color = labelColor, fontSize = 13.sp, fontWeight = FontWeight.Medium, textDecoration = labelDecoration(tokens)), maxLines = 1)
                 Text(statusText, style = TextStyle(color = statusColor, fontSize = 11.sp), maxLines = 1)
             }
-            if (chips.isNotEmpty()) {
+            if (chipData.isNotEmpty()) {
                 Spacer(modifier = GlanceModifier.width(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    chips.forEachIndexed { index, chip ->
+                    chipData.forEachIndexed { index, chip ->
                         if (index > 0) Spacer(modifier = GlanceModifier.width(CHIP_GAP_DP.dp))
                         // rowHeating skal matche hvad rækken FAKTISK tegner: unavailable trumfer heating
                         // (rækken bliver grå, ikke orange), så chips må ikke arve heating-paletten der.
@@ -359,10 +378,10 @@ private fun SlotRow(
     fun withClick(base: GlanceModifier) = clickModifier(
         context = context,
         base = base,
-        action = slot.action,
-        actionEntityId = slot.actionEntityId,
-        actionDomain = slot.actionDomain,
-        refreshEntityId = slot.displayEntityId,
+        action = action,
+        actionEntityId = actionEntityId,
+        actionDomain = actionDomain,
+        refreshEntityId = displayEntityId,
         rangeLabel = label,
         actionState = actionState,
         confirmAction = slot.confirmAction,
@@ -378,6 +397,42 @@ private fun SlotRow(
         ),
         contentAlignment = Alignment.Center,
     ) { rowContent() }
+}
+
+/** Chips-only række (ingen hoved-entitet, v0.3.x) — chips centreres og fordeles jævnt ud over hele
+ * rækkens bredde. Glance's Row har ingen Arrangement.SpaceEvenly, så det simuleres med lige store
+ * vægtede Spacer'e før/mellem/efter hver chip. Neutral baggrund (samme rolle som en info-agtig,
+ * ikke-aktiv række) — der er ingen hoved-entitet-tilstand at farvelægge efter. */
+@Composable
+private fun ChipsOnlyRow(
+    context: Context,
+    chips: List<SecondaryChipData>,
+    states: Map<String, EntityStateEntity?>,
+) {
+    // Højde sættes på INDHOLDS-rowet (som SlotRow), ikke på den ydre ramme — en fast højde på
+    // rammen KOMBINERET med padding ville æde af den tilgængelige plads og skære chippen (som selv
+    // kræver CHIP_HEIGHT_DP) af foroven/forneden (brugerrapporteret v0.3.x-fund). Rammens totale
+    // højde bliver dermed 48dp indhold + 6dp×2 padding = 60dp, identisk med en normal række.
+    Box(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .background(GlanceTheme.colors.surfaceVariant)
+            .cornerRadius(ROW_CORNER_DP.dp)
+            .padding(ROW_SINGLE_PAD_DP.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (chips.isEmpty()) return@Box
+        Row(
+            modifier = GlanceModifier.fillMaxWidth().height(CHIP_HEIGHT_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Spacer(modifier = GlanceModifier.defaultWeight())
+            chips.forEachIndexed { index, chip ->
+                SecondaryChip(context, chip, states, rowHeating = false)
+                Spacer(modifier = GlanceModifier.defaultWeight())
+            }
+        }
+    }
 }
 
 @Composable
@@ -414,7 +469,7 @@ private fun SecondaryChip(
 
     val labelText = chip.label
     val valueText = if (chip.showValue) {
-        displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat)
+        displayValueFor(context, chip.displayDomain, displayState, chip.displayPrecision, chip.datetimeFormat, chip.showRangeValue)
     } else null
 
     val hasText = labelText.isNotEmpty() || valueText != null

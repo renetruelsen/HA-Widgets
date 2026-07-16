@@ -158,6 +158,12 @@
     <string name="section_action">Åtgärd</string>
     <string name="change_entity">Byt enhet</string>
     <string name="change">Byt</string>
+    <string name="chips_only_hint">Ingen huvudentitet — raden visar bara chips</string>
+    <string name="add_main_entity">+ Välj huvudentitet</string>
+    <string name="remove_main_entity">Ta bort huvudentitet</string>
+    <string name="skip_main_entity">Hoppa över — ingen huvudentitet för den här raden</string>
+    <string name="show_range_value_label">Visa reglagevärde</string>
+    <string name="show_range_value_hint">Visa det råa värdet (t.ex. 45%) istället för text</string>
     <string name="action_invalid_target">Den här enheten kan inte styras — välj ett annat mål.</string>
     <string name="action_read_only">Den här enheten kan bara visas — inget händer vid tryck.</string>
     <string name="reacts_on_tap">Reagera vid tryck</string>
@@ -269,6 +275,10 @@
     <plurals name="import_item_multi_subtitle">
         <item quantity="one">Multi-widget · %d rad</item>
         <item quantity="other">Multi-widget · %d rader</item>
+    </plurals>
+    <plurals name="chips_only_row_name">
+        <item quantity="one">%d chip</item>
+        <item quantity="other">%d chips</item>
     </plurals>
     <string name="import_item_shortcut_subtitle">Dashboard-genväg</string>
     <string name="import_help_row">Så här importerar du: lägg till en widget, öppna dess inställningar och välj Importera.</string>

@@ -158,6 +158,12 @@
     <string name="section_action">Handling</string>
     <string name="change_entity">Skift entitet</string>
     <string name="change">Skift</string>
+    <string name="chips_only_hint">Ingen hoved-entitet — rækken viser kun chips</string>
+    <string name="add_main_entity">+ Vælg hoved-entitet</string>
+    <string name="remove_main_entity">Fjern hoved-entitet</string>
+    <string name="skip_main_entity">Spring over — ingen hoved-entitet på denne række</string>
+    <string name="show_range_value_label">Vis skyderværdi</string>
+    <string name="show_range_value_hint">Vis den rå værdi (fx 45%) i stedet for tekst</string>
     <string name="action_invalid_target">Denne enhed kan ikke handles på — vælg et andet mål.</string>
     <string name="action_read_only">Denne enhed kan kun vises — intet sker ved tryk.</string>
     <string name="reacts_on_tap">Reagér på tryk</string>
@@ -269,6 +275,10 @@
     <plurals name="import_item_multi_subtitle">
         <item quantity="one">Multi-widget · %d række</item>
         <item quantity="other">Multi-widget · %d rækker</item>
+    </plurals>
+    <plurals name="chips_only_row_name">
+        <item quantity="one">%d chip</item>
+        <item quantity="other">%d chips</item>
     </plurals>
     <string name="import_item_shortcut_subtitle">Dashboard-genvej</string>
     <string name="import_help_row">Sådan importerer du: tilføj en widget, åbn dens indstillinger, og vælg Importér.</string>

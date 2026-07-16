@@ -41,38 +41,44 @@ interface MultiWidgetDao {
     @Query("DELETE FROM multi_widget_slot WHERE appWidgetId = :id")
     suspend fun deleteAllSlots(id: Int)
 
-    @Query("SELECT DISTINCT displayEntityId FROM multi_widget_slot")
+    @Upsert
+    suspend fun upsertChip(chip: MultiWidgetChipEntity)
+
+    @Query("SELECT * FROM multi_widget_chip WHERE appWidgetId = :id ORDER BY slotIndex ASC, chipIndex ASC")
+    suspend fun getChips(id: Int): List<MultiWidgetChipEntity>
+
+    @Query("SELECT * FROM multi_widget_chip WHERE appWidgetId = :id ORDER BY slotIndex ASC, chipIndex ASC")
+    fun observeChips(id: Int): Flow<List<MultiWidgetChipEntity>>
+
+    @Query("DELETE FROM multi_widget_chip WHERE appWidgetId = :id")
+    suspend fun deleteAllChips(id: Int)
+
+    @Query("SELECT DISTINCT displayEntityId FROM multi_widget_slot WHERE displayEntityId IS NOT NULL")
     suspend fun allDisplayEntityIds(): List<String>
 
-    @Query("SELECT DISTINCT actionEntityId FROM multi_widget_slot")
+    @Query("SELECT DISTINCT actionEntityId FROM multi_widget_slot WHERE actionEntityId IS NOT NULL")
     suspend fun allActionEntityIds(): List<String>
 
-    /** Alle sekundær-chip-entiteter (visning + handlings-mål, op til 4 pr. slot) — bruges
+    /** Alle sekundær-chip-entiteter (visning + handlings-mål) på tværs af alle widgets — bruges
      * sammen med [allDisplayEntityIds]/[allActionEntityIds] til periodisk fuld-sync. */
     @Query(
         """
-        SELECT secondary1DisplayEntityId FROM multi_widget_slot WHERE secondary1DisplayEntityId IS NOT NULL
-        UNION SELECT secondary1ActionEntityId FROM multi_widget_slot WHERE secondary1ActionEntityId IS NOT NULL
-        UNION SELECT secondary2DisplayEntityId FROM multi_widget_slot WHERE secondary2DisplayEntityId IS NOT NULL
-        UNION SELECT secondary2ActionEntityId FROM multi_widget_slot WHERE secondary2ActionEntityId IS NOT NULL
-        UNION SELECT secondary3DisplayEntityId FROM multi_widget_slot WHERE secondary3DisplayEntityId IS NOT NULL
-        UNION SELECT secondary3ActionEntityId FROM multi_widget_slot WHERE secondary3ActionEntityId IS NOT NULL
-        UNION SELECT secondary4DisplayEntityId FROM multi_widget_slot WHERE secondary4DisplayEntityId IS NOT NULL
-        UNION SELECT secondary4ActionEntityId FROM multi_widget_slot WHERE secondary4ActionEntityId IS NOT NULL
+        SELECT DISTINCT displayEntityId FROM multi_widget_chip
+        UNION SELECT DISTINCT actionEntityId FROM multi_widget_chip
         """
     )
     suspend fun allSecondaryEntityIds(): List<String>
 
-    /** Alle slots (på tværs af widgets) der viser ELLER handler på [entityId] — bruges til fan-out.
-     * Tjekker også de 4 sekundær-chips' visning/handlings-mål (v0.2.28), ikke kun hoved-entiteten. */
+    /** True hvis [entityId] vises ELLER handles på i mindst én slot eller chip (på tværs af
+     * widgets) — bruges til fan-out (skal denne entitets ændring udløse en widget-repaint?). */
     @Query(
         """
-        SELECT * FROM multi_widget_slot WHERE displayEntityId = :entityId OR actionEntityId = :entityId
-        OR secondary1DisplayEntityId = :entityId OR secondary1ActionEntityId = :entityId
-        OR secondary2DisplayEntityId = :entityId OR secondary2ActionEntityId = :entityId
-        OR secondary3DisplayEntityId = :entityId OR secondary3ActionEntityId = :entityId
-        OR secondary4DisplayEntityId = :entityId OR secondary4ActionEntityId = :entityId
+        SELECT EXISTS(
+            SELECT 1 FROM multi_widget_slot WHERE displayEntityId = :entityId OR actionEntityId = :entityId
+            UNION
+            SELECT 1 FROM multi_widget_chip WHERE displayEntityId = :entityId OR actionEntityId = :entityId
+        )
         """
     )
-    suspend fun slotsForEntity(entityId: String): List<MultiWidgetSlotEntity>
+    suspend fun isEntityUsed(entityId: String): Boolean
 }

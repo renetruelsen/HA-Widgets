@@ -6,7 +6,7 @@ import android.content.Context
 import dk.akait.hawidgets.data.WidgetConfig
 import dk.akait.hawidgets.data.WidgetConfigStore
 import dk.akait.hawidgets.data.db.AppDatabase
-import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.data.db.MultiSlotWithChips
 import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
 import dk.akait.hawidgets.widget.multientity.MultiEntityWidgetReceiver
 import java.time.Instant
@@ -20,9 +20,9 @@ import java.time.Instant
 private fun nowIso(): String = Instant.now().toString()
 
 /** Auto-udledt label til import-vælgeren — multi-widgets har ingen egen titel. */
-internal fun deriveMultiLabel(slots: List<MultiWidgetSlotEntity>): String {
+internal fun deriveMultiLabel(slots: List<MultiSlotWithChips>): String {
     if (slots.isEmpty()) return "Multi"
-    val first = slots.first().let { it.label.ifBlank { it.displayEntityId } }
+    val first = slots.first().let { it.slot.label.ifBlank { it.slot.displayEntityId ?: "chips" } }
     val extra = slots.size - 1
     return if (extra > 0) "Multi: $first +$extra" else "Multi: $first"
 }
@@ -30,8 +30,19 @@ internal fun deriveMultiLabel(slots: List<MultiWidgetSlotEntity>): String {
 internal fun deriveShortcutLabel(config: WidgetConfig): String =
     config.title.ifBlank { config.dashboardPath }
 
+/** Sammensætter en widgets slots + chips (fra Room) til [MultiSlotWithChips]. */
+internal suspend fun loadSlotsWithChips(
+    db: AppDatabase,
+    appWidgetId: Int,
+): List<MultiSlotWithChips> {
+    val dao = db.multiWidgetDao()
+    val slots = dao.getSlots(appWidgetId)
+    val chipsBySlot = dao.getChips(appWidgetId).groupBy { it.slotIndex }
+    return slots.map { slot -> MultiSlotWithChips(slot, chipsBySlot[slot.slotIndex].orEmpty()) }
+}
+
 /** Én multi-widgets in-memory tilstand → transport-config (bruges af "Eksportér denne"). */
-fun multiTransferConfig(slots: List<MultiWidgetSlotEntity>, showRefreshIcon: Boolean): TransferConfig.Multi =
+fun multiTransferConfig(slots: List<MultiSlotWithChips>, showRefreshIcon: Boolean): TransferConfig.Multi =
     TransferConfig.Multi(
         label = deriveMultiLabel(slots),
         showRefreshIcon = showRefreshIcon,
@@ -56,10 +67,11 @@ suspend fun collectAllConfigs(context: Context): TransferBundle {
     val boundMulti = awm?.getAppWidgetIds(ComponentName(context, MultiEntityWidgetReceiver::class.java))?.toSet().orEmpty()
     val boundShortcut = awm?.getAppWidgetIds(ComponentName(context, ShortcutWidgetReceiver::class.java))?.toSet().orEmpty()
 
-    val dao = AppDatabase.get(context).multiWidgetDao()
+    val db = AppDatabase.get(context)
+    val dao = db.multiWidgetDao()
     val multi = dao.getAll()
         .filter { it.appWidgetId in boundMulti }
-        .map { widget -> multiTransferConfig(dao.getSlots(widget.appWidgetId), widget.showRefreshIcon) }
+        .map { widget -> multiTransferConfig(loadSlotsWithChips(db, widget.appWidgetId), widget.showRefreshIcon) }
     val shortcuts = WidgetConfigStore.get(context).getAll()
         .filterKeys { it in boundShortcut }
         .values.map { shortcutTransferConfig(it) }

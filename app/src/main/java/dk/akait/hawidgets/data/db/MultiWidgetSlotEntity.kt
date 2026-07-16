@@ -7,6 +7,10 @@ import androidx.room.Entity
  * er bevidst uafhængige felter — en slot kan vise én entitet (fx en batteri-sensor) men
  * handle på en helt anden (fx udløse en automatisering). Config-UI'en foreslår action =
  * samme entitet som default, men brugeren kan ændre det.
+ *
+ * Alle fem (display-/action-felter + action) er null SAMTIDIG for en "chips-only" række (ingen
+ * hoved-entitet — rækken viser kun sine chips, se [MultiWidgetChipEntity]). UI'en sørger for at
+ * de altid sættes/ryddes samlet; der findes ingen delvis-null-tilstand i praksis.
  */
 @Entity(
     tableName = "multi_widget_slot",
@@ -14,12 +18,12 @@ import androidx.room.Entity
 )
 data class MultiWidgetSlotEntity(
     val appWidgetId: Int,
-    val slotIndex: Int, // 0..4, venstre-til-højre rækkefølge
-    val displayEntityId: String,
-    val displayDomain: String,
-    val actionEntityId: String,
-    val actionDomain: String,
-    val action: String, // "TOGGLE" | "RANGE" | "TRIGGER" | "NONE"
+    val slotIndex: Int, // venstre-til-højre rækkefølge
+    val displayEntityId: String?,
+    val displayDomain: String?,
+    val actionEntityId: String?,
+    val actionDomain: String?,
+    val action: String?, // "TOGGLE" | "RANGE" | "TRIGGER" | "NONE" | "OPEN_APP" | null (chips-only)
     val label: String, // tom = brug friendly_name fra displayEntityId, maks 22 tegn
     // v0.3.0: Bekræft ved tryk (B1) — kun meningsfuld for TOGGLE/TRIGGER
     val confirmAction: Boolean = false,
@@ -34,57 +38,7 @@ data class MultiWidgetSlotEntity(
     // v0.2.72: "Åbn app"-handling (kun hoved-slotten). Når action == "OPEN_APP" peger trykket på
     // denne pakke i stedet for en HA-handling; displayet forbliver en HA-entitet. Null ellers.
     val actionPackageName: String? = null,
-    // Sekundære info/handlings-chips (v0.2.28) — op til 3 pr. slot, hver med samme
-    // visning/handling-uafhængighed som hoved-entiteten selv. Null = chip ikke i brug.
-    val secondary1DisplayEntityId: String? = null,
-    val secondary1DisplayDomain: String? = null,
-    val secondary1ActionEntityId: String? = null,
-    val secondary1ActionDomain: String? = null,
-    val secondary1Action: String? = null,
-    // Vis værditekst (ikke kun ikon) på chippen — brugervalgt, se defaultShowValueFor for forslag.
-    val secondary1ShowValue: Boolean? = null,
-    val secondary1ConfirmAction: Boolean? = null,
-    val secondary1DisplayPrecision: Int? = null,
-    val secondary1DatetimeFormat: String? = null,
-    val secondary1RangeInputMode: String? = null,
-    // Custom chip-label (v0.2.42) — vises på chippen (linje over evt. værdi). Null/tom = ingen label.
-    val secondary1Label: String? = null,
-    // Skjul domæne-ikonet på chippen — null = vist (samme default som ShowValue-mønsteret).
-    val secondary1ShowIcon: Boolean? = null,
-    val secondary2DisplayEntityId: String? = null,
-    val secondary2DisplayDomain: String? = null,
-    val secondary2ActionEntityId: String? = null,
-    val secondary2ActionDomain: String? = null,
-    val secondary2Action: String? = null,
-    val secondary2ShowValue: Boolean? = null,
-    val secondary2ConfirmAction: Boolean? = null,
-    val secondary2DisplayPrecision: Int? = null,
-    val secondary2DatetimeFormat: String? = null,
-    val secondary2RangeInputMode: String? = null,
-    val secondary2Label: String? = null,
-    val secondary2ShowIcon: Boolean? = null,
-    val secondary3DisplayEntityId: String? = null,
-    val secondary3DisplayDomain: String? = null,
-    val secondary3ActionEntityId: String? = null,
-    val secondary3ActionDomain: String? = null,
-    val secondary3Action: String? = null,
-    val secondary3ShowValue: Boolean? = null,
-    val secondary3ConfirmAction: Boolean? = null,
-    val secondary3DisplayPrecision: Int? = null,
-    val secondary3DatetimeFormat: String? = null,
-    val secondary3RangeInputMode: String? = null,
-    val secondary3Label: String? = null,
-    val secondary3ShowIcon: Boolean? = null,
-    val secondary4DisplayEntityId: String? = null,
-    val secondary4DisplayDomain: String? = null,
-    val secondary4ActionEntityId: String? = null,
-    val secondary4ActionDomain: String? = null,
-    val secondary4Action: String? = null,
-    val secondary4ShowValue: Boolean? = null,
-    val secondary4ConfirmAction: Boolean? = null,
-    val secondary4DisplayPrecision: Int? = null,
-    val secondary4DatetimeFormat: String? = null,
-    val secondary4RangeInputMode: String? = null,
-    val secondary4Label: String? = null,
-    val secondary4ShowIcon: Boolean? = null,
+    // Vis rå skyder-værdi (fx "45%") i stedet for formatEntityState-tekst — kun relevant for
+    // domæner i RANGE_VALUE_DOMAINS (light/cover/climate). null = false (uændret standardtekst).
+    val showRangeValue: Boolean? = null,
 )

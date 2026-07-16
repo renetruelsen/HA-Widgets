@@ -1,7 +1,7 @@
 package dk.akait.hawidgets.transfer
 
 import dk.akait.hawidgets.data.WidgetConfig
-import dk.akait.hawidgets.data.db.MultiWidgetSlotEntity
+import dk.akait.hawidgets.data.db.MultiSlotWithChips
 
 /** App-tag i filens `app`-felt — afviser import af en anden apps eksport-fil. */
 const val TRANSFER_APP_TAG = "ha-widgets"
@@ -12,7 +12,7 @@ const val TRANSFER_VERSION = 1
 
 /**
  * Én widget-konfiguration i en eksport-fil. [label] er auto-udledt ved eksport og vises i
- * import-vælgeren (multi-widgets har ingen egen titel). [MultiWidgetSlotEntity]/[WidgetConfig]
+ * import-vælgeren (multi-widgets har ingen egen titel). [MultiSlotWithChips]/[WidgetConfig]
  * genbruges som transport-repræsentation — de er rene data-klasser (ingen Room-runtime kræves
  * for at konstruere dem), og er den kanoniske form config'en alligevel gemmes i.
  */
@@ -22,9 +22,9 @@ sealed interface TransferConfig {
     data class Multi(
         override val label: String,
         val showRefreshIcon: Boolean,
-        /** Slots i rækkefølge. `appWidgetId` er en placeholder (0) — sættes ved import til den
-         * widget der anvender config'en. */
-        val slots: List<MultiWidgetSlotEntity>,
+        /** Slots (+ deres chips) i rækkefølge. `appWidgetId` er en placeholder (0) — sættes ved
+         * import til den widget der anvender config'en. */
+        val slots: List<MultiSlotWithChips>,
     ) : TransferConfig
 
     data class Shortcut(

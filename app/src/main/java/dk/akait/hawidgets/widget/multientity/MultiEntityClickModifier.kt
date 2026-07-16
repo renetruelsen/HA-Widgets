@@ -20,6 +20,9 @@ import dk.akait.hawidgets.widget.common.ToggleEntityAction
 import dk.akait.hawidgets.widget.common.TriggerEntityAction
 import dk.akait.hawidgets.widget.common.friendlyNameFromJson
 import dk.akait.hawidgets.widget.common.isActiveState
+import dk.akait.hawidgets.widget.common.rangeCurrentValue
+import dk.akait.hawidgets.widget.common.rangeMax
+import dk.akait.hawidgets.widget.common.rangeMin
 import org.json.JSONObject
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -198,26 +201,4 @@ internal fun clickModifier(
         // der kan gemmes) → ingen klik-handling i stedet for at antage TRIGGER.
         else -> base
     }
-}
-
-private fun rangeCurrentValue(domain: String, state: EntityStateEntity, attrs: JSONObject): Double = when (domain) {
-    "light" -> attrs.optInt("brightness", 255).let { (it * 100 / 255).coerceIn(0, 100) }.toDouble()
-    "cover" -> attrs.optInt("current_position", if (state.state == "open") 100 else 0).toDouble()
-    "climate" -> attrs.optInt("temperature", 20).toDouble()
-    // Bevarer decimaler (fx 21.5) i stedet for at afrunde til et heltal — number/input_number
-    // kan have en fraktioneret step.
-    "number", "input_number" -> state.state.toDoubleOrNull() ?: 0.0
-    else -> 0.0
-}
-
-private fun rangeMin(domain: String, attrs: JSONObject): Double = when (domain) {
-    "climate" -> attrs.optInt("min_temp", 16).toDouble()
-    "number", "input_number" -> attrs.optDouble("min", 0.0)
-    else -> 1.0
-}
-
-private fun rangeMax(domain: String, attrs: JSONObject): Double = when (domain) {
-    "climate" -> attrs.optInt("max_temp", 30).toDouble()
-    "number", "input_number" -> attrs.optDouble("max", 100.0)
-    else -> 100.0
 }
