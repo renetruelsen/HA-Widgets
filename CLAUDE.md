@@ -1621,6 +1621,80 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   widget 15, ægte HA-data): dialog navngiver korrekt entiteten, Annullér bevarer sloten (verificeret
   i DB), Fjern sletter den fra den in-memory liste (ikke gemt, DB fortsat urørt efter back uden
   gem). **Device-QA på S23: bruger-bekræftet OK.**
+- ✅ **v0.2.90 — MultiEntityWidget: auto-scroll til ny chip virkede reelt aldrig (2026-07-17,
+  brugerrapport "skal selv scrolle ned til den nye chip"):**
+  - **Root cause:** v0.2.86-88's auto-scroll (`LaunchedEffect(draft.secondaryEntities.size)` +
+    `remember { mutableStateOf(draft.secondaryEntities.size) }`) sammenlignede chip-antal mod en
+    lokalt husket forrige værdi — men "Tilføj ekstra entitet" navigerer altid via
+    `Step.EntityPicker` og tilbage til `Step.SlotEditor`, hvilket er et skift mellem forskellige
+    grene i den ydre `when`-blok og derfor smider hele `SlotEditorScreen`-kompositionen (inkl.
+    `remember`-state) væk og genopretter den fra bunden. Den friske komposition initialiserer
+    `prevChipCount` til den ALLEREDE opdaterede størrelse (den nye chip er jo allerede i `draft`
+    ved første komposition) — så størrelses-diffen så aldrig en vækst, og auto-scrollet virkede
+    reelt aldrig for den faktiske "tilføj chip"-vej (kun for et hypotetisk scenarie hvor skærmen
+    forbliver mount't, som ikke forekommer i denne navigationsmodel).
+  - **Fix:** nyt eksplicit signal i stedet for lokal state-diff. `Step.SlotEditor` fik et nyt
+    `scrollToNewChip: Boolean = false`-felt (`MultiEntityWidgetConfigActivity.kt`); sat til `true`
+    kun når `EntityPicker`s `onSelected` for `PickerTarget.SecondaryDisplay` reelt var en
+    tilføjelse (`target.index >= draft.secondaryEntities.size`), ikke ved andre navigationer.
+    `SlotEditorScreen` fik en ny `scrollToBottom`-parameter og et `LaunchedEffect(Unit)` der —
+    kun når flaget er sat — venter på `snapshotFlow { scrollState.maxValue }.first { it > 0 }`
+    (layoutet er ikke målt endnu ved allerførste komposition, så `maxValue` er 0 indtil da) før
+    den scroller til bunden.
+  - **QA:** build grønt. Emulator (`pixel_test`, widget 15, ægte HA-data): tilføjede en 3.
+    sekundær-chip til en eksisterende slot via "+ Tilføj ekstra entitet" → entity-picker →
+    valgte entitet → slot-editoren scrollede STRAKS til bunden med den nye chip synlig sammen
+    med Opdater/Annullér-knapperne, uden manuel scroll (matcher brugerens rapporterede fejl 1:1
+    før fixet). Annulleret uden at gemme — DB og den rigtige widget-config urørt. **Device-QA på
+    S23 afventer bruger.**
+- ✅ **v0.2.91-92 — MultiEntityWidget: resize-lofter/-gulve løsnet efter tablet-test (2026-07-17,
+  brugerrapport fra `tablet_10in`-emulator):**
+  - **v0.2.91 — fjernet max-højde:** `multi_entity_widget_info.xml`s `maxResizeHeight="400dp"`
+    fjernet helt (var indført i v0.2.37). Indholdet (`LazyColumn`, naturlig række-højde, ingen
+    `LocalSize`-læsning) strækker aldrig — fjernelsen giver bare plads til flere synlige rækker
+    før scroll, ingen render-risiko. `ShortcutWidget`s eget `maxResizeHeight=120dp` bevidst
+    IKKE rørt (brugervalg via `AskUserQuestion` — en ren ikon+label-tile uden liste-indhold ville
+    blive en unaturligt høj, smal boks med tomrum uden loftet).
+  - **v0.2.92 — løsnet min-bredde ved resize:** root cause for "kan ikke blive smal på tablet":
+    `minResizeWidth`/`minResizeHeight` var IKKE erklæret særskilt fra `minWidth=244dp`/
+    `minHeight=56dp` — Android defaulter da resize-gulvet til samme værdi som standard-
+    placeringsstørrelsen, så widgetten reelt ikke kunne trækkes smallere end 244dp. Tilføjet
+    `minResizeWidth="56dp"`/`minResizeHeight="56dp"` (matcher familiens etablerede 1x1-gulv,
+    `minWidth=244dp` UÆNDRET — styrer stadig standard-footprint ved placering). Verificeret
+    direkte i `dumpsys appwidget` på `tablet_10in`: `minResize` gik fra `(244x56)` til `(56x56)`.
+  - **Kendt, forklaret begrænsning (ikke en bug, ikke rettet):** selv efter v0.2.92 kan
+    widgetten sandsynligvis IKKE visuelt blive helt ned til 56dp på `tablet_10in` — launcheren
+    runder altid resize op til mindst 1 hel grid-celle, og på denne AVDs launcher-grid er én
+    celle målt til ~120×104dp (via `ShortcutWidget`, som allerede sad på det deklarerede
+    56×56dp-gulv men rendered større). Det er launcher-styret grid-kvantisering, ikke noget
+    app-XML'en kan overstyre. `ShortcutWidget` blev bevidst IKKE sænket under 56dp for samme
+    grund (brugerbekræftet via spørgsmål — intet at vinde, kun a11y-risiko på andre enheder).
+  - **QA:** build grønt hver iteration. Installeret + verificeret på alle tre emulatorer
+    (`pixel_test`, `tablet_7in`, `tablet_10in`). Device-QA på S23 afventer bruger.
+- ✅ **v0.2.93 — MainActivity: "Tilføj widget"-genvejen generaliseret til begge widget-typer
+  (2026-07-17, brugerønske "generalisér til bare at tilføje en widget"):**
+  - **Baggrund:** "Kom i gang"-knappen i hoved-appen kaldte hidtil ubetinget
+    `requestPinAppWidget` med `ShortcutWidgetReceiver` — kun dashboard-genvejen kunne pin'es
+    herfra; multi-entity-widgetten var kun tilgængelig via systemets egen widget-picker
+    (long-press hjemskærm). Brugervalgt UI-mønster (`AskUserQuestion`): lille dialog med 2 valg,
+    genbrugt fra samme visuelle mønster som `transfer/TransferUi.kt`s `ImportPickerDialog`
+    (ikon+titel+undertekst+chevron pr. række), fremfor to separate knapper.
+  - **Ny `AddWidgetPickerDialog`** (`MainActivity.kt`): to valg — "HA Dashboard Shortcut"
+    (`ic_dashboard`, genbruger eksisterende `shortcut_widget_label`/`_description`-strenge) og
+    "HA Multi-entity" (`ic_multi_entity`, genbruger `multi_entity_widget_label`/`_description`)
+    — ingen nye widget-navne/beskrivelser tilføjet, kun genbrug af de samme strenge som
+    system-widget-pickeren allerede viser. Valg → samme `requestPinAppWidget`-kald som før, nu
+    parametriseret på det valgte `ComponentName`.
+  - **Tekst generaliseret** (alle 3 sprog): `add_widget_to_home` "Add dashboard shortcut..." →
+    "Add widget to home screen"; `pin_manual_instructions`/`pin_button_instructions` nævner nu
+    "choose a widget"/"drag out the widget you want" i stedet for kun "shortcut"; `how_to_use_step1`
+    nævner nu "choose a widget type". Ny `add_widget_picker_title` ("Choose a widget").
+  - **QA:** build grønt. Emulator (`pixel_test`, ægte HA): fuldt flow kørt — tryk "Add widget to
+    home screen" → dialog med begge valg → valgte "HA Multi-entity" → systemets egen
+    pin-bekræftelsesdialog åbnede korrekt med rigtigt navn/footprint (4×1)/beskrivelse,
+    annulleret uden at placere (ren test). Dialogens rendering verificeret visuelt identisk på
+    alle tre emulatorer (`pixel_test`, `tablet_7in`, `tablet_10in`). Device-QA på S23 afventer
+    bruger.
 
 ## Næste skridt
 

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Language
@@ -77,8 +78,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.data.HaApiClient
 import dk.akait.hawidgets.data.SecureStore
@@ -86,6 +89,7 @@ import dk.akait.hawidgets.ui.theme.HaWidgetsTheme
 import dk.akait.hawidgets.widget.ShortcutWidget
 import dk.akait.hawidgets.widget.ShortcutWidgetReceiver
 import dk.akait.hawidgets.widget.multientity.MultiEntityWidget
+import dk.akait.hawidgets.widget.multientity.MultiEntityWidgetReceiver
 import dk.akait.hawidgets.worker.SyncWorker
 import dk.akait.hawidgets.widget.common.WIDGET_COLOR_THEMES
 import dk.akait.hawidgets.widget.common.presetFor
@@ -93,6 +97,8 @@ import dk.akait.hawidgets.logging.RemoteLogger
 import dk.akait.hawidgets.logging.ReportProblemDialog
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.annotation.DrawableRes
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
@@ -137,6 +143,7 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(openSettingsInitially) }
     var showTokenHelp by remember { mutableStateOf(false) }
+    var showAddWidgetPicker by remember { mutableStateOf(false) }
     var reportCrashSummary by remember { mutableStateOf(store.pendingCrashSummary) }
     var showReportDialog by remember { mutableStateOf(reportCrashSummary != null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -209,6 +216,20 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
             confirmButton = {
                 TextButton(onClick = { showTokenHelp = false }) { Text(stringResource(R.string.close)) }
             }
+        )
+    }
+
+    if (showAddWidgetPicker) {
+        AddWidgetPickerDialog(
+            onPick = { provider ->
+                showAddWidgetPicker = false
+                val awm = AppWidgetManager.getInstance(context)
+                if (awm.isRequestPinAppWidgetSupported) {
+                    awm.requestPinAppWidget(provider, null, null)
+                    (context as? android.app.Activity)?.moveTaskToBack(true)
+                }
+            },
+            onDismiss = { showAddWidgetPicker = false },
         )
     }
 
@@ -335,14 +356,7 @@ private fun OnboardingScreen(openSettingsInitially: Boolean = false) {
                     AppWidgetManager.getInstance(context).isRequestPinAppWidgetSupported
                 }
                 Button(
-                    onClick = {
-                        val awm = AppWidgetManager.getInstance(context)
-                        val provider = ComponentName(context, ShortcutWidgetReceiver::class.java)
-                        if (awm.isRequestPinAppWidgetSupported) {
-                            awm.requestPinAppWidget(provider, null, null)
-                            (context as? android.app.Activity)?.moveTaskToBack(true)
-                        }
-                    },
+                    onClick = { showAddWidgetPicker = true },
                     enabled = pinSupported,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(stringResource(R.string.add_widget_to_home)) }
@@ -466,6 +480,75 @@ private fun StepRow(number: Int, text: String) {
         }
         Text(text, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+/** Ét valg i widget-type-vælgeren — icon+titel+undertekst, samme visuelle mønster som
+ * [dk.akait.hawidgets.transfer.ImportPickerDialog] (uden dennes "N configs"-optælling, som ikke
+ * giver mening for et type-valg). */
+private data class AddWidgetChoice(val label: String, val description: String, @DrawableRes val iconResId: Int, val provider: ComponentName)
+
+@Composable
+private fun AddWidgetPickerDialog(onPick: (ComponentName) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val choices = listOf(
+        AddWidgetChoice(
+            stringResource(R.string.shortcut_widget_label),
+            stringResource(R.string.shortcut_widget_description),
+            R.drawable.ic_dashboard,
+            ComponentName(context, ShortcutWidgetReceiver::class.java),
+        ),
+        AddWidgetChoice(
+            stringResource(R.string.multi_entity_widget_label),
+            stringResource(R.string.multi_entity_widget_description),
+            R.drawable.ic_multi_entity,
+            ComponentName(context, MultiEntityWidgetReceiver::class.java),
+        ),
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.add_widget_picker_title)) },
+        text = {
+            Column {
+                choices.forEachIndexed { index, choice ->
+                    if (index > 0) HorizontalDivider()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .clickable { onPick(choice.provider) }
+                            .padding(vertical = 8.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(choice.iconResId),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Spacer(Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(choice.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                choice.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

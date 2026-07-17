@@ -78,7 +78,10 @@ internal sealed interface PickerTarget {
 
 internal sealed interface Step {
     data object ListScreen : Step
-    data class SlotEditor(val editIndex: Int?, val draft: SlotDraft) : Step
+    /** [scrollToNewChip] signalerer at [draft] netop fik en NY sekundær-chip tilføjet (fra
+     * EntityPicker) — SlotEditorScreen er en frisk komposition ved hver navigation hertil, så en
+     * lokal størrelses-diff ikke kan opdage væksten selv; se SlotEditorScreen. */
+    data class SlotEditor(val editIndex: Int?, val draft: SlotDraft, val scrollToNewChip: Boolean = false) : Step
     data class EntityPicker(val forTarget: PickerTarget, val editIndex: Int?, val draft: SlotDraft) : Step
     /** App-vælger for "Åbn app"-handlingen (kun hoved-slotten). */
     data class AppPicker(val editIndex: Int?, val draft: SlotDraft) : Step
@@ -267,7 +270,11 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
                         s.draft.copy(secondaryEntities = updated)
                     }
                 }
-                step = Step.SlotEditor(s.editIndex, updatedDraft)
+                // Ny chip tilføjet (ikke en eksisterende chips visnings-entitet skiftet — se
+                // docstring på PickerTarget.SecondaryDisplay) → auto-scroll til bunden når
+                // slot-editoren genindtrædes.
+                val scrollToNewChip = s.forTarget.let { it is PickerTarget.SecondaryDisplay && it.index >= s.draft.secondaryEntities.size }
+                step = Step.SlotEditor(s.editIndex, updatedDraft, scrollToNewChip)
             },
             // Kun tilbage til listen når dette er en HELT ny, endnu ikke tilføjet række (editIndex
             // null) der aldrig fik valgt en hoved-entitet — ellers (fx "+ Vælg hoved-entitet" på en
@@ -291,6 +298,7 @@ private fun MultiEntityConfigScreen(appWidgetId: Int, onSaved: () -> Unit) {
         is Step.SlotEditor -> SlotEditorScreen(
             draft = s.draft,
             isEditing = s.editIndex != null,
+            scrollToBottom = s.scrollToNewChip,
             attrsByEntityId = attrsByEntityId,
             onChangeDisplay = { step = Step.EntityPicker(PickerTarget.Display, s.editIndex, s.draft) },
             onRemoveMainEntity = {

@@ -22,11 +22,12 @@
     <string name="disconnect_dialog_title">Disconnect HA?</string>
     <string name="disconnect_dialog_body">This removes your connection. Existing widgets will stop working until you connect again.</string>
     <string name="connected_to">Connected to</string>
-    <string name="add_widget_to_home">Add dashboard shortcut to home screen</string>
-    <string name="pin_manual_instructions">Long-press an empty spot on the home screen → Widgets → find \'HA Widgets\' → drag the shortcut out.</string>
-    <string name="pin_button_instructions">Tap the button and confirm in the dialog. Not working? Long-press the home screen → Widgets → \'HA Widgets\'.</string>
+    <string name="add_widget_to_home">Add widget to home screen</string>
+    <string name="add_widget_picker_title">Choose a widget</string>
+    <string name="pin_manual_instructions">Long-press an empty spot on the home screen → Widgets → find \'HA Widgets\' → drag out the widget you want.</string>
+    <string name="pin_button_instructions">Tap the button, choose a widget, and confirm in the dialog. Not working? Long-press the home screen → Widgets → \'HA Widgets\'.</string>
     <string name="how_to_use_title">How to use HA Widgets</string>
-    <string name="how_to_use_step1">Tap \'Add dashboard shortcut\' above</string>
+    <string name="how_to_use_step1">Tap \'Add widget to home screen\' above and choose a widget type</string>
     <string name="how_to_use_step2">Choose dashboard and view in the configuration</string>
     <string name="how_to_use_step3">Tap the widget icon on the home screen to open your dashboard</string>
     <string name="onboarding_intro">Connect your Home Assistant instance below. You can also skip this and connect the first time you add a widget.</string>

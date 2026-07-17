@@ -22,8 +22,8 @@ android {
         applicationId = "dk.akait.hawidgets"
         minSdk = 26
         targetSdk = 35
-        versionCode = 89
-        versionName = "0.2.89"
+        versionCode = 93
+        versionName = "0.2.93"
         buildConfigField(
             "String",
             "LOG_UPLOAD_TOKEN",

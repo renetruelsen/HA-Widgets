@@ -22,11 +22,12 @@
     <string name="disconnect_dialog_title">Frakobl HA?</string>
     <string name="disconnect_dialog_body">Dette fjerner din forbindelse. Eksisterende widgets holder op med at virke, indtil du forbinder igen.</string>
     <string name="connected_to">Forbundet til</string>
-    <string name="add_widget_to_home">Tilføj dashboard-genvej til hjemskærm</string>
-    <string name="pin_manual_instructions">Hold på et tomt sted på hjemskærmen → Widgets → find \'HA Widgets\' → træk genvejen ud.</string>
-    <string name="pin_button_instructions">Tryk på knappen og bekræft i dialogen. Virker det ikke? Hold på hjemskærmen → Widgets → \'HA Widgets\'.</string>
+    <string name="add_widget_to_home">Tilføj widget til hjemskærm</string>
+    <string name="add_widget_picker_title">Vælg en widget</string>
+    <string name="pin_manual_instructions">Hold på et tomt sted på hjemskærmen → Widgets → find \'HA Widgets\' → træk den ønskede widget ud.</string>
+    <string name="pin_button_instructions">Tryk på knappen, vælg en widget, og bekræft i dialogen. Virker det ikke? Hold på hjemskærmen → Widgets → \'HA Widgets\'.</string>
     <string name="how_to_use_title">Sådan bruger du HA Widgets</string>
-    <string name="how_to_use_step1">Tryk \'Tilføj dashboard-genvej\' ovenfor</string>
+    <string name="how_to_use_step1">Tryk \'Tilføj widget til hjemskærm\' ovenfor og vælg en widget-type</string>
     <string name="how_to_use_step2">Vælg dashboard og visning i konfigurationen</string>
     <string name="how_to_use_step3">Tryk på widget-ikonet på hjemskærmen for at åbne dit dashboard</string>
     <string name="onboarding_intro">Forbind din Home Assistant-instans nedenfor. Du kan også springe dette over og forbinde første gang du tilføjer en widget.</string>

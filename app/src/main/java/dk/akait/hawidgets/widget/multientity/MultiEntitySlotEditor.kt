@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import dk.akait.hawidgets.R
 import dk.akait.hawidgets.widget.common.RANGE_VALUE_DOMAINS
 import dk.akait.hawidgets.widget.common.domainIconResId
+import kotlinx.coroutines.flow.first
 
 @Composable
 internal fun actionLabel(action: String): String = when (action) {
@@ -111,6 +113,7 @@ private fun RangeValueToggle(checked: Boolean, onCheckedChange: (Boolean) -> Uni
 internal fun SlotEditorScreen(
     draft: SlotDraft,
     isEditing: Boolean,
+    scrollToBottom: Boolean,
     attrsByEntityId: Map<String, String>,
     onChangeDisplay: () -> Unit,
     onRemoveMainEntity: () -> Unit,
@@ -174,13 +177,18 @@ internal fun SlotEditorScreen(
     }
 
     val scrollState = rememberScrollState()
-    // Auto-scroll til den nyeste chip når en tilføjes (brugerønske) — kun ved vækst, ikke fjernelse.
-    var prevChipCount by remember { mutableStateOf(draft.secondaryEntities.size) }
-    LaunchedEffect(draft.secondaryEntities.size) {
-        if (draft.secondaryEntities.size > prevChipCount) {
+    // Auto-scroll til den nyeste chip (brugerønske). Skærmen er en FRISK komposition hver gang den
+    // genindtrædes efter EntityPicker (navigation mellem "when"-grene i Step smider den gamle
+    // komposition væk) — den nye chip er derfor allerede med i `draft` ved allerførste komposition,
+    // så en lokal størrelses-diff aldrig ser en vækst. `scrollToBottom` er derfor et eksplicit
+    // signal fra navigations-callet i stedet.
+    LaunchedEffect(Unit) {
+        if (scrollToBottom) {
+            // Vent til layoutet er målt (maxValue er 0 indtil layout har kørt) — ellers scroller
+            // vi til 0 i stedet for den faktiske bund.
+            snapshotFlow { scrollState.maxValue }.first { it > 0 }
             scrollState.animateScrollTo(scrollState.maxValue)
         }
-        prevChipCount = draft.secondaryEntities.size
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.slot_editor_title)) }) }) { padding ->

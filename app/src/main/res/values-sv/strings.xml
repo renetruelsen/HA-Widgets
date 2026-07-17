@@ -22,11 +22,12 @@
     <string name="disconnect_dialog_title">Koppla från HA?</string>
     <string name="disconnect_dialog_body">Detta tar bort din anslutning. Befintliga widgetar slutar fungera tills du ansluter igen.</string>
     <string name="connected_to">Ansluten till</string>
-    <string name="add_widget_to_home">Lägg till instrumentpanelsgenväg på hemskärmen</string>
-    <string name="pin_manual_instructions">Håll ner ett tomt ställe på hemskärmen → Widgetar → hitta \'HA Widgets\' → dra ut genvägen.</string>
-    <string name="pin_button_instructions">Tryck på knappen och bekräfta i dialogrutan. Fungerar det inte? Håll ner hemskärmen → Widgetar → \'HA Widgets\'.</string>
+    <string name="add_widget_to_home">Lägg till widget på hemskärmen</string>
+    <string name="add_widget_picker_title">Välj en widget</string>
+    <string name="pin_manual_instructions">Håll ner ett tomt ställe på hemskärmen → Widgetar → hitta \'HA Widgets\' → dra ut den widget du vill ha.</string>
+    <string name="pin_button_instructions">Tryck på knappen, välj en widget och bekräfta i dialogrutan. Fungerar det inte? Håll ner hemskärmen → Widgetar → \'HA Widgets\'.</string>
     <string name="how_to_use_title">Så använder du HA Widgets</string>
-    <string name="how_to_use_step1">Tryck på \'Lägg till instrumentpanelsgenväg\' ovan</string>
+    <string name="how_to_use_step1">Tryck på \'Lägg till widget på hemskärmen\' ovan och välj en widgettyp</string>
     <string name="how_to_use_step2">Välj instrumentpanel och vy i konfigurationen</string>
     <string name="how_to_use_step3">Tryck på widgetikonen på hemskärmen för att öppna din instrumentpanel</string>
     <string name="onboarding_intro">Anslut din Home Assistant-instans nedan. Du kan även hoppa över detta och ansluta första gången du lägger till en widget.</string>
