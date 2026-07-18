@@ -9,7 +9,7 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:widgetFeatures="reconfigurable"
-    android:configure="dk.akait.hawidgets.widget.ShortcutWidgetConfigActivity"
+    android:configure="dk.rtr.hawidgets.widget.ShortcutWidgetConfigActivity"
     android:description="@string/shortcut_widget_description"
     android:previewImage="@drawable/preview_shortcut"
     android:updatePeriodMillis="0"

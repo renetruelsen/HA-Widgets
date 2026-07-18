@@ -149,6 +149,10 @@
     <string name="multi_entity_config_title">Kombineret widget</string>
     <string name="multi_entity_empty_hint">Ingen slots endnu — tryk \"Tilføj slot\" for at starte.</string>
     <string name="multi_entity_show_refresh_icon">Vis refresh-ikon</string>
+    <string name="row_density_label">Rækkehøjde</string>
+    <string name="row_density_compact">Kompakt</string>
+    <string name="row_density_normal">Normal</string>
+    <string name="row_density_large">Stor</string>
     <string name="add_slot">+ Tilføj slot</string>
     <string name="cd_edit">Rediger</string>
     <string name="cd_remove">Fjern %1$s</string>

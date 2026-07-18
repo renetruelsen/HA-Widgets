@@ -16,7 +16,7 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 
 ## Pakke / org
 
-- applicationId / namespace: `dk.akait.hawidgets`
+- applicationId / namespace: `dk.rtr.hawidgets` (omdøbt fra `dk.akait.hawidgets` i v0.2.94, FØR første Play-upload)
 - minSdk 26, targetSdk/compileSdk 35.
 
 ## Status
@@ -1695,6 +1695,86 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     annulleret uden at placere (ren test). Dialogens rendering verificeret visuelt identisk på
     alle tre emulatorer (`pixel_test`, `tablet_7in`, `tablet_10in`). Device-QA på S23 afventer
     bruger.
+- ✅ **v0.2.94 — pakkenavn omdøbt dk.akait.hawidgets → dk.rtr.hawidgets (2026-07-18,
+  brugerbeslutning FØR første Google Play-upload — applicationId er permanent på Play):**
+  - **Fuld omdøbning (brugervalg via spørgsmål, frem for kun-applicationId):** `applicationId` +
+    `namespace` (`build.gradle.kts`), alle Kotlin-pakker + mappestruktur
+    (`app/src/main/java/dk/akait/` → `dk/rtr/`, samme for test — flyttet med `git mv` så
+    historikken bevares), `AndroidManifest.xml` (inkl. FileProvider-authority
+    `dk.rtr.hawidgets.fileprovider`), `WidgetTransferIo.FILE_PROVIDER_AUTHORITY`,
+    widget-info-XML'ernes `android:configure`-FQCN'er og `proguard-rules.pro` — 355 forekomster
+    i 81 filer, alle mekanisk `sed`-erstattet. **Historiske docs
+    (`docs/superpowers/plans|specs/*`) og ældre CLAUDE.md-logposter bevidst IKKE rørt** — de
+    beskriver fortiden.
+  - **Konsekvens (kendt og accepteret):** Android ser den nye pakke som en HELT NY app —
+    eksisterende installationer (`dk.akait.hawidgets` på S23 + emulatorer) bliver liggende som
+    en separat gammel app; widgets skal re-placeres og forbindelsen sættes op igen i den nye.
+    Eksport/import-featuren (v0.2.81) kan flytte widget-konfigurationer over. Den gamle app kan
+    afinstalleres manuelt bagefter.
+  - **QA:** clean build + ALLE unit-tests grønne efter omdøbningen. APK-identitet verificeret
+    med `aapt dump badging`: `package: name='dk.rtr.hawidgets' versionCode='94'`. Ingen
+    `dk.akait`-referencer tilbage i `app/` (verificeret med `git grep`). Installeret på S23 +
+    alle 3 emulatorer; gamle `dk.akait.hawidgets` afinstalleret alle steder.
+- ✅ **v0.2.95 — MultiEntityWidget: pr.-widget række-densitet Kompakt/Normal/Stor (2026-07-18,
+  brugerønske, brainstorm → direkte implementering efter omfattende afklaring):**
+  - **Baggrund:** bruger ville kunne reducere "tom luft" afhængigt af slot-antal. Afklaret grundigt
+    (padding-struktur målt direkte på S23, hjørne-radier, a11y-tap-target, 2-linjers chip-tekst +
+    fontskala-risiko). Beslutninger låst: **pr. widget** (ikke global — kun pr.-widget løser
+    "tilpas til MIT slot-antal"); tre navngivne niveauer; kun **indholdshøjden** varierer (vertikal
+    padding fast 6dp, vandret urørt); default Normal = uændret.
+  - **Højder (brugervalg 44/48/52):** indholdshøjde Kompakt **44** / Normal **48** / Stor **52**dp
+    → samlet rækkehøjde **56 / 60 / 64**dp (Normal = nøjagtig i dag). Samme konstant driver BÅDE
+    chippen OG en chipløs rækkes indhold → lige-høje rækker bevaret (v0.2.79-invarianten,
+    parameteriseret). Hjørner (chip 10dp / række 12dp) intakte ved alle højder (44 ≫ 2×10). 44dp er
+    bevidst 4dp under Android/Material 48dp-tap-target-anbefaling — accepteret af bruger (opt-in,
+    egne widgets); Normal/Stor er ≥48.
+  - **Arkitektur:** ny `RowDensity`-objekt (`MultiEntityRendering.kt`) — `contentHeightDp(key)` er
+    eneste kilde til 44/48/52 (unit-testet, `RowDensityTest`, 5 tests). `CHIP_HEIGHT_DP`s tre
+    hardcodede brug (SlotRow/ChipsOnlyRow/SecondaryChip) erstattet af en gennemtrådet
+    `contentHeightDp: Int`-parameter fra `MultiEntityContent`; widgetten resolver den fra
+    `config.rowDensity`.
+  - **Data:** ny `MultiWidgetEntity.rowDensity: String = "NORMAL"` + **Room-migration v15→v16**
+    (`MIGRATION_15_16`, additiv `ALTER TABLE … ADD COLUMN … NOT NULL DEFAULT 'NORMAL'` —
+    ikke-destruktiv, eksisterende widgets uændrede). Config-UI: FilterChip-vælger
+    (Kompakt/Normal/Stor) på Skærm 1 ved "Vis refresh-ikon"; load/save i config-activity.
+  - **Eksport/import:** `rowDensity` føjet til `TransferConfig.Multi` + serializer (parse-default
+    "NORMAL" for ældre filer) + collector + import-apply — så densiteten ikke stilfærdigt nulstilles
+    ved en eksport/import- eller gendan-runde. Transfer-round-trip-test udvidet.
+  - **Strenge:** `row_density_label`/`_compact`/`_normal`/`_large` på alle 3 sprog.
+  - **QA:** clean build + fuld unit-test-suite grøn (nye: `RowDensityTest` + udvidet
+    `WidgetTransferSerializerTest`). Emulator (`pixel_test`): app installeret + starter uden crash
+    på ny v16-skema. **IKKE kørt på emulator:** interaktiv densitets-vælger + live re-render ved
+    Kompakt/Normal/Stor + lige-høje-rækker + 2-linjers-klip ved forstørret font — fordi emulatoren
+    efter pakke-omdøbningen (v0.2.94) mistede sin HA-forbindelse (lå i den afinstallerede
+    `dk.akait`-apps krypterede store) og tokenet ikke er tilgængeligt for at genoprette den; config-
+    skærmen er gated bag forbindelse, og ingen widget er placeret. **Migration på RIGTIG v15-data +
+    al visuel/interaktiv QA udføres på S23** (som har ægte data + HA-forbindelse) — afventer bruger.
+    `code-review` køres inden merge.
+  - **Device-QA (S23, delvist under v0.2.96-sessionen):** migration v15→v16 verificeret på ægte
+    importeret data — config-skærmen renderede alle rigtige slots (SPA/Auto Opvarm/JWA94B/Velux +
+    chips) uden crash, hvilket beviser migrationen kørte (en fejlet Room-migration ville kaste her);
+    densitets-vælgeren (Rækkehøjde: Kompakt/Normal/Stor) renderede korrekt. Bruger kørte selv videre
+    tests: "ser godt ud".
+- ✅ **v0.2.96 — refresh-bar/ramme følger nu app-temaet reaktivt (2026-07-18, brugerrapport
+  "refresh-baren følger systemets tema, ikke det tema der er sat i HA Widgets-appen"):**
+  - **Root cause (kode-niveau):** `WidgetColors.refreshOverlay/frameBackground/themed`
+    (sidstnævnte bruges af `chipDimText`/`fadedContent`) læste `SecureStore.themeMode` IMPERATIVT og
+    abonnerede ikke på nogen Compose-state. v0.2.75 gjorde temaet reaktivt ved at collecte
+    `observeThemeSettings()` i `WidgetGlanceTheme` og opdatere `GlanceTheme.colors` (en
+    CompositionLocal). Et tema-skift re-komponerer derfor kun de composables der LÆSER
+    `GlanceTheme.colors.X` (rækkerne/ikon-tint) — de imperative farve-funktioner re-kaldes aldrig, så
+    de beholdt tema-værdien fra første komposition (typisk system). Resultat: rækkerne skiftede tema,
+    men refresh-barens baggrund + ramme + faded/chip-dim-farver "fulgte systemet" indtil næste fulde
+    provideGlance.
+  - **Fix:** ny `LocalWidgetThemeMode` CompositionLocal — `WidgetGlanceTheme` leverer den reaktive
+    `settings.themeMode` via `CompositionLocalProvider`. `refreshOverlay`/`frameBackground`/`themed`/
+    `chipDimText`/`fadedContent` er nu `@Composable` og læser `LocalWidgetThemeMode.current` i stedet
+    for `SecureStore` imperativt → et tema-skift opdaterer localen → de re-komponerer med det samme,
+    sammen med rækkerne. `colorFor`s nu-ubrugte `context`-param fjernet (8 call-sites).
+  - **QA:** clean build + fuld unit-test-suite grøn. Emulator (`pixel_test`): installeret, starter
+    uden crash. **Visuel verifikation (skift tema i app → refresh-bar + ramme følger med øjeblikkeligt)
+    udføres på S23** — kræver en placeret multi-widget + HA-forbindelse, som emulatoren mangler efter
+    omdøbningen. Afventer bruger. `code-review` køres inden merge.
 
 ## Næste skridt
 

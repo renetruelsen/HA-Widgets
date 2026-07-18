@@ -135,7 +135,7 @@
         <!-- Eksponerer den eksporterede config-fil midlertidigt til systemets share-sheet. -->
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="dk.akait.hawidgets.fileprovider"
+            android:authorities="dk.rtr.hawidgets.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

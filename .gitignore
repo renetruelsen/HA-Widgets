@@ -14,3 +14,11 @@
 
 # Brainstorming-companion mockups/scratch (screenshots, DB dumps m.m.) — ikke del af koden
 .superpowers/
+
+# Kotlin daemon session files
+.kotlin/
+
+# Play signing + build artifacts (never commit signing keys or bundles)
+*.jks
+keystore.properties
+*.aab

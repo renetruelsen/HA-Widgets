@@ -149,6 +149,10 @@
     <string name="multi_entity_config_title">Combined widget</string>
     <string name="multi_entity_empty_hint">No slots yet — tap \"Add slot\" to start.</string>
     <string name="multi_entity_show_refresh_icon">Show refresh icon</string>
+    <string name="row_density_label">Row height</string>
+    <string name="row_density_compact">Compact</string>
+    <string name="row_density_normal">Normal</string>
+    <string name="row_density_large">Large</string>
     <string name="add_slot">+ Add slot</string>
     <string name="cd_edit">Edit</string>
     <string name="cd_remove">Remove %1$s</string>

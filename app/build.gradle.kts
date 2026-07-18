@@ -15,15 +15,15 @@ val localProperties = Properties().apply {
 }
 
 android {
-    namespace = "dk.akait.hawidgets"
+    namespace = "dk.rtr.hawidgets"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dk.akait.hawidgets"
+        applicationId = "dk.rtr.hawidgets"
         minSdk = 26
         targetSdk = 35
-        versionCode = 93
-        versionName = "0.2.93"
+        versionCode = 96
+        versionName = "0.2.96"
         buildConfigField(
             "String",
             "LOG_UPLOAD_TOKEN",

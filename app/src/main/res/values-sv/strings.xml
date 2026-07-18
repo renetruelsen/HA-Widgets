@@ -149,6 +149,10 @@
     <string name="multi_entity_config_title">Kombinerad widget</string>
     <string name="multi_entity_empty_hint">Inga platser än — tryck på \"Lägg till plats\" för att börja.</string>
     <string name="multi_entity_show_refresh_icon">Visa uppdateringsikon</string>
+    <string name="row_density_label">Radhöjd</string>
+    <string name="row_density_compact">Kompakt</string>
+    <string name="row_density_normal">Normal</string>
+    <string name="row_density_large">Stor</string>
     <string name="add_slot">+ Lägg till plats</string>
     <string name="cd_edit">Redigera</string>
     <string name="cd_remove">Ta bort %1$s</string>

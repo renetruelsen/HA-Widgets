@@ -10,7 +10,7 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:widgetFeatures="reconfigurable"
-    android:configure="dk.akait.hawidgets.widget.multientity.MultiEntityWidgetConfigActivity"
+    android:configure="dk.rtr.hawidgets.widget.multientity.MultiEntityWidgetConfigActivity"
     android:description="@string/multi_entity_widget_description"
     android:previewImage="@drawable/preview_multi_entity"
     android:updatePeriodMillis="0"
