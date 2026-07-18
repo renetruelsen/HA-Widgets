@@ -3,13 +3,14 @@
 Alt til Google Play Store for **HA Widgets** samlet ét sted.
 
 - **applicationId:** `dk.rtr.hawidgets` (permanent på Play — kan ikke ændres efter første upload)
-- **Aktuel version:** `0.2.96` (versionCode `96`)
+- **Aktuel version:** `0.2.97` (versionCode `97`)
 
 ## Indhold
 
 | Sti | Hvad | I git? |
 |-----|------|--------|
 | `ha-widgets-<version>-<code>.aab` | Den signerede App Bundle klar til upload | ❌ git-ignoreret (`*.aab`) |
+| `play-icon-512.png` | **App-ikon 512×512** til butikssiden (blå hus-af-widgets) | ✅ |
 | `signing/upload-keystore.jks` | **Upload-nøgle** (RSA 2048, alias `upload`, gyldig til 2053) | ❌ git-ignoreret (`*.jks`) |
 | `../../keystore.properties` (repo-rod) | Nøgle-sti + passwords som Gradle læser ved release-build | ❌ git-ignoreret |
 | `store-listing.md` | Butiks-tekster (titel/kort/fuld beskrivelse) på en/da/sv | ✅ |
@@ -41,7 +42,7 @@ Release-buildet signeres automatisk når `keystore.properties` findes i repo-rod
 
 ## Endnu ikke lavet (kræves/anbefales før publicering)
 
-- [ ] **App-ikon 512×512** (PNG, high-res icon til butikssiden)
+- [x] **App-ikon 512×512** — `play-icon-512.png` (matcher det nye adaptive launcher-ikon)
 - [ ] **Feature graphic 1024×500** (PNG/JPG — vises øverst på butikssiden)
 - [ ] Mindst **2 telefon-screenshots** pr. sprog (findes — verificér de viser reelle widgets, ikke onboarding)
 - [ ] **Privatlivspolitik-URL** (påkrævet — appen håndterer HA-token/URL; hostes fx på rtr.dk)
