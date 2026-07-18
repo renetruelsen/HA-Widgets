@@ -1,0 +1,11 @@
+Første version.
+
+• Dashboard-genvej-widget — åbn et hvilket som helst Home Assistant-dashboard med ét tryk
+• Multi-entitet-widget — vis og styr flere entiteter i én størrelsesjusterbar widget, med rækker og sekundære chips
+• Virker offline — widgets viser den senest kendte tilstand med markering hvis data er forældet
+• Sikker — dit access token gemmes krypteret på enheden og forlader den aldrig
+• Ingen cloud — forbinder direkte til din egen Home Assistant
+• Mørkt, lyst eller system-tema, med 6 widget-farvetemaer
+• Fås på dansk, engelsk og svensk
+• Bekræft-ved-tryk for at undgå utilsigtede handlinger
+• Valgfri diagnostik-rapport du selv kan sende hvis noget går galt — sendes aldrig automatisk

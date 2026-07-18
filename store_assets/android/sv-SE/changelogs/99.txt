@@ -1,0 +1,11 @@
+Första version.
+
+• Dashboard-genväg-widget — öppna vilken Home Assistant-instrumentpanel som helst med en tryckning
+• Multi-enhet-widget — visa och styr flera enheter i en storleksanpassningsbar widget, med rader och sekundära chips
+• Fungerar offline — widgets visar det senast kända tillståndet med en markering om data är föråldrad
+• Säker — din åtkomsttoken lagras krypterad på enheten och lämnar den aldrig
+• Inget moln — ansluter direkt till din egen Home Assistant
+• Mörkt, ljust eller systemtema, med 6 widget-färgteman
+• Finns på engelska, danska och svenska
+• Bekräfta-vid-tryck för att undvika oavsiktliga åtgärder
+• Valfri diagnostikrapport du själv kan skicka om något går fel — skickas aldrig automatiskt

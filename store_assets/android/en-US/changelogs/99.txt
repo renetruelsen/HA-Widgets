@@ -1,0 +1,11 @@
+Initial release.
+
+• Dashboard shortcut widget — open any Home Assistant dashboard with one tap
+• Multi-entity widget — show and control several entities in one resizable widget, with rows and secondary chips
+• Works offline — widgets show the last known state with a staleness marker
+• Secure — your access token is stored encrypted on the device and never leaves it
+• No cloud — connects directly to your own Home Assistant instance
+• Dark, light or system theme, with 6 widget color themes
+• Available in English, Danish and Swedish
+• Confirm-on-tap option to avoid accidental actions
+• Optional diagnostic report you can send if something goes wrong — never sent automatically

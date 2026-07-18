@@ -18,7 +18,9 @@ Alt til Google Play Store for **HA Widgets** samlet ét sted.
 | `../../keystore.properties` (repo-rod) | Nøgle-sti + passwords som Gradle læser ved release-build | ❌ git-ignoreret |
 | `store-listing.md` | Butiks-tekster (titel/kort/fuld beskrivelse) på en/da/sv | ✅ |
 | `privacy-policy.md` | **Privatlivspolitik** (kilde) — live på https://rtr.dk/projects/ha-widgets/privacy | ✅ |
+| `data-safety.md` | Play Console **Data safety**-formular, udfyldningsklar reference | ✅ |
 | `screenshots/` | Phone + tablet7 + tablet10 screenshots på en/da/sv | ✅ |
+| `<locale>/changelogs/<versionCode>.txt` | Release-noter pr. locale (fastlane-format), indsættes manuelt i Play Console | ✅ |
 
 ## ⚠️ Backup af upload-nøglen — VIGTIGT
 
