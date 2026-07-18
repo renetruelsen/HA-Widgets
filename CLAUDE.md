@@ -1857,6 +1857,51 @@ _Alle kendte UX-problemer løst. Kanonisk spec i [`docs/widget-settings-spec.md`
 
 `code-review` køres inden merge til main.
 
+## Releases (Play Store test-track)
+
+Tilpasset fra en søster-app's Flutter-baserede release-proces (bruger delte 2026-07-18) — samme
+idéer (tagging, changelog-struktur, releasenote-format), oversat til dette repos Gradle/Kotlin-
+værktøjer (ingen Flutter, ingen fastlane-automatisering endnu).
+
+- **`store_assets/android/`** = ALT til Play Store-listingen (se
+  [`store_assets/android/README.md`](store_assets/android/README.md) for AAB-build/signering).
+  Changelogs ligger i `store_assets/android/<locale>/changelogs/<versionCode>.txt` (fastlane-
+  konventionen — filnavn = **versionCode**, ikke versionName) for de 3 aktive Play-locales:
+  `da-DK`, `en-US`, `sv-SE` (jf. `store-listing.md` — modsat søster-appen har HA Widgets alle tre
+  som rigtige Play-locales, ikke kun to).
+
+- **Release-checkliste (følg i denne rækkefølge — gælder hver gang der uploades til Play, også
+  intern/closed testing):**
+  1. **Kør `./gradlew testDebugUnitTest` FØRST**, før noget andet — 0 fejlende. Byg aldrig en
+     release-AAB på en rød/utestet branch.
+  2. Bump `versionCode`/`versionName` i `app/build.gradle.kts` (allerede fast projekt-konvention
+     ved hver ændring — se [`feedback-always-bump-version`]-hukommelsen; en release-upload skal
+     mindst opfylde dette, Play afviser en genbrugt versionCode).
+  3. Find rettelser siden sidste release-tag: `git log v<forrige-versionName>..HEAD --oneline`.
+     Filtrér docs-only-commits fra (kun brugervendte ændringer i release-noten).
+  4. Skriv release-noter, punktform, læsbart for lægmand (ingen filnavne/klassenavne), til
+     `store_assets/android/<locale>/changelogs/<versionCode>.txt` for hver af de 3 locales.
+  5. Byg AAB: `JAVA_HOME=<jdk17> ./gradlew bundleRelease` (signeres automatisk hvis
+     `keystore.properties` findes i repo-roden — se `store_assets/android/README.md`).
+  6. Commit version-bump + changelog-filer (separat commit fra evt. andre hængende
+     docs-ændringer i working tree).
+  7. Tag `v<versionName>` (annoteret, med release-notens indhold som besked) på den commit der
+     blev bygget. **Bemærk:** i dette repo følger `versionCode` og `versionName` hinanden 1:1
+     (begge bumpes sammen ved hver ændring) — modsat søster-appens `X.Y.Z+N`-format er der derfor
+     ingen separat `+N` at tagge med, `v<versionName>` (fx `v0.2.99`) identificerer entydigt både.
+  8. Push tag + commits til `origin` — **kun hvis brugeren har bekræftet det** (tagging er
+     lokalt/reversibelt, push er ikke).
+  9. Upload `.aab`'en manuelt til Play Console (Internal/Closed testing track) — ingen
+     fastlane-automatisering endnu, så release-note-teksten skal også indsættes manuelt i Play
+     Console-UI'et (den synker ikke fra `.txt`-filerne af sig selv).
+  - **QA-gate:** hvis ændringerne siden sidste tag ikke allerede har kørt igennem den formelle
+    emulator+telefon-QA/`code-review`-proces ovenfor, kør den retroaktivt før upload — spring den
+    ikke over bare fordi testene er grønne.
+
+- **Release-note-format i chat-svar:** når release-noter skrives i `<en-US>`/`<da-DK>`/`<sv-SE>`-
+  blokke i en samtale, indsæt tom linje EFTER selve åbnings-tagget (før teksten begynder) — ren
+  læsbarhed, ikke tekst klistret op ad tagget.
+
 ## Build & install
 
 ```
