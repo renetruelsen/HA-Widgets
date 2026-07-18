@@ -8,8 +8,6 @@ import android.os.Process
 import android.util.Log
 import dk.rtr.hawidgets.BuildConfig
 import dk.rtr.hawidgets.data.SecureStore
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -36,8 +34,8 @@ object RemoteLogger {
         data object NotConfigured : UploadResult()
         data object NetworkError : UploadResult()
 
-        /** Kun ramt af den interne, ikke-forced auto-flush fra [w]/[e] — aldrig af
-         * "Report a problem"-dialogen (sender altid `force = true`). */
+        /** I praksis uopnåelig efter opt-in-omlægningen (ingen ikke-forced kaldere tilbage);
+         * beholdt som sikkerhedsnet-returværdi for tom-buffer-grenen i [flush]. */
         data object Throttled : UploadResult()
         data class ServerRejected(val code: Int) : UploadResult()
     }
@@ -51,18 +49,21 @@ object RemoteLogger {
         .readTimeout(5, TimeUnit.SECONDS)
         .build()
 
+    // Alle tre niveauer skriver KUN til den in-memory buffer — de uploader ALDRIG af sig selv.
+    // "Privacy by default" (opt-in): diagnostik forlader først enheden når brugeren eksplicit
+    // vælger det via "Report a problem" eller den automatisk åbnede crash-rapport-dialog (som
+    // begge kalder [flush] med `force = true`). Linjerne opsamles så de ER med NÅR brugeren
+    // vælger at sende. Se docs/superpowers/specs/2026-07-12-remote-error-logging-design.md.
     fun i(tag: String, message: String) {
         buffer.add('I', tag, message)
     }
 
     fun w(tag: String, message: String) {
         buffer.add('W', tag, message)
-        flush()
     }
 
     fun e(tag: String, message: String) {
         buffer.add('E', tag, message)
-        flush()
     }
 
     /** Kaldes tidligt (HaWidgetsApp.onCreate) — tilføjer enheds-info-linjen én gang pr. proces. */
@@ -104,10 +105,10 @@ object RemoteLogger {
     }
 
     /**
-     * Uploader bufferens indhold. [force] ignorerer 30s-throttlen (bruges af crash-handleren og
-     * "Report a problem"-dialogen). [configLines] tilføjes til bufferen lige før upload (crash +
-     * manuel send — IKKE den rutinemæssige, throttlede auto-flush fra [w]/[e]). Blokerende
-     * netværkskald — kald fra en baggrundstråd (crash-handleren) eller wrap i `Dispatchers.IO`
+     * Uploader bufferens indhold. Kaldes KUN fra den brugerudløste "Report a problem"-dialog
+     * (opt-in — se [installCrashHandler]/[w]/[e]); der er ingen automatiske kaldere tilbage.
+     * [force] ignorerer 30s-throttlen (dialogen sender altid `force = true`). [configLines]
+     * tilføjes til bufferen lige før upload. Blokerende netværkskald — wrap i `Dispatchers.IO`
      * fra en coroutine.
      */
     fun flush(force: Boolean = false, configLines: List<String> = emptyList()): UploadResult {
@@ -145,11 +146,13 @@ object RemoteLogger {
     }
 
     /**
-     * Installerer en global uncaught-exception-handler: skriver en E-linje + stacktrace,
-     * PERSISTERER buffer-øjebliksbilledet til [SecureStore] (så "Report a problem"-dialogen kan
-     * tilbyde at sende det ved næste app-åbning, selv efter en proces-genstart), tilføjer
-     * widget-config-dumpet, og forsøger en FORCED, blokerende upload FØR den oprindelige handler
-     * kaldes videre — så systemets crash-dialog/øvrig crash-reporting sker helt uændret bagefter.
+     * Installerer en global uncaught-exception-handler: skriver en E-linje + stacktrace og
+     * PERSISTERER buffer-øjebliksbilledet til [SecureStore], så "Report a problem"-dialogen kan
+     * TILBYDE at sende det ved næste app-åbning (selv efter en proces-genstart). Der uploades
+     * IKKE noget her — det ville være en tvungen upload uden samtykke. Opt-in ("privacy by
+     * default"): rapporten sendes først når brugeren eksplicit accepterer i next-launch-dialogen.
+     * Widget-config-dumpet indsamles friskt af selve send-stien (ReportProblemDialog.sendReport),
+     * ikke her. Systemets crash-dialog/øvrig crash-reporting sker helt uændret bagefter.
      */
     fun installCrashHandler(context: Context) {
         val appContext = context.applicationContext
@@ -158,22 +161,14 @@ object RemoteLogger {
             try {
                 buffer.add('E', "CRASH", throwable.toString())
                 buffer.addRaw(Log.getStackTraceString(throwable))
-                try {
-                    // .commit() (synkron), IKKE .apply() — se SecureStore.persistPendingCrashSync's
-                    // KDoc. Fundet via emulator-QA: med .apply() nåede skrivningen aldrig disk før
-                    // processen døde, så auto-trigger-dialogen aldrig så et pending-crash-flag ved
-                    // næste åbning.
-                    SecureStore.get(appContext).persistPendingCrashSync(throwable.toString(), buffer.body())
-                } catch (_: Throwable) {
-                    // Persistering er best-effort — må ikke forhindre selve upload-forsøget nedenfor.
-                }
-                val configLines = runBlocking {
-                    withTimeoutOrNull(2000) { collectWidgetConfigDump(appContext) } ?: emptyList()
-                }
-                flush(force = true, configLines = configLines)
+                // .commit() (synkron), IKKE .apply() — se SecureStore.persistPendingCrashSync's
+                // KDoc. Fundet via emulator-QA: med .apply() nåede skrivningen aldrig disk før
+                // processen døde, så auto-trigger-dialogen aldrig så et pending-crash-flag ved
+                // næste åbning.
+                SecureStore.get(appContext).persistPendingCrashSync(throwable.toString(), buffer.body())
             } catch (_: Throwable) {
-                // Logging må aldrig forstyrre den rigtige crash-håndtering — inkl. Error
-                // (fx StackOverflowError/OutOfMemoryError), da throwable selv kan være sådan én.
+                // Logging/persistering må aldrig forstyrre den rigtige crash-håndtering — inkl.
+                // Error (fx StackOverflowError/OutOfMemoryError), da throwable selv kan være sådan én.
             }
             if (previous != null) {
                 previous.uncaughtException(thread, throwable)

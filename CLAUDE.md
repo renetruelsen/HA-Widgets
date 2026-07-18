@@ -1775,6 +1775,43 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     uden crash. **Visuel verifikation (skift tema i app → refresh-bar + ramme følger med øjeblikkeligt)
     udføres på S23** — kræver en placeret multi-widget + HA-forbindelse, som emulatoren mangler efter
     omdøbningen. Afventer bruger. `code-review` køres inden merge.
+- ✅ **v0.2.97 — nyt app-ikon + Play-assets (2026-07-18, ikke logget i sin egen session):**
+  nyt app-ikon "hjem bygget af widget-fliser" + 512×512 Play-ikon, feature graphic 1024×500,
+  release-signeringsconfig, samlet `store_assets/android/` (AAB + upload-nøgle git-ignoreret,
+  store-listing, screenshots, README), og privatlivspolitik-udkast. Se commits
+  `df9b30f`/`64c0f91`/`8c5ac14`/`897af09`/`c9cff02`.
+- ✅ **v0.2.98 — crash-/diagnostik-rapportering gjort opt-in før Play-release (2026-07-18,
+  brugerbeslutning "privacy by default"):**
+  - **Baggrund:** privatlivspolitik-gennemgangen (v0.2.97) afslørede at crash-rapporter blev sendt
+    til `rtr.dk/api/logs` **automatisk uden samtykke** (tvungen, blokerende upload i
+    `RemoteLogger.installCrashHandler`), plus at `RemoteLogger.w()/e()` (bl.a. HA-forbindelsesfejl)
+    auto-flushede. For EU/GDPR og "privacy by default" skulle ingen diagnostik forlade enheden uden
+    et eksplicit brugervalg. Bruger valgte (`AskUserQuestion`): **kun per-crash dialog** — ingen ny
+    "send automatisk"-toggle.
+  - **Fix (`RemoteLogger.kt`):** fjernet ALLE automatiske uploads. `w()`/`e()` skriver nu KUN til
+    den in-memory buffer (ingen `flush()`). `installCrashHandler` persisterer stadig crashet synkront
+    (`persistPendingCrashSync`, uændret) men **uploader ikke** — indsamler heller ikke længere
+    widget-config-dumpet ved crash-tid (send-stien gør det friskt). Eneste tilbageværende
+    `flush(force=true)`-kalder er den bruger­udløste `ReportProblemDialog.sendReport`. Ubrugte
+    imports (`runBlocking`/`withTimeoutOrNull`) fjernet; KDoc'er + `UploadResult.Throttled`-doc
+    opdateret. Ingen ny data/UI — den eksisterende v0.2.78 next-launch-dialog ("App closed
+    unexpectedly", gated på `pendingCrashSummary`) ER samtykke-mekanismen pr. crash.
+  - **Privatlivspolitik + Data safety:** `store_assets/android/privacy-policy.md` opdateret (ingen
+    automatiske uploads; rapporter sendes kun når brugeren vælger det). Nyt
+    `store_assets/android/data-safety.md` — udfyldningsklar reference til Play Consoles Data
+    safety-formular ud fra appens faktiske dataflows (verificeret i kode): kun Crash logs +
+    Diagnostics + valgfri note deklareres (Collected/optional/ikke delt), alt andet "No"; noter om
+    `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`-permission-deklaration + at app-listen aldrig sendes
+    (`<queries>`, ikke `QUERY_ALL_PACKAGES`).
+  - **QA (emulator `pixel_test`, ægte HA mod `home.rtr.dk`, `LOG_UPLOAD_TOKEN` sat):** build + alle
+    unit-tests grønne. Verificeret end-to-end via `adb shell am crash dk.rtr.hawidgets`: (1) ved
+    crash-tidspunkt INGEN upload-forsøg i logcat (før ændringen ville token'et have udløst et POST →
+    "Log upload failed" uden DNS til rtr.dk); (2) crashet persisteres synkront (prefs-fil voksede
+    1802→3470 bytes ved crash-tid); (3) ved relaunch popper "App closed unexpectedly"-dialogen op
+    med korrekt crash-summary + Send report/Cancel/Copy log, stadig UDEN nogen auto-upload i logcat;
+    (4) Cancel → ny relaunch viser IKKE dialogen igen (ask-once-per-crash intakt). Den manuelle
+    "Send report"-upload-sti (`flush(force=true)`) er uændret kode. Device-QA på S23 + `code-review`
+    inden merge afventer bruger.
 
 ## Næste skridt
 

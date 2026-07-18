@@ -14,9 +14,9 @@ The app is developed by René Truelsen (rtr.dk). Contact: **rtr@rtr.dk**.
   sent **only to your own Home Assistant server** — never to us or any third party.
 - The app contains **no ads, no analytics SDKs, and no third‑party trackers**. We do not sell or
   share your data.
-- The only data that can leave your device to us is an **optional/automatic diagnostic report**
-  (on a crash, or when you tap "Report a problem"). It never contains your Home Assistant address
-  or token.
+- The only data that can leave your device to us is a **diagnostic report that you choose to send**
+  (after a crash you are asked whether to send one, or you tap "Report a problem"). Nothing is sent
+  automatically, and it never contains your Home Assistant address or token.
 
 ## 1. Data stored on your device
 
@@ -40,10 +40,11 @@ network by your own choice; `https://` is recommended.
 ## 3. Diagnostic / crash reports (to the developer)
 
 To help fix bugs, the app can send a **diagnostic report** to the developer's server at
-`https://rtr.dk/api/logs`. This happens:
+`https://rtr.dk/api/logs`. Sending is **always your choice** — nothing is transmitted automatically:
 
-- **automatically if the app crashes**, and
-- **when you tap "Report a problem"** in the app's settings.
+- **If the app crashes**, the crash details are stored locally on your device and, the next time you
+  open the app, you are **asked whether to send** a report. If you decline, nothing leaves your device.
+- **When you tap "Report a problem"** in the app's settings.
 
 A report may contain: your device model, Android version and app version; the app's recent
 internal log lines; a summary of your widget setup (entity IDs, domains and action types); and any
