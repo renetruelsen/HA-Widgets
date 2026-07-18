@@ -1812,6 +1812,10 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (4) Cancel → ny relaunch viser IKKE dialogen igen (ask-once-per-crash intakt). Den manuelle
     "Send report"-upload-sti (`flush(force=true)`) er uændret kode. Device-QA på S23 + `code-review`
     inden merge afventer bruger.
+- ✅ **v0.2.99 — privatlivspolitik hostet live (2026-07-18):** privatlivspolitikken er nu live på
+  `https://rtr.dk/projects/ha-widgets/privacy` — `store_assets/android/README.md` opdateret med
+  URL'en (checklistepunktet markeret færdigt; kun "indsæt URL i Play Console" står tilbage, ren
+  Play Console-handling, ingen kode). Ren dokumentations-/version-opdatering, ingen kodeændring.
 
 ## Næste skridt
 

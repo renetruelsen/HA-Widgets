@@ -3,7 +3,8 @@
 Alt til Google Play Store for **HA Widgets** samlet ét sted.
 
 - **applicationId:** `dk.rtr.hawidgets` (permanent på Play — kan ikke ændres efter første upload)
-- **Aktuel version:** `0.2.97` (versionCode `97`)
+- **Aktuel version:** `0.2.99` (versionCode `99`)
+- **Privatlivspolitik (live):** https://rtr.dk/projects/ha-widgets/privacy
 
 ## Indhold
 
@@ -16,7 +17,7 @@ Alt til Google Play Store for **HA Widgets** samlet ét sted.
 | `signing/upload-keystore.jks` | **Upload-nøgle** (RSA 2048, alias `upload`, gyldig til 2053) | ❌ git-ignoreret (`*.jks`) |
 | `../../keystore.properties` (repo-rod) | Nøgle-sti + passwords som Gradle læser ved release-build | ❌ git-ignoreret |
 | `store-listing.md` | Butiks-tekster (titel/kort/fuld beskrivelse) på en/da/sv | ✅ |
-| `privacy-policy.md` | **Privatlivspolitik (udkast)** — hostes på rtr.dk, URL i Play Console | ✅ |
+| `privacy-policy.md` | **Privatlivspolitik** (kilde) — live på https://rtr.dk/projects/ha-widgets/privacy | ✅ |
 | `screenshots/` | Phone + tablet7 + tablet10 screenshots på en/da/sv | ✅ |
 
 ## ⚠️ Backup af upload-nøglen — VIGTIGT
@@ -57,8 +58,8 @@ chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
 - [x] **App-ikon 512×512** — `play-icon-512.png` (matcher det nye adaptive launcher-ikon)
 - [x] **Feature graphic 1024×500** — `feature-graphic-1024x500.png` (samme stil som ikonet)
 - [ ] Mindst **2 telefon-screenshots** pr. sprog (findes — verificér de viser reelle widgets, ikke onboarding)
-- [~] **Privatlivspolitik** — udkast klar (`privacy-policy.md`); skal **gennemlæses + hostes** på en
-      offentlig URL (fx rtr.dk), og URL'en indsættes i Play Console
+- [x] **Privatlivspolitik** — live på https://rtr.dk/projects/ha-widgets/privacy; indsæt URL'en i
+      Play Console (App content → Privacy policy)
 - [ ] **Content rating**-spørgeskema (udfyldes i Play Console)
 - [ ] **Data safety**-formular (token gemmes lokalt i AndroidKeyStore, sendes kun til brugerens egen HA;
       diagnostik-log til rtr.dk ved "Report a problem" — deklarér dette)
