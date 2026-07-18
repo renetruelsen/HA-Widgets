@@ -14,6 +14,15 @@ val localProperties = Properties().apply {
     }
 }
 
+// Release-signering (Play upload key). Læses fra en git-ignoreret keystore.properties i repo-roden.
+// Filen findes ikke for andre/CI → så bygger release UNDERSKREVET-ELLERS-fallback til debug-nøgle
+// (bundleRelease virker stadig lokalt uden nøglen, bare ikke Play-uploadbar).
+val keystoreProperties = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
+
 android {
     namespace = "dk.rtr.hawidgets"
     compileSdk = 35
@@ -31,6 +40,17 @@ android {
         )
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -38,6 +58,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Kun sat når keystore.properties findes lokalt — ellers usigneret (ikke Play-uploadbar).
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
