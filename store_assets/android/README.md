@@ -11,6 +11,8 @@ Alt til Google Play Store for **HA Widgets** samlet ét sted.
 |-----|------|--------|
 | `ha-widgets-<version>-<code>.aab` | Den signerede App Bundle klar til upload | ❌ git-ignoreret (`*.aab`) |
 | `play-icon-512.png` | **App-ikon 512×512** til butikssiden (blå hus-af-widgets) | ✅ |
+| `feature-graphic-1024x500.png` | **Feature graphic 1024×500** (banner øverst på butikssiden) | ✅ |
+| `feature-graphic.src.html` | Kilde til feature-graphic — rediger + gen-render (se nedenfor) | ✅ |
 | `signing/upload-keystore.jks` | **Upload-nøgle** (RSA 2048, alias `upload`, gyldig til 2053) | ❌ git-ignoreret (`*.jks`) |
 | `../../keystore.properties` (repo-rod) | Nøgle-sti + passwords som Gradle læser ved release-build | ❌ git-ignoreret |
 | `store-listing.md` | Butiks-tekster (titel/kort/fuld beskrivelse) på en/da/sv | ✅ |
@@ -40,10 +42,19 @@ Release-buildet signeres automatisk når `keystore.properties` findes i repo-rod
 (fx på en anden maskine/CI), bygger release usigneret — så kopiér `keystore.properties` +
 `signing/upload-keystore.jks` med over (aldrig via git).
 
+## Gen-render feature graphic
+
+Rediger `feature-graphic.src.html` og render til præcis 1024×500 med headless Chrome:
+
+```
+chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
+  --window-size=1024,500 --screenshot=feature-graphic-1024x500.png feature-graphic.src.html
+```
+
 ## Endnu ikke lavet (kræves/anbefales før publicering)
 
 - [x] **App-ikon 512×512** — `play-icon-512.png` (matcher det nye adaptive launcher-ikon)
-- [ ] **Feature graphic 1024×500** (PNG/JPG — vises øverst på butikssiden)
+- [x] **Feature graphic 1024×500** — `feature-graphic-1024x500.png` (samme stil som ikonet)
 - [ ] Mindst **2 telefon-screenshots** pr. sprog (findes — verificér de viser reelle widgets, ikke onboarding)
 - [ ] **Privatlivspolitik-URL** (påkrævet — appen håndterer HA-token/URL; hostes fx på rtr.dk)
 - [ ] **Content rating**-spørgeskema (udfyldes i Play Console)
