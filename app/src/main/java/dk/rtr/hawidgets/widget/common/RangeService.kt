@@ -43,6 +43,12 @@ suspend fun sendRangeValue(context: Context, domain: String, entityId: String, v
         else -> return false
     }
     val ok = result is HaApiClient.Result.Ok
-    if (ok) EntityRepository.refresh(context.applicationContext, entityId)
+    if (ok) {
+        EntityRepository.refresh(context.applicationContext, entityId)
+        // Fysiske RANGE-mål (klima-temperatur, Velux-position, lys-dæmpning) lander først
+        // sekunder-til-minutter efter kommandoen → efterpoll så den nye tilstand fanges uden
+        // at vente på næste periodiske sync.
+        EntityRepository.scheduleSettleBurst(context, entityId)
+    }
     return ok
 }

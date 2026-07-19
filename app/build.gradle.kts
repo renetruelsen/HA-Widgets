@@ -31,8 +31,8 @@ android {
         applicationId = "dk.rtr.hawidgets"
         minSdk = 26
         targetSdk = 35
-        versionCode = 99
-        versionName = "0.2.99"
+        versionCode = 100
+        versionName = "0.2.100"
         buildConfigField(
             "String",
             "LOG_UPLOAD_TOKEN",

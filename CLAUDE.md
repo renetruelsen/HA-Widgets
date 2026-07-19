@@ -1816,6 +1816,52 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   `https://rtr.dk/projects/ha-widgets/privacy` — `store_assets/android/README.md` opdateret med
   URL'en (checklistepunktet markeret færdigt; kun "indsæt URL i Play Console" står tilbage, ren
   Play Console-handling, ingen kode). Ren dokumentations-/version-opdatering, ingen kodeændring.
+  Første Play-release cuttet: `store_assets/android/<locale>/changelogs/99.txt` (da/en/sv),
+  signeret AAB, annoteret tag `v0.2.99` pushet. Play-kategori besluttet: **House & Home** (matcher
+  HA's egen officielle companion-app).
+- 🔄 **v0.2.100 — "settle-burst": efterpolling efter bruger-handling (2026-07-19, brugerrapport
+  "ændringer opdateres ikke intuitivt længere efter pull-interval-featuren"):**
+  - **Root cause (systematic-debugging):** appen er ren pull — INGEN aktiv lytning på entity-state
+    (den eneste WebSocket-brug er dashboard-listen i genvej-config). Efter en handling skete der to
+    ting afhængigt af type: TOGGLE/TRIGGER = kun optimistisk lokal on/off-skrivning, NUL opfølgende
+    hentning; RANGE/skyder + climate/light/cover tænd-sluk = præcis ÉN øjeblikkelig hentning af den
+    ene entitet lige efter kommandoen. Problemet: fysiske enheder lander sekunder-til-minutter
+    senere (spaens `hvac_action` flipper til "heating" når varmelegemet starter; Velux kører til
+    position), så den ene øjeblikkelige hentning fanger overgangstilstanden, ikke sluttilstanden —
+    hvorefter widgetten ventede på næste periodiske sync. **v0.2.85 (pull-interval) gjorde et gammelt
+    hul synligt:** den faste 15-min-sync lappede det før, men default er nu 30 min (op til dobbelt
+    ventetid). Ramte: climate (orange + temp), cover (position/opening-closing, Velux), light-skyder
+    (brightness), scene/script/automation-sideeffekter, asymmetriske slots (viser A, handler på B),
+    og TOGGLE-fejl (optimistisk gæt stod som "sandhed" til næste sync).
+  - **Løsning (brugervalgt via afklaring, omfang = "hele rækken"):** ny `scheduleSettleBurst` i
+    `EntityRepository` — efter en VELLYKKET handling henter den frisk tilstand for den handlede
+    entitet + hele dens række(r) (slot display+action + alle rækkens chips' display+action) nogle
+    få gange over ~90 sek (`SETTLE_BURST_DELAYS_MS` = 2/5/10/20/40/60/90 sek kumulativt, 7 runder).
+    Kun på et eksplicit bruger-tryk, tidsbegrænset, ingen vedvarende forbindelse (batteri-krav
+    bevaret). Coalescing: nyt tryk på samme entitet annullerer forrige burst. Eget proces-levetids
+    `burstScope` (overlever broadcast-receiver/Activity-nedrivning). **Ingen "stop tidligt"-logik**
+    bevidst: en forsinket ændring kan ikke skelnes fra "endnu ikke startet" uden domæne-specifik
+    terminal-viden, så naiv "to ens runder → stop" ville risikere at stoppe FØR ændringen når frem
+    (fast plan er korrekt/deterministisk, og 7 bundne GET-runder pr. tryk er batterimæssigt
+    negligerbart — runde-antal driver forbruget, ikke bredden).
+  - **Row-resolution** (`data/SettleBurst.kt`, ren fn `entityIdsInSameRows`, 8 unit-tests): finder
+    alle slots (appWidgetId, slotIndex) hvor entiteten optræder som visning/action/chip, og samler
+    rækkens entity-ID'er. Dækker asymmetri + chips mod andre entiteter. Fodres af nye DAO-queries
+    `getAllSlots()`/`getAllChips()`. Hooket ind i `command()` (TOGGLE/TRIGGER inkl. bekræft-dialog),
+    `sendRangeValue` (RANGE-skyder + felt) og `RangeControlActivity.sendToggle` (climate/light/cover
+    tænd-sluk). `refresh()` genbruges i loop (statisk delt OkHttp → billigt).
+  - **Fravalgt:** WebSocket `subscribe_events` (realtid, men kræver vedvarende forbindelse — imod
+    batteri-arkitektur); kortere periodisk interval (WorkManager 15-min-gulv); FCM-push (M3).
+  - **Kendt begrænsning:** under ekstremt hukommelsespres kan Android dræbe app-processen midt i en
+    burst (samme in-proces-vilkår som al baggrundskode) — best-effort, periodisk sync er backstop.
+  - **QA:** build + fuld unit-test-suite grøn (8 nye `SettleBurstTest`). Emulator (`pixel_test`):
+    APK installeret, app starter uden crash (ingen skema-/migrations-ændring). **Live burst-adfærd
+    (spa bliver orange inden for ~90s; Velux-position lander) IKKE observeret på emulator** —
+    emulatoren har ingen HA-forbindelse efter pakke-omdøbningen (v0.2.94), og det fysiske
+    settle-delay findes kun med rigtig hardware. Row-resolution + poll-plan er dækket af unit-tests;
+    orkestreringen er delay+`refresh()`-loop over den allerede-verificerede refresh-sti. **Device-QA
+    på Galaxy S23 (spa-opvarmning + Velux-skyder) + `code-review` inden release afventer bruger.**
+    Ikke committet/pushet endnu ved denne linjes skrivning.
 
 ## Næste skridt
 

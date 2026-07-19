@@ -32,6 +32,11 @@ interface MultiWidgetDao {
     @Query("SELECT * FROM multi_widget_slot WHERE appWidgetId = :id ORDER BY slotIndex ASC")
     suspend fun getSlots(id: Int): List<MultiWidgetSlotEntity>
 
+    /** Alle slots på tværs af widgets — bruges af settle-burstens row-resolution
+     * ([dk.rtr.hawidgets.data.entityIdsInSameRows]). */
+    @Query("SELECT * FROM multi_widget_slot")
+    suspend fun getAllSlots(): List<MultiWidgetSlotEntity>
+
     @Query("SELECT * FROM multi_widget_slot WHERE appWidgetId = :id ORDER BY slotIndex ASC")
     fun observeSlots(id: Int): Flow<List<MultiWidgetSlotEntity>>
 
@@ -46,6 +51,11 @@ interface MultiWidgetDao {
 
     @Query("SELECT * FROM multi_widget_chip WHERE appWidgetId = :id ORDER BY slotIndex ASC, chipIndex ASC")
     suspend fun getChips(id: Int): List<MultiWidgetChipEntity>
+
+    /** Alle chips på tværs af widgets — bruges af settle-burstens row-resolution
+     * ([dk.rtr.hawidgets.data.entityIdsInSameRows]). */
+    @Query("SELECT * FROM multi_widget_chip")
+    suspend fun getAllChips(): List<MultiWidgetChipEntity>
 
     @Query("SELECT * FROM multi_widget_chip WHERE appWidgetId = :id ORDER BY slotIndex ASC, chipIndex ASC")
     fun observeChips(id: Int): Flow<List<MultiWidgetChipEntity>>

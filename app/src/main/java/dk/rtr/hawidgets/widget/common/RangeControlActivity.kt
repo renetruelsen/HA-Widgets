@@ -132,6 +132,9 @@ class RangeControlActivity : ComponentActivity() {
                             if (result is HaApiClient.Result.Ok) {
                                 isOn = !isOn
                                 EntityRepository.refresh(applicationContext, entityId)
+                                // Climate/light/cover tænd-sluk lander først når enheden fysisk
+                                // reagerer (fx spaens hvac_action flipper) → efterpoll rækken.
+                                EntityRepository.scheduleSettleBurst(applicationContext, entityId)
                             } else {
                                 showActionError(applicationContext)
                             }

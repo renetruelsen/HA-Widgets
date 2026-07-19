@@ -3,7 +3,14 @@ package dk.rtr.hawidgets.data
 import android.content.Context
 import dk.rtr.hawidgets.data.db.AppDatabase
 import dk.rtr.hawidgets.data.db.EntityStateEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Eneste ejer af al HA-synkronisering (pull + push) og widget-fan-out.
@@ -23,6 +30,15 @@ object EntityRepository {
 
     /** Hård loft på kommando-kald så broadcast-vinduet aldrig ANR'er. */
     private const val COMMAND_TIMEOUT_MS = 8_000L
+
+    /** Proces-levetids-scope til settle-bursts. Skal OVERLEVE kalderen (en broadcast-receiver-
+     * coroutine der slutter straks, eller en Activity-scope der rives ned når en dialog lukkes),
+     * derfor eget scope frem for kalderens. [EntityRepository] er selv et proces-objekt. */
+    private val burstScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Kørende bursts, keyed på den handlede entitet — et nyt tryk på samme entitet annullerer
+     * den forrige burst (coalescing) så vi ikke stabler overlappende poll-planer. */
+    private val burstJobs = ConcurrentHashMap<String, Job>()
 
     private fun client(context: Context): HaApiClient? {
         val store = SecureStore.get(context)
@@ -101,7 +117,33 @@ object EntityRepository {
             markStale(context, entityId, restoreState = fromState)
             return false
         }
+        scheduleSettleBurst(context, entityId)
         return true
+    }
+
+    /**
+     * Starter en [settle-burst][SettleBurst] efter en vellykket bruger-handling: henter frisk
+     * tilstand for den handlede entitet + resten af dens række(r) nogle få gange over ~90 sek
+     * (se [SETTLE_BURST_DELAYS_MS]), så en forsinket FYSISK ændring (spa der begynder at varme,
+     * Velux der kører til position) fanges uden at vente på næste periodiske sync. Coalescer:
+     * et nyt tryk på samme entitet annullerer den forrige burst. Best-effort — fejl ignoreres.
+     */
+    fun scheduleSettleBurst(context: Context, entityId: String) {
+        val appCtx = context.applicationContext
+        burstJobs.remove(entityId)?.cancel()
+        val job = burstScope.launch {
+            val dao = AppDatabase.get(appCtx).multiWidgetDao()
+            val ids = entityIdsInSameRows(entityId, dao.getAllSlots(), dao.getAllChips())
+                .take(SETTLE_BURST_MAX_ENTITIES)
+            for (stepDelay in SETTLE_BURST_DELAYS_MS) {
+                delay(stepDelay)
+                for (id in ids) {
+                    runCatching { refresh(appCtx, id) }
+                }
+            }
+        }
+        burstJobs[entityId] = job
+        job.invokeOnCompletion { burstJobs.remove(entityId, job) }
     }
 
     /**
