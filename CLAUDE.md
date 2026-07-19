@@ -1819,7 +1819,7 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
   Første Play-release cuttet: `store_assets/android/<locale>/changelogs/99.txt` (da/en/sv),
   signeret AAB, annoteret tag `v0.2.99` pushet. Play-kategori besluttet: **House & Home** (matcher
   HA's egen officielle companion-app).
-- 🔄 **v0.2.100 — "settle-burst": efterpolling efter bruger-handling (2026-07-19, brugerrapport
+- ✅ **v0.2.100 — "settle-burst": efterpolling efter bruger-handling (2026-07-19, brugerrapport
   "ændringer opdateres ikke intuitivt længere efter pull-interval-featuren"):**
   - **Root cause (systematic-debugging):** appen er ren pull — INGEN aktiv lytning på entity-state
     (den eneste WebSocket-brug er dashboard-listen i genvej-config). Efter en handling skete der to
@@ -1859,9 +1859,13 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     (spa bliver orange inden for ~90s; Velux-position lander) IKKE observeret på emulator** —
     emulatoren har ingen HA-forbindelse efter pakke-omdøbningen (v0.2.94), og det fysiske
     settle-delay findes kun med rigtig hardware. Row-resolution + poll-plan er dækket af unit-tests;
-    orkestreringen er delay+`refresh()`-loop over den allerede-verificerede refresh-sti. **Device-QA
-    på Galaxy S23 (spa-opvarmning + Velux-skyder) + `code-review` inden release afventer bruger.**
-    Ikke committet/pushet endnu ved denne linjes skrivning.
+    orkestreringen er delay+`refresh()`-loop over den allerede-verificerede refresh-sti.
+  - **Device-QA (Galaxy S23, `R3CWC00JY4M`): bruger-bekræftet OK (2026-07-19)** — spa bliver orange
+    af sig selv efter skyder-justering; Velux-position lander af sig selv. Manuel code-review ren
+    (tråd-sikker coalescing via `remove(key, value)`, DAO-load én gang pr. burst, no-op i frakoblet
+    tilstand). **Release cuttet:** changelog `store_assets/android/<locale>/changelogs/100.txt`
+    (da/en/sv), signeret AAB, annoteret tag `v0.2.100` + commits pushet til `origin/main`
+    (`0fe86c3`). Play Console-upload (AAB + release-note-indsættelse) resterer som manuel handling.
 
 ## Næste skridt
 
@@ -1944,9 +1948,12 @@ værktøjer (ingen Flutter, ingen fastlane-automatisering endnu).
     emulator+telefon-QA/`code-review`-proces ovenfor, kør den retroaktivt før upload — spring den
     ikke over bare fordi testene er grønne.
 
-- **Release-note-format i chat-svar:** når release-noter skrives i `<en-US>`/`<da-DK>`/`<sv-SE>`-
-  blokke i en samtale, indsæt tom linje EFTER selve åbnings-tagget (før teksten begynder) — ren
-  læsbarhed, ikke tekst klistret op ad tagget.
+- **Release-note-format i chat-svar:** når release-noter ("produktbemærkninger") skrives i
+  `<en-US>`/`<da-DK>`/`<sv-SE>`-blokke i en samtale, indsæt tom linje EFTER selve åbnings-tagget
+  (før teksten begynder) — ren læsbarhed, ikke tekst klistret op ad tagget.
+- **Produktbemærkninger leveres to steder (brugerønske 2026-07-19):** ved hver release outputtes
+  release-noterne BÅDE i chat-tråden (i `<locale>`-blokkene ovenfor) OG som filer i android-mappen
+  (`store_assets/android/<locale>/changelogs/<versionCode>.txt`) — de to skal have samme indhold.
 
 ## Build & install
 
