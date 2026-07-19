@@ -65,7 +65,7 @@ chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
 - [ ] **Content rating**-spørgeskema (udfyldes i Play Console)
 - [ ] **Data safety**-formular (token gemmes lokalt i AndroidKeyStore, sendes kun til brugerens egen HA;
       diagnostik-log til rtr.dk ved "Report a problem" — deklarér dette)
-- [ ] Kategori + kontakt-email (rtr@rtr.dk)
+- [x] **Kategori:** House & Home (matcher Home Assistants egen officielle companion-app på Play) + kontakt-email (rtr@rtr.dk)
 - [ ] Beslut om varemærke-navnet "Home Assistant" bruges i titlen (se note i `store-listing.md`)
 
 ## Gen-generér upload-nøgle med eget password (valgfrit, kun før første upload)
