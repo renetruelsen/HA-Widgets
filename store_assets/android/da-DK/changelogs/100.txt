@@ -1,0 +1,1 @@
+• Hurtigere opdatering efter tryk: når du justerer en kontrol (fx en termostat eller en persienne), holder widgetten nu øje et lille stykke tid og opdaterer sig selv efterhånden som enheden faktisk reagerer — så fx et varmelegeme der tænder eller et vindue der når sin position vises af sig selv inden for sekunder, i stedet for at vente på næste baggrundsopdatering.

@@ -1,0 +1,1 @@
+• Faster updates after you tap: when you adjust a control (like a thermostat or a blind), the widget now keeps checking for a little while and updates itself as the device actually responds — so a heater turning on or a window reaching its position shows up on its own within seconds, instead of waiting for the next background refresh.

@@ -1,0 +1,1 @@
+• Snabbare uppdatering efter tryck: när du justerar en kontroll (t.ex. en termostat eller en persienn) fortsätter widgeten nu att kolla en liten stund och uppdaterar sig själv allt eftersom enheten faktiskt svarar — så t.ex. ett värmeelement som slås på eller ett fönster som når sin position visas av sig själv inom sekunder, istället för att vänta på nästa bakgrundsuppdatering.
