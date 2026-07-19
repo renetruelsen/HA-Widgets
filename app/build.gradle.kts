@@ -58,6 +58,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Bevidst INGEN ndk { debugSymbolLevel } — appens eneste native kode er en
+            // færdig-strippet AndroidX-prebuilt (libandroidx.graphics.path.so, transitivt fra
+            // Compose-grafik). Den indeholder ingen symboler at udtrække, så Play Consoles
+            // "upload debug-symboler"-advarsel kan ikke ryddes fra vores side og er harmløs
+            // (et evt. native crash dér ville være en AndroidX-fejl, diagnosticerbar via version).
             // Kun sat når keystore.properties findes lokalt — ellers usigneret (ikke Play-uploadbar).
             if (hasReleaseKeystore) {
                 signingConfig = signingConfigs.getByName("release")
