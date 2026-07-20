@@ -67,6 +67,11 @@ chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
       diagnostik-log til rtr.dk ved "Report a problem" — deklarér dette)
 - [x] **Kategori:** House & Home (matcher Home Assistants egen officielle companion-app på Play) + kontakt-email (rtr@rtr.dk)
 - [ ] Beslut om varemærke-navnet "Home Assistant" bruges i titlen (se note i `store-listing.md`)
+- [x] **Play-advarsel "native debug-symboler" — ACCEPTERET (ignoreres):** appens eneste native
+      kode er en færdig-strippet AndroidX-prebuilt (`libandroidx.graphics.path.so`, transitivt fra
+      Compose-grafik). Den indeholder ingen symboler at udtrække (verificeret med clean
+      `bundleRelease` + `debugSymbolLevel=FULL` → nul metadata), så advarslen kan ikke ryddes og er
+      harmløs. Se forklarende kommentar i `app/build.gradle.kts`.
 
 ## Gen-generér upload-nøgle med eget password (valgfrit, kun før første upload)
 
