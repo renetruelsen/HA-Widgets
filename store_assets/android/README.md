@@ -55,18 +55,18 @@ chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
   --window-size=1024,500 --screenshot=feature-graphic-1024x500.png feature-graphic.src.html
 ```
 
-## Endnu ikke lavet (kræves/anbefales før publicering)
+## Publiceringskrav (alle gjort)
 
 - [x] **App-ikon 512×512** — `play-icon-512.png` (matcher det nye adaptive launcher-ikon)
 - [x] **Feature graphic 1024×500** — `feature-graphic-1024x500.png` (samme stil som ikonet)
-- [ ] Mindst **2 telefon-screenshots** pr. sprog (findes — verificér de viser reelle widgets, ikke onboarding)
+- [x] Mindst **2 telefon-screenshots** pr. sprog (findes — verificér de viser reelle widgets, ikke onboarding)
 - [x] **Privatlivspolitik** — live på https://rtr.dk/projects/ha-widgets/privacy; indsæt URL'en i
       Play Console (App content → Privacy policy)
-- [ ] **Content rating**-spørgeskema (udfyldes i Play Console)
-- [ ] **Data safety**-formular (token gemmes lokalt i AndroidKeyStore, sendes kun til brugerens egen HA;
+- [x] **Content rating**-spørgeskema (udfyldes i Play Console)
+- [x] **Data safety**-formular (token gemmes lokalt i AndroidKeyStore, sendes kun til brugerens egen HA;
       diagnostik-log til rtr.dk ved "Report a problem" — deklarér dette)
 - [x] **Kategori:** House & Home (matcher Home Assistants egen officielle companion-app på Play) + kontakt-email (rtr@rtr.dk)
-- [ ] Beslut om varemærke-navnet "Home Assistant" bruges i titlen (se note i `store-listing.md`)
+- [x] Beslut om varemærke-navnet "Home Assistant" bruges i titlen (se note i `store-listing.md`)
 - [x] **Play-advarsel "native debug-symboler" — ACCEPTERET (ignoreres):** appens eneste native
       kode er en færdig-strippet AndroidX-prebuilt (`libandroidx.graphics.path.so`, transitivt fra
       Compose-grafik). Den indeholder ingen symboler at udtrække (verificeret med clean
