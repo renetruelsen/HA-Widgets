@@ -1872,7 +1872,6 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 - **Play Store:** app'en er i **lukket test** (Closed testing track) — AAB uploadet, release-note
   indsat, Data safety + Content rating udfyldt i Play Console. Alle publiceringskrav i
   [`store_assets/android/README.md`](store_assets/android/README.md) er gjort.
-- **Deferred:** Værdisensor med flere entiteter (op til 3-5) — kræver ny Room-kolonne + config-UI + widget-layout; separat opgave.
 - M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
 
 ### Åbne UX-problemer
