@@ -5,12 +5,14 @@ Native Android-app der giver Home Assistant (HA) home screen widgets. "Appen lev
 ## Arkitektur (kort)
 
 - **Sprog/UI:** Kotlin, Jetpack Compose (app), Jetpack Glance (widgets).
-- **Auth (M1):** long-lived access token (LLT) gemt i EncryptedSharedPreferences (AndroidKeyStore).
+- **Auth:** long-lived access token (LLT) gemt i EncryptedSharedPreferences (AndroidKeyStore).
   Token aldrig i WebView-storage. WebView får token i hukommelsen via HA's external-auth JS-bro.
-  OAuth/IndieAuth udskudt til M3 (kræver offentlig https client_id-side).
+  (OAuth/IndieAuth var oprindeligt planlagt til M3, men **droppet 2026-07-20** — se "Næste skridt":
+  LLT er sikkert nok og enkelt nok for denne apps brugerbase.)
 - **Render:** hybrid — live/små værdier native fra JSON-cache (M2); rig dashboard-visning i WebView (live).
 - **Offline:** widgets tegner fra cache + staleness (M2). **Strøm:** native fetch frem for WebView-render;
-  WorkManager + push frem for polling (M2/M3).
+  WorkManager-polling + settle-burst efter tryk (v0.2.100). Ingen vedvarende forbindelse — se
+  "Næste skridt" for hvorfor push/WebSocket blev fravalgt.
 
 Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 
@@ -1872,7 +1874,30 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 - **Play Store:** app'en er i **lukket test** (Closed testing track) — AAB uploadet, release-note
   indsat, Data safety + Content rating udfyldt i Play Console. Alle publiceringskrav i
   [`store_assets/android/README.md`](store_assets/android/README.md) er gjort.
-- M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
+- **Fremtidige muligheder (tidl. "M3" — revurderet 2026-07-20):**
+  - **Flere domæner:** `fan`, `media_player`, `person` (de eneste fra det oprindelige M3-sæt der
+    stadig mangler — `cover`/`lock` er der). Billigt nu: ét opslag i `DOMAIN_CAPABILITIES`
+    (`MultiDomainSupport.kt`) pr. domæne. Lavt-hængende hvis brugeren har dem i HA.
+  - **network-security-config pr. host** (stram `usesCleartextTraffic` op — kun cleartext til den
+    konkrete lokale HA-host, ikke globalt).
+  - **DROPPET — OAuth/IndieAuth:** LLT (Keystore-krypteret) er sikkert nok og enkelt nok for denne
+    apps brugerbase (bruger + lukkede testere; onboarding har en LLT-hjælpedialog). Stor kompleksitet
+    (hostet https client_id-side, Custom Tabs, refresh-tokens) for ingen reel gevinst. Bliver på LLT
+    indtil andet er bevist.
+  - **FORKASTET — realtids-friskhed for eksternt-udløste ændringer** (ændringer der sker UDEN et
+    widget-tryk, fx en anden HA-automation): der findes ingen batterivenlig løsning givet
+    widget-modellen.
+    - *FCM push:* systemdelt kanal (ikke batteri-problem), MEN kræver egen server-side
+      infrastruktur (Firebase-projekt + HA→FCM-relæ med abonnements-liste), da appen ikke er den
+      officielle Companion-app og ikke kan bruge Nabu Casas push-relæ. For komplekst — fravalgt.
+    - *WebSocket (`subscribe_trigger`):* HA understøtter server-side per-entity-abonnement, MEN en
+      WebSocket kræver en levende proces til at holde socket'en. En altid-synlig widget er bare
+      RemoteViews uden kørende proces — WS ville kun virke "mens app'en er åben" (som HA's egen app),
+      værdiløst for widgets. Passer ikke til modellen.
+    - **Accepteret begrænsning:** eksternt-udløste ændringer opdateres kun ved næste periodiske sync
+      (brugervalgt 15 min–6 t). Bruger-udløste ændringer dækkes af settle-burst (v0.2.100). En mulig
+      fremtidig forfining: erstat settle-burstens polling med en KORTLIVET WS-burst (åbn ved tryk,
+      realtid i ~90s, luk) — samme batteriprofil, men øjeblikkelig i stedet for pollet.
 
 ### Åbne UX-problemer
 
