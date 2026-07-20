@@ -1869,19 +1869,10 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
 
 ## Næste skridt
 
-- v0.2.6 QA på rigtig enhed (Galaxy S23): `adb install -r`, test:
-  - Tema (mørk/lys/auto) virker korrekt på dashboards
-  - Ingen "Opsæt"-flash på widgets under refresh
-  - Tap på sensor/klima-widget refresher KUN den ene widget (ikke alle)
-  - ClimateWidget wide → temperatur-slider åbner med korrekt range
-  - CoverWidget: "Luk helt"/"Åbn helt", ingen Luk-knap
-  - LightWidget: dimmable lys → slider, ikke-dimmable → toggle
-  - Batteri-knap viser status + åbner indstillinger korrekt
+- **Play Store:** app'en er i **lukket test** (Closed testing track) — AAB uploadet, release-note
+  indsat, Data safety + Content rating udfyldt i Play Console. Alle publiceringskrav i
+  [`store_assets/android/README.md`](store_assets/android/README.md) er gjort.
 - **Deferred:** Værdisensor med flere entiteter (op til 3-5) — kræver ny Room-kolonne + config-UI + widget-layout; separat opgave.
-- ~~Discoverability~~ — **GJORT i v0.2.69-70** (gate + app-genvej i top-bar + bund-henvisning +
-  deep-link + resume-recheck; genvejens inline connect fjernet).
-- ~~Konvergering på multi-widget~~ — **GJORT i v0.2.68** (slettede alle 9 singles i stedet for
-  skjul-men-behold, da appen ingen brugere har; ingen kompakt 1-slot-footprint tilføjet).
 - M3: OAuth/IndieAuth, push-notifikationer (FCM), network-security-config pr. host.
 
 ### Åbne UX-problemer
