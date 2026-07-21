@@ -3,7 +3,7 @@
 Alt til Google Play Store for **HA Widgets** samlet ét sted.
 
 - **applicationId:** `dk.rtr.hawidgets` (permanent på Play — kan ikke ændres efter første upload)
-- **Aktuel version:** `0.2.100` (versionCode `100`)
+- **Aktuel version:** `0.2.101` (versionCode `101`)
 - **Privatlivspolitik (live):** https://rtr.dk/projects/ha-widgets/privacy
 
 ## Indhold
