@@ -16,6 +16,20 @@ class RangeValuesTest {
         assertEquals(50.0, value, 0.5)
     }
 
+    @Test fun lightOffReportsZeroBrightness() {
+        // HA dropper brightness-attr når lyset er slukket (null) → må ikke defaulte til 100%.
+        val offNullAttr = state("off", """{"brightness":null}""")
+        assertEquals(0.0, rangeCurrentValue("light", offNullAttr, JSONObject(offNullAttr.attributesJson)), 0.0)
+        // også når attr helt mangler
+        assertEquals(0.0, rangeCurrentValue("light", state("off"), JSONObject()), 0.0)
+    }
+
+    @Test fun lightBrightnessRoundsToNearestPercent() {
+        // 127/255 = 49.8% → 50 (afrunding), ikke 49 (gammel heltalsdivision).
+        val s = state("on", """{"brightness":127}""")
+        assertEquals(50.0, rangeCurrentValue("light", s, JSONObject(s.attributesJson)), 0.0)
+    }
+
     @Test fun coverPositionFallsBackToOpenClosedWhenMissing() {
         val open = state("open")
         assertEquals(100.0, rangeCurrentValue("cover", open, JSONObject()), 0.0)

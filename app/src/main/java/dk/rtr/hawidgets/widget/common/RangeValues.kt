@@ -14,7 +14,14 @@ val RANGE_VALUE_DOMAINS = setOf("light", "cover", "climate")
  * delt mellem klik-dialogen ([dk.rtr.hawidgets.widget.multientity.clickModifier]) og den
  * "vis rå værdi"-visning ([formatRangeValue]), så de aldrig kan divergere på hvad værdien er. */
 fun rangeCurrentValue(domain: String, state: EntityStateEntity, attrs: JSONObject): Double = when (domain) {
-    "light" -> attrs.optInt("brightness", 255).let { (it * 100 / 255).coerceIn(0, 100) }.toDouble()
+    // Slukket lys har ingen brightness-attr (HA sender null) → 0, ikke det gamle 255-default
+    // (=100%), som fik både rækken og skyder-dialogen til at vise et misvisende 100% for et
+    // slukket lys.
+    "light" -> if (state.state == "on") {
+        // Afrunding (ikke heltalsdivision), så % ↔ 0–255 round-tripper tabsfrit: 50% gemmes som
+        // 128 og læses tilbage som 50 (ikke 49, som den gamle trunkering gav).
+        (attrs.optInt("brightness", 255) * 100.0 / 255.0).roundToInt().coerceIn(0, 100).toDouble()
+    } else 0.0
     "cover" -> attrs.optInt("current_position", if (state.state == "open") 100 else 0).toDouble()
     "climate" -> attrs.optInt("temperature", 20).toDouble()
     // Bevarer decimaler (fx 21.5) i stedet for at afrunde til et heltal — number/input_number

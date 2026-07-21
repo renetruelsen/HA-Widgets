@@ -3,6 +3,7 @@ package dk.rtr.hawidgets.widget.common
 import android.content.Context
 import dk.rtr.hawidgets.data.EntityRepository
 import dk.rtr.hawidgets.data.HaApiClient
+import kotlin.math.roundToInt
 
 /**
  * Delt RANGE-værdi-afsendelse: én kanonisk domain→service-mapping for at SÆTTE en numerisk værdi
@@ -22,7 +23,9 @@ suspend fun sendRangeValue(context: Context, domain: String, entityId: String, v
     val result = when (domain) {
         "light" -> api.callService(
             "light", "turn_on", entityId,
-            extraData = mapOf("brightness" to (value.toInt() * 255 / 100).coerceIn(1, 255)),
+            // Afrunding (ikke trunkering), så fx 50% → 128 og læses tilbage som 50%, jf.
+            // rangeCurrentValue — undgår "ned med 1%" ved genlæsning.
+            extraData = mapOf("brightness" to (value * 255.0 / 100.0).roundToInt().coerceIn(1, 255)),
         )
         "cover" -> api.callService(
             "cover", "set_cover_position", entityId,

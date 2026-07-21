@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +32,10 @@ import androidx.compose.ui.unit.dp
 import dk.rtr.hawidgets.R
 import dk.rtr.hawidgets.data.EntityRepository
 import dk.rtr.hawidgets.data.HaApiClient
+import dk.rtr.hawidgets.data.db.EntityStateEntity
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class RangeControlActivity : ComponentActivity() {
 
@@ -53,6 +57,12 @@ class RangeControlActivity : ComponentActivity() {
         const val EXTRA_CURRENT_VALUE_PRECISE = "current_value_precise"
         const val EXTRA_MIN_VALUE_PRECISE = "min_value_precise"
         const val EXTRA_MAX_VALUE_PRECISE = "max_value_precise"
+
+        /** Kort poll efter "Tænd" for et lys: HA's genskabte brightness er ikke altid på plads i
+         * samme øjeblik turn_on returnerer (kapløb → gav skyder-spring til "1%"). Vent op til
+         * TRIES×DELAY på at lyset rapporterer on + brightness, og sæt så skyderen. */
+        private const val LIGHT_ON_POLL_TRIES = 8
+        private const val LIGHT_ON_POLL_DELAY_MS = 250L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,12 +108,34 @@ class RangeControlActivity : ComponentActivity() {
                     var isOn by remember { mutableStateOf(isOnInitial) }
                     var busy by remember { mutableStateOf(false) }
 
+                    // Afspejl en frisk HA-tilstand i skyderen + Tænd/Sluk-knappen.
+                    fun applyState(s: EntityStateEntity) {
+                        val a = try { JSONObject(s.attributesJson) } catch (_: Exception) { JSONObject() }
+                        sliderValue = rangeCurrentValue(domain, s, a).toFloat()
+                            .coerceIn(minValue.toFloat(), maxValue.toFloat())
+                        isOn = s.state != "off" && s.state != "closed" && s.state != "unavailable"
+                    }
+
+                    // Ved åbning: hent frisk tilstand fra HA (ikke kun den cachede seed fra intent'en),
+                    // så skyderen afspejler den aktuelle værdi — gælder light/cover/climate. Offline:
+                    // refresh returnerer null, og den cachede seed bevares.
+                    LaunchedEffect(Unit) {
+                        EntityRepository.refresh(applicationContext, entityId)?.let { applyState(it) }
+                    }
+
                     // Delt domain→service-mapping i sendRangeValue (RangeService.kt) — samme kald som
                     // NumberInputActivity bruger, så der ikke findes to divergerende RANGE-mappinger.
                     fun sendRangeCommand(value: Double) {
                         scope.launch {
                             val ok = sendRangeValue(applicationContext, domain, entityId, value)
-                            if (!ok) showActionError(applicationContext)
+                            if (ok) {
+                                // Et træk sætter værdien OG tænder/åbner entiteten (light.turn_on /
+                                // cover.set_cover_position) → knappen skal skifte til "Sluk"/"Luk
+                                // helt". Ikke climate: set_temperature tænder ikke anlægget.
+                                if (domain == "light" || domain == "cover") isOn = true
+                            } else {
+                                showActionError(applicationContext)
+                            }
                         }
                     }
 
@@ -130,8 +162,39 @@ class RangeControlActivity : ComponentActivity() {
                                 else -> null
                             }
                             if (result is HaApiClient.Result.Ok) {
-                                isOn = !isOn
-                                EntityRepository.refresh(applicationContext, entityId)
+                                val turnedOn = !isOn
+                                isOn = turnedOn
+                                // Ved SLUK rører vi IKKE skyderen — den beholder sin værdi, så næste
+                                // "Tænd" kan vende tilbage til den. Ved TÆND afspejler vi den værdi
+                                // HA faktisk lander på:
+                                if (turnedOn) {
+                                    when (domain) {
+                                        "light" -> {
+                                            // HA genskaber lysets huskede lysstyrke, men brightness-
+                                            // attr er ikke altid på plads i samme øjeblik turn_on
+                                            // returnerer (kapløb → gav "1%"). Poll kort indtil lyset
+                                            // rapporterer on + brightness, og sæt så skyderen.
+                                            var applied = false
+                                            var tries = 0
+                                            while (!applied && tries < LIGHT_ON_POLL_TRIES) {
+                                                val s = EntityRepository.refresh(applicationContext, entityId)
+                                                val b = s?.let { runCatching { JSONObject(it.attributesJson) }.getOrNull() }
+                                                if (s != null && s.state == "on" && b != null && !b.isNull("brightness")) {
+                                                    applyState(s)
+                                                    applied = true
+                                                } else {
+                                                    delay(LIGHT_ON_POLL_DELAY_MS)
+                                                    tries++
+                                                }
+                                            }
+                                        }
+                                        // climate: mål-temperaturen er stabil og altid kendt (også
+                                        // når slukket) → én frisk aflæsning er nok, intet kapløb.
+                                        "climate" -> EntityRepository.refresh(applicationContext, entityId)?.let { applyState(it) }
+                                        // cover: positionen ramper langsomt mod fuldt åben → lad
+                                        // skyderen stå; settle-burst'en opdaterer rækken efterhånden.
+                                    }
+                                }
                                 // Climate/light/cover tænd-sluk lander først når enheden fysisk
                                 // reagerer (fx spaens hvac_action flipper) → efterpoll rækken.
                                 EntityRepository.scheduleSettleBurst(applicationContext, entityId)
@@ -205,7 +268,11 @@ class RangeControlActivity : ComponentActivity() {
                         // direkte slider-træk går gennem SAMME præcise Double-værdi til
                         // sendRangeCommand — number/input_number bevarer dermed decimaler (v0.2.34)
                         // uændret.
-                        val controlsEnabled = domain == "number" || domain == "input_number" || isOn
+                        // Skyder + −/+ er ALTID aktive — også når entiteten er slukket. Et træk
+                        // sender en RANGE-kommando (fx light.turn_on + brightness) der tænder
+                        // entiteten, ligesom HA's eget UI. Man slukker via Tænd/Sluk-knappen (og
+                        // for lys kan skyderen ikke ramme 0, da min-brightness er 1).
+                        val controlsEnabled = true
                         fun applyStep(direction: Int) {
                             val next = stepValue(sliderValue.toDouble(), direction, step, minValue, maxValue)
                             sliderValue = next.toFloat()

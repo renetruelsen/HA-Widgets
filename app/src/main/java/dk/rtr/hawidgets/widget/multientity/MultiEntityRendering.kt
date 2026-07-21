@@ -230,6 +230,12 @@ private fun displayValueFor(
         return formatEntityState(context, domain, state?.state, state?.attributesJson?.let { unitFromJson(it) })
     }
     if (showRangeValue && domain in RANGE_VALUE_DOMAINS) {
+        // Et slukket lys har ingen meningsfuld lysstyrke (HA dropper brightness-attr) → vis
+        // statusteksten ("Slukket") i stedet for et misvisende "0%". Kun light: cover/climate
+        // beholder deres værdi-visning (0%/temperatur) uændret, også når lukket/off.
+        if (domain == "light" && state.state != "on") {
+            return formatEntityState(context, domain, state.state, null)
+        }
         return formatRangeValue(domain, state)
     }
     if (!isRawValueDomain(domain)) {
