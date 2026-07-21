@@ -1868,6 +1868,44 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     tilstand). **Release cuttet:** changelog `store_assets/android/<locale>/changelogs/100.txt`
     (da/en/sv), signeret AAB, annoteret tag `v0.2.100` + commits pushet til `origin/main`
     (`0fe86c3`). Play Console-upload (AAB + release-note-indsættelse) resterer som manuel handling.
+- ✅ **v0.2.101 — RANGE-skyder: fire sammenhængende defekter for lys løst (2026-07-21,
+  brugerrapport, systematic-debugging):**
+  - **Baggrund:** bruger rapporterede uhensigtsmæssig skyder-adfærd på et lys med RANGE-handling
+    + "Vis værdi". Fejlene blev afdækket iterativt (to første fix-forsøg afslørede nye fejl → stop
+    og redesign af hele dialog-modellen, brugergodkendt via afklarende spørgsmål). Kun `light`
+    påvirkes reelt; cover/climate får kun de afrundings-neutrale + open-refresh-ændringer.
+  - **D0 — slukket lys viste 100%:** HA dropper `brightness`-attributten (`null`) når et lys er
+    slukket, og `rangeCurrentValue("light")` defaultede til 255 (=100%). Seedede både rækken og
+    skyder-dialogen forkert. **Fix:** slukket → 0. Rækken (med "Vis værdi") viser nu statusteksten
+    ("Slukket") i stedet for et misvisende "0%" (`displayValueFor`, kun light — cover/climate viser
+    fortsat 0%/temperatur når lukket/off).
+  - **D1 — knappen skiftede ikke ved træk:** et træk i skyderen tændte lyset i HA, men dialogens
+    interne `isOn` opdateredes kun af Tænd/Sluk-*knappen* → knappen blev ved med at sige "Tænd".
+    **Fix:** `sendRangeCommand` sætter `isOn = true` ved succes for light/cover (ikke climate —
+    `set_temperature` tænder ikke anlægget).
+  - **D2 — spring til 1% (kapløb):** første fix-forsøg genlæste HA-tilstanden STRAKS efter "Tænd",
+    men brightness-attr er ikke altid på plads i samme øjeblik `turn_on` returnerer → aflæsningen
+    fangede lyset som stadig slukket → skyderen hoppede til 1% (min). **Fix:** kort bounded poll
+    (8×250 ms) indtil lyset rapporterer `state=="on"` + brightness present, og sæt så skyderen.
+    Climate: enkelt refresh (mål-temp er stabil/altid kendt). Cover: skyderen står (position ramper).
+  - **D3 — "ned med 1%" (afrunding):** brightness konverteredes %↔0-255 med heltalsdivision (50% →
+    gemt 127 → læst 49%). **Fix:** afrunding (`roundToInt`) begge veje i `sendRangeValue` og
+    `rangeCurrentValue` → tabsfrit round-trip for alle 1-100%.
+  - **Skyder altid aktiv:** `controlsEnabled = true` (var `... || isOn`) — skyder + −/+ virker også
+    når slukket; et træk tænder entiteten som på HA's eget UI. Man slukker via knappen (skyderen kan
+    ikke ramme 0, da min-brightness er 1).
+  - **Frisk værdi ved åbning:** dialogen henter nu frisk tilstand fra HA (`LaunchedEffect` →
+    `EntityRepository.refresh` → `applyState`) i stedet for kun den cachede intent-seed — gælder
+    light/cover/climate. Offline: refresh returnerer null, cachet seed bevares.
+  - **Kendt, uundgåelig begrænsning:** et koldt-åbnet SLUKKET lys viser skyderen ved min (HA
+    afslører ikke den huskede lysstyrke mens slukket) — den huskede værdi vises først efter "Tænd"
+    (via pollet) eller ved et træk.
+  - **QA:** build + fuld unit-test-suite grøn (2 nye `RangeValuesTest`: slukket→0, afrunding 127→50).
+    **Device-QA (Galaxy S23, `R3CWC00JY4M`): bruger-bekræftet OK (2026-07-21)** — hele flowet
+    (åbning afspejler HA, træk tænder + knap flipper, "Tænd" henter husket værdi til skyderen, ingen
+    spring, climate uændret). Emulator kunne ikke bruges (ingen HA-forbindelse efter v0.2.94-omdøbning;
+    dialog-flowet kræver ægte HA). Inline code-review ren (poll-terminering, lifecycle-annullering,
+    tabsfri afrunding, ingen number/input-regression). Committet til `main` (`c9b4b88`).
 
 ## Næste skridt
 
