@@ -1906,6 +1906,27 @@ Fuld plan: `C:\Users\rtr\.claude\plans\du-m-gerne-tale-mossy-kazoo.md`.
     spring, climate uændret). Emulator kunne ikke bruges (ingen HA-forbindelse efter v0.2.94-omdøbning;
     dialog-flowet kræver ægte HA). Inline code-review ren (poll-terminering, lifecycle-annullering,
     tabsfri afrunding, ingen number/input-regression). Committet til `main` (`c9b4b88`).
+- 🚧 **v0.2.102 — target/compileSdk hævet 35 → 36 (Android 16) for Play-compliance (2026-07-22,
+  efter Google Play-varsel):**
+  - **Baggrund:** Google Play varslede at højeste ikke-compliant targetede API var 35; nye uploads
+    (også closed testing) skal targetere Android 16 (API 36) for fortsat at kunne opdateres.
+    `compileSdk`/`targetSdk` 35→36 (`app/build.gradle.kts`), AGP `8.7.3 → 8.9.1` (understøtter
+    `compileSdk 36` uden advarsel, kører på nuværende Gradle 8.11.1 + JDK 17). Kotlin 2.0.21/KSP
+    uændret. Version `0.2.101 (101) → 0.2.102 (102)`.
+  - **Reelt en no-op for adfærd:** edge-to-edge var allerede tvunget på targetSdk 35, og app'en har
+    ALDRIG fravalgt det (`windowOptOutEdgeToEdgeEnforcement` findes ikke nogen steder) → 35→36
+    ændrer intet i layoutet. Manifest-audit: ingen `screenOrientation`-lås, ingen
+    `resizeableActivity=false`, ingen predictive-back-opt-in → ingen af Android 16's øvrige
+    adfærdsændringer rammer denne app. Brugerens S23 kører i forvejen Android 16.
+  - **QA:** `assembleDebug` + unit-tests grønne; `aapt dump badging` bekræfter `targetSdkVersion 36`
+    / `compileSdkVersion 36` / versionCode 102. Edge-to-edge-QA på ny API 36-emulator (`api36_test`,
+    google_apis x86_64): onboarding + settings-arket (det historisk problematiske bottom sheet)
+    renderer korrekt fuldt udfoldet, intet gemt bag system-bjælker/gesture-pille, ingen crash i
+    logcat. **Ikke testbart på emulator** (ingen HA-forbindelse efter v0.2.94-omdøbningen):
+    config-skærme m. rigtige entiteter + translucent `WebViewActivity`-overlay + kontrol-popups →
+    installeret på S23 (versionCode 102, `adb install -r`). **Device-QA på S23 (Android 16):
+    bruger-bekræftet OK (2026-07-22)** — ingen edge-to-edge-regression, ingen adfærdsændring.
+    Changelog (`102.txt` × 3 sprog) + signeret AAB + tag + CLAUDE.md-release-log RESTERER.
 
 ## Næste skridt
 
@@ -1953,7 +1974,7 @@ _Alle kendte UX-problemer løst. Kanonisk spec i [`docs/widget-settings-spec.md`
 
 1. **Fix i kode** — ret fejlen.
 2. **Byg** — `./gradlew assembleDebug`.
-3. **QA på emulator** (`pixel_test`) — driv det faktiske flow via `adb shell input`, screenshots, DB-inspektion.
+3. **QA på emulator** (`api36_test`, API 36 — primær siden v0.2.102; se "Kendte quirks / beslutninger". `pixel_test`/API 34 udfases) — driv det faktiske flow via `adb shell input`, screenshots, DB-inspektion.
    Virker det ikke → tilbage til trin 1. Bliv i loopet til testen er grøn.
 4. **QA på telefon** (`adb install -r`, ALDRIG uninstall) — bekræft samme flow på rigtig enhed.
 5. **Commit + push** — kun når begge QA-trin er grønne.
@@ -2019,6 +2040,27 @@ JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assemble
 
 ## Kendte quirks / beslutninger
 
+- **QA-emulator skiftet fra `pixel_test` (API 34) til `api36_test` (API 36) (besluttet 2026-07-22,
+  del af v0.2.102):** `api36_test` (Android 16, google_apis x86_64) er fremover den primære
+  funktions-/visuelle QA-emulator. Begrundelse: (1) **repræsentativt miljø** — samme API som
+  target 36 OG som brugerens S23 (NB: Play-compliance afhænger *kun* af build'ets `targetSdk`,
+  ikke af hvilken emulator der findes — men QA bør ligne target-miljøet); (2) **nyere bundtet
+  WebView** end pixel_test's Android 14-image (v113/2023, som fik custom cards til at rendere
+  forkert — se WebView-versionsgab-noten nedenfor); (3) **ingen akkumuleret cruft/quirks**
+  (Glance-repaint-caching, id-genbrug); (4) pixel_test's testdata er alligevel afkoblet efter
+  pakke-omdøbningen (v0.2.94), så lidt går tabt. **Accepteret omkostning:** mister billig
+  cross-version-emulator-dækning (minSdk 26) — modforanstaltning: system-image kan gen-downloades
+  og en ældre AVD spinnes op *on demand* ved en cross-version-mistanke; S23 dækker 36.
+  - **Oprydning (AFVENTER "gå i gang" + tablet-tjek):** slet AVD'erne `pixel_test` + `play_test`
+    (`avdmanager delete avd`, rører ikke tablets); slet system-images `android-34` (4,3 GB, kun
+    brugt af pixel_test) + `android-35` (2,2 GB, kun brugt af play_test); **behold `android-36`**.
+    ⚠️ **Både android-34 og -35 skal først tjekkes mod `tablet_7in`/`tablet_10in`** (deres drev var
+    frakoblet 2026-07-22, kun C: monteret) — hvis en tablet booter fra 34/35, brækker den ved
+    sletning. Systemet påvirker IKKE builds (builds bruger `platforms/`, ikke `system-images/`).
+  - Snapshots for alle 3 C:-AVD'er allerede ryddet 2026-07-22 (8 GB frigivet, ufarligt —
+    regenereres ved kold-boot).
+  - **TODO ved næste lejlighed:** opdatér memory-filerne der nævner `pixel_test`
+    ([[qa-before-declaring-fixed]], [[emulator-widget-visual-qa]]) til `api36_test`.
 - `usesCleartextTraffic=true` i M1 fordi lokale HA-instanser ofte er `http://`. Strammes senere
   (network-security-config pr. host) i takt med OAuth/TLS-arbejdet.
 - **External-auth kræver MERE end token:** når `window.externalApp` injiceres, behandler HA frontend

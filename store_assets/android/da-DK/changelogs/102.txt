@@ -1,0 +1,1 @@
+• Opdateret til Android 16 for fortsat kompatibilitet. Ingen ændringer i funktioner.

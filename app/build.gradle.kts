@@ -25,14 +25,14 @@ val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
 
 android {
     namespace = "dk.rtr.hawidgets"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dk.rtr.hawidgets"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 101
-        versionName = "0.2.101"
+        targetSdk = 36
+        versionCode = 102
+        versionName = "0.2.102"
         buildConfigField(
             "String",
             "LOG_UPLOAD_TOKEN",
