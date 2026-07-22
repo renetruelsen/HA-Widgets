@@ -40,7 +40,7 @@ Upload-certifikatets fingeraftryk (til dine egne noter / Play):
 
 ```
 JAVA_HOME=<jdk17> ./gradlew bundleRelease
-# → app/build/outputs/bundle/release/app-release.aab
+# → store_assets/android/bundle/app-release.aab
 ```
 Release-buildet signeres automatisk når `keystore.properties` findes i repo-roden. Findes den ikke
 (fx på en anden maskine/CI), bygger release usigneret — så kopiér `keystore.properties` +

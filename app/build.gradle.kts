@@ -124,3 +124,15 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }
+
+// Projekt-konvention: release-AAB'en skal ALTID ende i store_assets/android/bundle/ (klar til
+// Play-upload), ikke kun i Gradles default app/build/outputs/bundle/release/. `bundleRelease`
+// finalizes derfor med en kopi hertil. (.aab er git-ignoreret, så mappen forbliver ren i git.)
+tasks.register<Copy>("copyReleaseBundleToStoreAssets") {
+    from(layout.buildDirectory.dir("outputs/bundle/release"))
+    include("*.aab")
+    into(rootProject.layout.projectDirectory.dir("store_assets/android/bundle"))
+}
+tasks.matching { it.name == "bundleRelease" }.configureEach {
+    finalizedBy("copyReleaseBundleToStoreAssets")
+}

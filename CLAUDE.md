@@ -2006,7 +2006,9 @@ værktøjer (ingen Flutter, ingen fastlane-automatisering endnu).
   4. Skriv release-noter, punktform, læsbart for lægmand (ingen filnavne/klassenavne), til
      `store_assets/android/<locale>/changelogs/<versionCode>.txt` for hver af de 3 locales.
   5. Byg AAB: `JAVA_HOME=<jdk17> ./gradlew bundleRelease` (signeres automatisk hvis
-     `keystore.properties` findes i repo-roden — se `store_assets/android/README.md`).
+     `keystore.properties` findes i repo-roden — se `store_assets/android/README.md`). AAB'en
+     ender ALTID i `store_assets/android/bundle/app-release.aab` (projekt-konvention — `bundleRelease`
+     finalizes med en kopi dertil; `.aab` er git-ignoreret).
   6. Commit version-bump + changelog-filer (separat commit fra evt. andre hængende
      docs-ændringer i working tree).
   7. Tag `v<versionName>` (annoteret, med release-notens indhold som besked) på den commit der
