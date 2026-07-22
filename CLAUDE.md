@@ -2051,14 +2051,16 @@ JAVA_HOME="C:/Program Files/Microsoft/jdk-17.0.19.10-hotspot" ./gradlew assemble
   pakke-omdøbningen (v0.2.94), så lidt går tabt. **Accepteret omkostning:** mister billig
   cross-version-emulator-dækning (minSdk 26) — modforanstaltning: system-image kan gen-downloades
   og en ældre AVD spinnes op *on demand* ved en cross-version-mistanke; S23 dækker 36.
-  - **Oprydning (AFVENTER "gå i gang" + tablet-tjek):** slet AVD'erne `pixel_test` + `play_test`
-    (`avdmanager delete avd`, rører ikke tablets); slet system-images `android-34` (4,3 GB, kun
-    brugt af pixel_test) + `android-35` (2,2 GB, kun brugt af play_test); **behold `android-36`**.
-    ⚠️ **Både android-34 og -35 skal først tjekkes mod `tablet_7in`/`tablet_10in`** (deres drev var
-    frakoblet 2026-07-22, kun C: monteret) — hvis en tablet booter fra 34/35, brækker den ved
-    sletning. Systemet påvirker IKKE builds (builds bruger `platforms/`, ikke `system-images/`).
-  - Snapshots for alle 3 C:-AVD'er allerede ryddet 2026-07-22 (8 GB frigivet, ufarligt —
-    regenereres ved kold-boot).
+  - **Oprydning (UDFØRT 2026-07-22):** AVD'erne `pixel_test` + `play_test` slettet
+    (`avdmanager delete avd`); system-images `android-34` (google_apis) + `android-35`
+    (google_apis_playstore) afinstalleret (`sdkmanager --uninstall`). **Beholdt:** AVD `api36_test`
+    + system-image `android-36` (google_apis x86_64). Tablet-forbeholdet bortfaldt — brugeren
+    oplyste at `tablet_7in`/`tablet_10in` var slettet på anden vis. Byggeri upåvirket (bruger
+    `platforms/`, ikke `system-images/`). Efter oprydning: ~4,4 GB AVD + ~4,3 GB system-images
+    (fra ~30 GB → ~9 GB; inkl. den tidligere snapshot-rydning på 8 GB).
+  - **`api36_test` er nu den ENESTE emulator** — der er ikke længere en ældre-API-emulator til
+    cross-version-QA (minSdk 26). Ved en cross-version-mistanke: gen-download et ældre system-image
+    og spin en frisk AVD op on demand (S23 dækker API 36).
   - **TODO ved næste lejlighed:** opdatér memory-filerne der nævner `pixel_test`
     ([[qa-before-declaring-fixed]], [[emulator-widget-visual-qa]]) til `api36_test`.
 - `usesCleartextTraffic=true` i M1 fordi lokale HA-instanser ofte er `http://`. Strammes senere
