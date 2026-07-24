@@ -1,0 +1,36 @@
+name: Build AAB (manual, unsigned)
+
+# Manuel, on-demand build af en usigneret release-AAB. Bruges når der ikke er
+# adgang til en maskine med Android SDK/Android Studio (fx fra mobil).
+# Producerer IKKE en Play-uploadbar fil, da der ingen keystore.properties er i
+# CI — se app/build.gradle.kts (hasReleaseKeystore-fallback).
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Build unsigned release AAB
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-unsigned-aab
+          path: app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
